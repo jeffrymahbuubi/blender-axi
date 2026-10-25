@@ -22,6 +22,11 @@ _src = str(REPO / "src")
 if _src not in sys.path:
     sys.path.insert(0, _src)
 
+# The benchmark harness (benchmarks/bench) is not installed; make it importable for tests/unit/test_bench_*.py.
+_bench = str(REPO / "benchmarks")
+if _bench not in sys.path:
+    sys.path.insert(0, _bench)
+
 HOST_TEMP = Path(tempfile.gettempdir())
 FIXTURES = REPO / ".tmp" / "fixtures"
 

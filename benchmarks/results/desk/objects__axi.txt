@@ -1,0 +1,19 @@
+file: "<repo>/.tmp/bench/scenes/desk.blend"
+count: 13 of 13 total
+objects[13]{name,type,collection,visible}:
+  BookGreen,MESH,Scene Collection,true
+  BookYellow,MESH,Scene Collection,true
+  Camera,CAMERA,Scene Collection,true
+  DeskLamp,LIGHT,Scene Collection,true
+  Floor,MESH,Scene Collection,true
+  Leg1,MESH,Scene Collection,true
+  Leg2,MESH,Scene Collection,true
+  Leg3,MESH,Scene Collection,true
+  Leg4,MESH,Scene Collection,true
+  Mug,MESH,Scene Collection,true
+  MugHandle,MESH,Scene Collection,true
+  Sun,LIGHT,Scene Collection,true
+  TableTop,MESH,Scene Collection,true
+help[2]:
+  - Run `blender-axi object <name> --live --host 127.0.0.1 --port 50000` for one object's details
+  - "Run `blender-axi objects --fields location,dimensions --live --host 127.0.0.1 --port 50000` for more columns"

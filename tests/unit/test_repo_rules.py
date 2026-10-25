@@ -26,7 +26,7 @@ def _line_count(p: Path) -> int:
     return len(p.read_text(encoding="utf-8").splitlines())
 
 
-@pytest.mark.parametrize("base,pattern", [("src", "*.py"), ("tests", "*.py"), ("docs", "*.md")])
+@pytest.mark.parametrize("base,pattern", [("src", "*.py"), ("tests", "*.py"), ("benchmarks", "*.py"), ("docs", "*.md")])
 def test_files_under_500_lines(base, pattern):
     files = list(_files(base, pattern))
     if not files and base == "docs":

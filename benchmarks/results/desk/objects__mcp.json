@@ -1,0 +1,138 @@
+{
+  "status": "ok",
+  "result": {
+    "status": "ok",
+    "scene_name": "Scene",
+    "active_workspace": null,
+    "active_object": "BookYellow",
+    "object_mode": "OBJECT",
+    "camera_object": "Camera",
+    "collections": [
+      {
+        "name": "Scene Collection",
+        "exclude": false,
+        "hide_viewport": false,
+        "objects": [
+          {
+            "name": "BookGreen",
+            "type": "MESH",
+            "parent": null,
+            "data_name": "Cube.005",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "BookYellow",
+            "type": "MESH",
+            "parent": null,
+            "data_name": "Cube.006",
+            "selected": true,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "Camera",
+            "type": "CAMERA",
+            "parent": null,
+            "data_name": "Camera",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "DeskLamp",
+            "type": "LIGHT",
+            "parent": null,
+            "data_name": "Area",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "Floor",
+            "type": "MESH",
+            "parent": null,
+            "data_name": "Plane",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "Leg1",
+            "type": "MESH",
+            "parent": null,
+            "data_name": "Cube.001",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "Leg2",
+            "type": "MESH",
+            "parent": null,
+            "data_name": "Cube.002",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "Leg3",
+            "type": "MESH",
+            "parent": null,
+            "data_name": "Cube.003",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "Leg4",
+            "type": "MESH",
+            "parent": null,
+            "data_name": "Cube.004",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "Mug",
+            "type": "MESH",
+            "parent": null,
+            "data_name": "Cylinder",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "MugHandle",
+            "type": "MESH",
+            "parent": "Mug",
+            "data_name": "Torus",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "Sun",
+            "type": "LIGHT",
+            "parent": null,
+            "data_name": "Sun",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "TableTop",
+            "type": "MESH",
+            "parent": null,
+            "data_name": "Cube",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          }
+        ],
+        "children": []
+      }
+    ]
+  }
+}

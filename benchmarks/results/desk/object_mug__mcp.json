@@ -1,0 +1,54 @@
+{
+  "status": "ok",
+  "result": {
+    "status": "ok",
+    "name": "Mug",
+    "type": "MESH",
+    "location": [
+      0.6000000238418579,
+      0.20000000298023224,
+      1.8300000429153442
+    ],
+    "rotation": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "scale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "dimensions": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "parent": null,
+    "children": [
+      "MugHandle"
+    ],
+    "modifiers": [
+      {
+        "name": "Bevel",
+        "type": "BEVEL",
+        "show_viewport": true,
+        "show_render": true
+      }
+    ],
+    "constraints": [],
+    "materials": [
+      "Ceramic"
+    ],
+    "visibility": {
+      "hide_viewport": false,
+      "hide_render": false,
+      "hide_get": false
+    },
+    "data_name": "Cylinder",
+    "collections": [
+      "Scene Collection"
+    ],
+    "message": null
+  }
+}

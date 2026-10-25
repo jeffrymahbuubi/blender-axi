@@ -19,21 +19,38 @@ blender-axi exists to cut the context an AI agent spends on Blender. It does thi
 3. **Fewer round trips.** Every result ends with the next useful command, errors say how to fix the
    call, and empty results say so outright (`0 objects matching type=CAMERA in desk.blend`).
 
-Measured on 2026-10-25 against the official Blender Lab MCP server (`blender-mcp`, commit dbbf836),
-both reading the same 13-object scene in a running Blender 5.2:
+The numbers below come from `benchmarks/token_bench.py`: both tools read the same scenes in one
+running Blender 5.2, and every output is counted. The official tools return more fields than
+blender-axi's defaults, so compare per task, not field for field. To reproduce:
+`.venv/Scripts/python.exe benchmarks/token_bench.py` (artifacts in `benchmarks/results/`, details in
+`benchmarks/results/results.md`).
 
-| What | Official MCP server | blender-axi | Saving |
-|---|---|---|---|
-| Fixed cost per session | 26 tool definitions, 18,911 chars, always loaded | skill 3,225 chars, only when needed | ~83%, or all of it when Blender isn't used |
-| List the scene's objects | `get_objects_summary`: 4,214 chars | `objects --live`: 636 chars | 85% |
-| One object's details | `get_object_detail_summary`: 855 chars | `object Mug --live`: 282 chars | 67% |
-| File/scene overview | `get_blendfile_summary_datablocks`: 771 chars | `scene --live`: 520 chars | 33% |
-| Same data, TOON vs JSON | — | `objects --live`: 636 vs 1,745 chars (`--json`) | 64% |
+<!-- bench:start -->
+**Measured against the official `blender-mcp` server, same live Blender:**
 
-Characters are a stand-in for tokens; for English and code the two scale roughly together
-(about 4 characters per token). The official tools return more fields than blender-axi's defaults, so
-compare per task, not field for field. To reproduce: run the same command with and without `--json`,
-and pipe it through `wc -c`.
+*city: 502 objects, 21 collections*
+
+| Task | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving | Note |
+|---|---:|---:|---:|---|
+| Scene overview | 310 ([raw](benchmarks/results/city/scene__mcp.json)) | 341 ([raw](benchmarks/results/city/scene__axi.txt)) | -10.0% |  |
+| List objects (default --limit 100) | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 2,100 ([raw](benchmarks/results/city/objects__axi.txt)) | 94.9% |  |
+| List all 502 objects | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 9,494 ([raw](benchmarks/results/city/objects_all__axi.txt)) | 77.1% | MCP call shared with objects |
+| Objects in District05 | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 540 ([raw](benchmarks/results/city/objects_collection__axi.txt)) | 98.7% | MCP has no collection filter: full list; MCP call shared with objects |
+| Objects named *Tree* | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 1,860 ([raw](benchmarks/results/city/objects_tree__axi.txt)) | 95.5% | MCP has no name filter: full list; MCP call shared with objects |
+| One object: D05_Bldg03 | 396 ([raw](benchmarks/results/city/object_bldg__mcp.json)) | 174 ([raw](benchmarks/results/city/object_bldg__axi.txt)) | 56.1% |  |
+
+| Item | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving |
+|---|---:|---:|---:|
+| Tool definitions vs. skill text | 7,843 (26 tools, [raw](benchmarks/results/fixed/tools_list__mcp.json)) | 1,255 ([raw](skills/blender-axi/SKILL.md)) | 84.0% |
+
+*The tool-list figure is a lower bound: it is the compact JSON of the server's `tools/list` reply, and real clients serialise tool schemas more verbosely.*
+
+![desk scene](benchmarks/results/desk/render.png) ![city scene](benchmarks/results/city/render.png)
+
+![Characters or tokens per call, log scale](benchmarks/results/chart.svg)
+
+Unit: tokens (claude-opus-5-5), measured 2026-10-25. Details: [results.md](benchmarks/results/results.md).
+<!-- bench:end -->
 
 ## Install (development)
 

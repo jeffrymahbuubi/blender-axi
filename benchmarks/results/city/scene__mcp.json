@@ -1,0 +1,35 @@
+{
+  "status": "ok",
+  "result": {
+    "status": "ok",
+    "datablock_counts": {
+      "all_ids": 1079,
+      "cameras": 1,
+      "collections": 21,
+      "lights": 1,
+      "materials": 30,
+      "meshes": 500,
+      "objects": 502,
+      "scenes": 1,
+      "screens": 11,
+      "window_managers": 1,
+      "workspaces": 11
+    },
+    "render_engine": "BLENDER_EEVEE",
+    "scene_name": "Scene",
+    "workspaces": [
+      "Animation",
+      "Compositing",
+      "Geometry Nodes",
+      "Layout",
+      "Modeling",
+      "Rendering",
+      "Scripting",
+      "Sculpting",
+      "Shading",
+      "Texture Paint",
+      "UV Editing"
+    ],
+    "active_workspace": null
+  }
+}

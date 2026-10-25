@@ -1,0 +1,26 @@
+file: "<repo>/.tmp/bench/scenes/city.blend"
+count: 20 of 20 matching (502 total)
+objects[20]{name,type,collection,visible}:
+  D05_Bldg00,MESH,District05,true
+  D05_Bldg01,MESH,District05,true
+  D05_Bldg02,MESH,District05,true
+  D05_Bldg03,MESH,District05,true
+  D05_Bldg04,MESH,District05,true
+  D05_Bldg05,MESH,District05,true
+  D05_Bldg06,MESH,District05,true
+  D05_Bldg07,MESH,District05,true
+  D05_Bldg08,MESH,District05,true
+  D05_Bldg09,MESH,District05,true
+  D05_Bldg10,MESH,District05,true
+  D05_Bldg11,MESH,District05,true
+  D05_Bldg12,MESH,District05,true
+  D05_Bldg13,MESH,District05,true
+  D05_Bldg14,MESH,District05,true
+  D05_Bldg15,MESH,District05,true
+  D05_Bldg16,MESH,District05,true
+  D05_Bldg17,MESH,District05,true
+  D05_Bldg18,MESH,District05,true
+  D05_Bldg19,MESH,District05,true
+help[2]:
+  - Run `blender-axi object <name> --live --host 127.0.0.1 --port 50000` for one object's details
+  - "Run `blender-axi objects --fields location,dimensions --live --host 127.0.0.1 --port 50000` for more columns"

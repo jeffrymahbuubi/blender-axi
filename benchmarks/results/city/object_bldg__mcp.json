@@ -1,0 +1,52 @@
+{
+  "status": "ok",
+  "result": {
+    "status": "ok",
+    "name": "D05_Bldg03",
+    "type": "MESH",
+    "location": [
+      66.5999984741211,
+      0.0,
+      6.789977550506592
+    ],
+    "rotation": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "scale": [
+      0.8999999761581421,
+      0.8999999761581421,
+      6.789977550506592
+    ],
+    "dimensions": [
+      1.7999999523162842,
+      1.7999999523162842,
+      13.579955101013184
+    ],
+    "parent": null,
+    "children": [],
+    "modifiers": [
+      {
+        "name": "Bevel",
+        "type": "BEVEL",
+        "show_viewport": true,
+        "show_render": true
+      }
+    ],
+    "constraints": [],
+    "materials": [
+      "Facade28"
+    ],
+    "visibility": {
+      "hide_viewport": false,
+      "hide_render": false,
+      "hide_get": false
+    },
+    "data_name": "Cube.103",
+    "collections": [
+      "District05"
+    ],
+    "message": null
+  }
+}

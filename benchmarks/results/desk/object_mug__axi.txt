@@ -1,0 +1,16 @@
+name: Mug
+type: MESH
+collection: Scene Collection
+parent: none
+children[1]: MugHandle
+location: "0.6,0.2,1.83"
+rotation_deg: "0,0,0"
+scale: "1,1,1"
+dimensions: "0.5,0.5,0.5"
+visible: true
+verts: 64
+faces: 34
+materials[1]: Ceramic
+modifiers[1]{name,type}:
+  Bevel,BEVEL
+custom_props: none

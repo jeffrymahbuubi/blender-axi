@@ -1,0 +1,652 @@
+{
+  "status": "ok",
+  "result": {
+    "status": "ok",
+    "scene_name": "Scene",
+    "active_workspace": null,
+    "active_object": "Camera",
+    "object_mode": "OBJECT",
+    "camera_object": "Camera",
+    "collections": [
+      {
+        "name": "Scene Collection",
+        "exclude": false,
+        "hide_viewport": false,
+        "objects": [
+          {
+            "name": "Camera",
+            "type": "CAMERA",
+            "parent": null,
+            "data_name": "Camera",
+            "selected": true,
+            "visible": true,
+            "hide_viewport": false
+          },
+          {
+            "name": "Sun",
+            "type": "LIGHT",
+            "parent": null,
+            "data_name": "Sun",
+            "selected": false,
+            "visible": true,
+            "hide_viewport": false
+          }
+        ],
+        "children": [
+          {
+            "name": "District00",
+            "exclude": false,
+            "hide_viewport": false,
+            "objects": [
+              {
+                "name": "D00_Bldg00",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg01",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.001",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg02",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.002",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg03",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.003",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg04",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.004",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg05",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.005",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg06",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.006",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg07",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.007",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg08",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.008",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg09",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.009",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg10",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.010",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg11",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.011",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg12",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.012",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg13",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.013",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg14",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.014",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg15",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.015",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg16",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.016",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg17",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.017",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg18",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.018",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D00_Bldg19",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.019",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              }
+            ],
+            "children": []
+          },
+          {
+            "name": "District01",
+            "exclude": false,
+            "hide_viewport": false,
+            "objects": [
+              {
+                "name": "D01_Bldg00",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.020",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg01",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.021",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg02",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.022",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg03",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.023",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg04",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.024",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg05",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.025",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg06",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.026",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg07",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.027",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg08",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.028",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg09",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.029",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg10",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.030",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg11",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.031",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg12",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.032",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg13",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.033",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg14",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.034",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg15",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.035",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg16",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.036",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg17",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.037",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg18",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.038",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D01_Bldg19",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.039",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              }
+            ],
+            "children": []
+          },
+          {
+            "name": "District02",
+            "exclude": false,
+            "hide_viewport": false,
+            "objects": [
+              {
+                "name": "D02_Bldg00",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.040",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg01",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.041",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg02",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.042",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg03",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.043",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg04",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.044",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg05",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.045",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg06",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.046",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg07",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.047",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg08",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.048",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg09",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.049",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg10",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.050",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg11",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.051",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg12",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.052",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg13",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.053",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg14",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.054",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg15",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.055",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg16",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.056",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg17",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.057",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg18",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.058",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D02_Bldg19",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.059",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              }
+            ],
+            "children": []
+          },
+          {
+            "name": "District03",
+            "exclude": false,
+            "hide_viewport": false,
+            "objects": [
+              {
+                "name": "D03_Bldg00",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.060",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D03_Bldg01",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.061",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D03_Bldg02",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.062",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D03_Bldg03",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.063",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D03_Bldg04",
+                "type": "MESH",
+                "parent": null,
+                "data_name": "Cube.064",
+                "selected": false,
+                "visible": true,
+                "hide_viewport": false
+              },
+              {
+                "name": "D0
+…[truncated: 146677 chars total, sha256 230886aa2e0c]

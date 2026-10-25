@@ -1,0 +1,88 @@
+{
+  "file": "<repo>/.tmp/bench/scenes/desk.blend",
+  "count": "13 of 13 total",
+  "objects": [
+    {
+      "name": "BookGreen",
+      "type": "MESH",
+      "collection": "Scene Collection",
+      "visible": true
+    },
+    {
+      "name": "BookYellow",
+      "type": "MESH",
+      "collection": "Scene Collection",
+      "visible": true
+    },
+    {
+      "name": "Camera",
+      "type": "CAMERA",
+      "collection": "Scene Collection",
+      "visible": true
+    },
+    {
+      "name": "DeskLamp",
+      "type": "LIGHT",
+      "collection": "Scene Collection",
+      "visible": true
+    },
+    {
+      "name": "Floor",
+      "type": "MESH",
+      "collection": "Scene Collection",
+      "visible": true
+    },
+    {
+      "name": "Leg1",
+      "type": "MESH",
+      "collection": "Scene Collection",
+      "visible": true
+    },
+    {
+      "name": "Leg2",
+      "type": "MESH",
+      "collection": "Scene Collection",
+      "visible": true
+    },
+    {
+      "name": "Leg3",
+      "type": "MESH",
+      "collection": "Scene Collection",
+      "visible": true
+    },
+    {
+      "name": "Leg4",
+      "type": "MESH",
+      "collection": "Scene Collection",
+      "visible": true
+    },
+    {
+      "name": "Mug",
+      "type": "MESH",
+      "collection": "Scene Collection",
+      "visible": true
+    },
+    {
+      "name": "MugHandle",
+      "type": "MESH",
+      "collection": "Scene Collection",
+      "visible": true
+    },
+    {
+      "name": "Sun",
+      "type": "LIGHT",
+      "collection": "Scene Collection",
+      "visible": true
+    },
+    {
+      "name": "TableTop",
+      "type": "MESH",
+      "collection": "Scene Collection",
+      "visible": true
+    }
+  ],
+  "help": [
+    "Run `blender-axi object <name> --live --host 127.0.0.1 --port 50000` for one object's details",
+    "Run `blender-axi objects --fields location,dimensions --live --host 127.0.0.1 --port 50000` for more columns"
+  ]
+}

@@ -1,0 +1,16 @@
+file: "<repo>/.tmp/bench/scenes/desk.blend"
+blender: 5.2.0 LTS
+scene: Scene
+engine: EEVEE
+resolution: 1280x720@100%
+frames: 1-48 (current 1)
+fps: 24
+camera: Camera
+objects: "13 (MESH 10, LIGHT 2, CAMERA 1)"
+collections: "0"
+materials: "5 (BookGreenCover, BookYellowCover, Ceramic, Floor, Wood)"
+unsaved_changes: false
+help[3]:
+  - Run `blender-axi objects --live --host 127.0.0.1 --port 50000` to list objects
+  - Run `blender-axi render --out <path.png> --live --host 127.0.0.1 --port 50000` to render a still
+  - Run `blender-axi export --out <path.glb> --live --host 127.0.0.1 --port 50000` to export the scene
