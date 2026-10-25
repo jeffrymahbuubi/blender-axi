@@ -152,6 +152,14 @@ def test_installed_package_is_not_in_checkout_mode(installed):
     assert "site-packages" in Path(second).as_posix()
 
 
+def test_installed_home_reports_version_and_upgrade_hint(installed, tmp_path):
+    proc = _run([installed, "--json"], env=_clean_env(), cwd=tmp_path)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    data = json.loads(proc.stdout)
+    assert data["version"] == __version__
+    assert any("uv tool upgrade blender-axi" in h for h in data["help"]), data["help"]
+
+
 def test_installed_help_works_offline(installed):
     proc = _run([installed, "scene", "--help"], env=_clean_env())
     assert proc.returncode == 0 and "scene" in proc.stdout

@@ -41,7 +41,7 @@ blender-axi's defaults, so compare per task, not field for field. To reproduce:
 
 | Item | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving |
 |---|---:|---:|---:|
-| Tool definitions vs. skill text | 7,843 (26 tools, [raw](benchmarks/results/fixed/tools_list__mcp.json)) | 1,481 ([raw](skills/blender-axi/SKILL.md)) | 81.1% |
+| Tool definitions vs. skill text | 7,843 (26 tools, [raw](benchmarks/results/fixed/tools_list__mcp.json)) | 1,883 ([raw](skills/blender-axi/SKILL.md)) | 76.0% |
 
 *The tool-list figure is a lower bound: it is the compact JSON of the server's `tools/list` reply, and real clients serialise tool schemas more verbosely.*
 
@@ -79,6 +79,10 @@ Blender 5.2 LTS is verified. blender-axi finds it via `--blender <path>`, `BLEND
 | `blender-axi` | Home view: Blender found, live status, `.blend` files here |
 | `scene [<file>]` | Overview of a .blend file: engine, resolution, frames, camera, object and collection counts (collections include the Scene Collection, e.g. `3 (Scene Collection, Collection, Props)`) |
 | `new <file.blend> [--template empty\|default] [--force]` | Create a new .blend (empty, or Blender's default Camera, Cube and Light); headless only, refuses to overwrite without `--force`. Build the scene with `exec <file> --script build.py --in-place --allow-exec` |
+| `add <kind> [<file>] [--name N] [--location x,y,z] [--rotation x,y,z] [--scale x,y,z] [--size n \| --radius n --depth n --segments n] [--collection C] [--type POINT\|SUN\|SPOT\|AREA --energy n] --in-place \| --out <copy.blend>` | Add a cube, plane, sphere, icosphere, cylinder, cone, monkey, camera, light or empty (see [Modeling](#modeling)) |
+| `set <name> [<file>] [--name N] [--location x,y,z] [--rotation x,y,z] [--scale x,y,z] [--parent P\|none] [--collection C] [--hide \| --show] --in-place \| --out <copy.blend>` | Move, rotate, scale, rename, reparent, move to a collection or hide/show one object; reports `changed` |
+| `delete <a,b,...> [<file>] --in-place \| --out <copy.blend>` | Delete objects (all or nothing); children stay in place and are listed as `children_kept` |
+| `material <object> [<file>] --name M [--color r,g,b[,a]] [--metallic n] [--roughness n] [--emission r,g,b --emission-strength n] [--slot replace\|add] --in-place \| --out <copy.blend>` | Give a mesh a Principled BSDF material (reused by name, created if missing); replaces slot 0 unless `--slot add` |
 | `objects [<file>] [--type T] [--collection C] [--name-contains S] [--limit N] [--fields a,b]` | List objects (name, type, collection, visible); extra columns: location, dimensions, parent, verts, faces, materials, modifiers, data |
 | `object <name> [<file>]` | One object's transform, dimensions, parent/children, materials, modifiers, custom props |
 | `exec [<file>] --code <python> \| --script <path> --allow-exec [--live]` | Run Python inside Blender; `bpy` is predefined, assign a dict to `result` |
@@ -100,6 +104,17 @@ nothing writes nothing (`modified: false`). With `--in-place`, Blender keeps the
 `<file>.blend1` and the result reports it as `backup:`. Moving the current frame is not a modification; it
 is reported as `frame_changed: "1 -> 10"`. Code that assigns no `result` reports
 `result: none (the code did not assign result)`.
+
+### Modeling
+
+`add`, `set`, `delete` and `material` make bounded edits without `--allow-exec`. Headless, they write only
+when told where: `--in-place` writes the file (Blender keeps `<file>.blend1`, reported as `backup:`) and
+`--out <copy.blend>` writes a copy; with neither they exit 2 and print both full commands. A request that
+changes nothing writes nothing (`modified: false`, `saved: none (no changes)`). Rotations are in degrees.
+They use Blender's data API rather than operators, so the same command works headless, against a headless
+MCP server and in the GUI. With `--live` they change the open session like `exec --live` (no copy,
+`--in-place` saves the open file, an undo step is pushed when Blender allows it). For a whole scene, one
+`new` + `exec --script build.py --in-place --allow-exec` is still cheaper than many single commands.
 
 ## Live mode
 
@@ -167,5 +182,6 @@ the global flags, so it never drifts from the CLI:
     blender-axi skill gen --check    # exit 1 if the committed skill is missing or stale
 
 Run `skill gen` after adding or changing a command. Running `blender-axi` with no arguments prints
-the live home view (Blender location, live-session reachability, `.blend` files in the current
-directory). There is no SessionStart hook in v1; the skill is the discovery path.
+the live home view (version, Blender location, live-session reachability, the temp root with its count of
+`exec` copies, `.blend` files in the current directory); an installed copy also hints
+`uv tool upgrade blender-axi`. There is no SessionStart hook in v1; the skill is the discovery path.

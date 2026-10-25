@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from blender_axi import flags, toon
+from blender_axi import __version__, flags, paths, toon
 from blender_axi.commands import home
 from blender_axi.errors import AxiError
 from blender_axi.locate import BlenderInfo
@@ -39,7 +39,7 @@ def test_collapse_home():
 def test_data_order_and_blender_line(fake_blender, no_live, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     res = home.run(_inv())
-    assert list(res.data) == ["bin", "description", "blender", "live", "blends"]
+    assert list(res.data) == ["bin", "version", "description", "blender", "live", "tmp", "blends"]
     assert res.data["blender"] == "5.2.0 LTS (~/apps/blender.exe)"
     assert res.data["live"] == "unreachable localhost:9876"
     assert res.data["blends"].startswith("0 .blend files in ")
@@ -63,7 +63,7 @@ def test_hints_absent_when_blender_found_and_live_down(fake_blender, no_live, tm
     res = home.run(_inv())
     assert not any("--blender" in h for h in res.help)
     assert not any("--live" in h for h in res.help)
-    assert 3 <= len(res.help) <= 5
+    assert 3 <= len(res.help) <= 6
 
 
 def test_blends_listing_newest_first(fake_blender, no_live, tmp_path, monkeypatch):
@@ -152,3 +152,77 @@ def test_bin_falls_back_to_path_lookup(monkeypatch, tmp_path):
     assert home._bin_path().endswith("blender-axi.exe")
     monkeypatch.setattr(home.shutil, "which", lambda name: None)
     assert home._bin_path().endswith("-m blender_axi")
+
+
+@pytest.fixture
+def fake_tmp(monkeypatch, tmp_path):
+    root = tmp_path / "axi-tmp"
+    monkeypatch.setattr(paths, "tmp_root", lambda: root)
+    return root
+
+
+def test_version_field(fake_blender, no_live, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert home.run(_inv()).data["version"] == __version__
+
+
+def test_tmp_line_without_exec_dir_is_plain_and_not_created(fake_blender, no_live, fake_tmp, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    res = home.run(_inv())
+    assert res.data["tmp"] == home.collapse_home(fake_tmp)
+    assert "exec cop" not in res.data["tmp"]
+    assert not fake_tmp.exists()
+
+
+def test_tmp_line_counts_exec_copies(fake_blender, no_live, fake_tmp, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (fake_tmp / "exec").mkdir(parents=True)
+    (fake_tmp / "exec" / "a-1.blend").write_bytes(b"x")
+    (fake_tmp / "exec" / "b-2.blend").write_bytes(b"x")
+    (fake_tmp / "exec" / "note.txt").write_text("no")
+    res = home.run(_inv())
+    assert res.data["tmp"] == home.collapse_home(fake_tmp) + " (2 exec copies)"
+
+
+def test_empty_exec_dir_has_no_suffix(fake_blender, no_live, fake_tmp, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (fake_tmp / "exec").mkdir(parents=True)
+    assert home.run(_inv()).data["tmp"] == home.collapse_home(fake_tmp)
+
+
+def test_upgrade_hint_only_when_installed(fake_blender, no_live, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(paths, "_checkout_root", lambda: None)
+    installed = home.run(_inv())
+    assert any("uv tool upgrade blender-axi" in h for h in installed.help)
+    monkeypatch.setattr(paths, "_checkout_root", lambda: tmp_path)
+    checkout = home.run(_inv())
+    assert not any("uv tool upgrade" in h for h in checkout.help)
+
+
+def test_new_hint_only_when_no_blend_files(fake_blender, no_live, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert any("blender-axi new <file.blend>" in h for h in home.run(_inv()).help)
+    (tmp_path / "a.blend").write_bytes(b"x")
+    assert not any("blender-axi new" in h for h in home.run(_inv()).help)
+
+
+def test_carry_user_prefs_and_non_default_host_port(fake_blender, no_live, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(home, "_live_reachable", lambda h, p: True)
+    res = home.run(_inv(["--live", "--host", "10.0.0.5", "--port", "9999", "--user-prefs"]))
+    assert "blender-axi --live --host 10.0.0.5 --port 9999 --user-prefs scene <file>" in res.help[0]
+    res = home.run(_inv(["--user-prefs"]))
+    assert "blender-axi --user-prefs scene <file>" in res.help[0]
+
+
+def test_all_hints_within_bound_when_everything_applies(monkeypatch, no_live, tmp_path):
+    monkeypatch.chdir(tmp_path)
+
+    def boom(explicit=None):
+        raise AxiError("BLENDER_NOT_FOUND", "Blender executable not found")
+
+    monkeypatch.setattr("blender_axi.locate.find_blender", boom)
+    monkeypatch.setattr(paths, "_checkout_root", lambda: None)
+    res = home.run(_inv())
+    assert len(res.help) <= 6

@@ -26,6 +26,12 @@ def test_tmp_root_installed_fallback(monkeypatch):
     assert paths.tmp_root() == Path.home() / ".cache" / "blender-axi" / "tmp"
 
 
+def test_is_checkout_follows_checkout_root(monkeypatch):
+    assert paths.is_checkout() is True
+    monkeypatch.setattr(paths, "_checkout_root", lambda: None)
+    assert paths.is_checkout() is False
+
+
 def test_blender_env_sets_all_three(monkeypatch):
     monkeypatch.setenv("BLENDER_AXI_TMP", str(REPO / ".tmp" / "tests"))
     env = paths.blender_env({"PATH": "p", "TEMP": "old"})

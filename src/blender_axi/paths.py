@@ -18,6 +18,11 @@ def _checkout_root() -> Path | None:
     return root if (root / "pyproject.toml").is_file() else None
 
 
+def is_checkout() -> bool:
+    """True when running from a source checkout, False when installed (wheel or `uv tool`)."""
+    return _checkout_root() is not None
+
+
 def tmp_root() -> Path:
     """1) $BLENDER_AXI_TMP  2) <checkout>/.tmp  3) %LOCALAPPDATA%/blender-axi/tmp or ~/.cache/blender-axi/tmp."""
     env = os.environ.get("BLENDER_AXI_TMP")

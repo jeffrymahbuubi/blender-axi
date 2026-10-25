@@ -19,6 +19,7 @@ SKILL_DESCRIPTION = (
     "Inspect, render, export and script Blender (.blend) files from the terminal with the blender-axi CLI. "
     "Use when asked what is in a .blend file, to list its objects, render a still or frames, "
     "export glb/fbx/obj/stl, run a Blender Python script headlessly, create a new .blend, "
+    "add, move or delete objects and assign materials with typed commands (no exec gate), "
     "or run Python inside an open Blender (`--live`)."
 )
 INSTALL_URL = "git+https://github.com/jeffrymahbuubi/blender-axi"
@@ -62,6 +63,10 @@ def _safety(names: set[str]) -> list[str]:
         lines.append("- `exec` refuses to run without `--allow-exec` (`EXEC_NOT_ALLOWED`, exit 2); "
                      "it works on a copy unless `--in-place` is given.")
         lines.append("- With `--live`, `exec` changes the open session directly (no copy); `--in-place` saves it.")
+    if names & {"add", "set", "delete", "material"}:
+        lines.append("- Modeling commands (`add`, `set`, `delete`, `material`) write a file only with `--in-place` "
+                     "(a `.blend1` backup is kept) or `--out <copy.blend>`; with `--live` they change the open session. "
+                     "For a whole scene prefer `new` + `exec --script`.")
     lines.append("- `--user-prefs` loads your add-ons; the default is `--factory-startup`.")
     lines.append("- Temp files stay under the project-local `.tmp/` (or `BLENDER_AXI_TMP`), never the system temp.")
     lines.append("- Errors are data on stdout with a `code` and `help`; exit 2 means a usage problem, 1 a runtime failure.")

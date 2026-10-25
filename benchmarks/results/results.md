@@ -1,6 +1,6 @@
 # Token-savings benchmark
 
-Measured 2026-10-25 · Blender 5.2.0 LTS · blender-axi 0.2.0 · official server blender-mcp 1.0.2 (dbbf836)
+Measured 2026-10-25 · Blender 5.2.0 LTS · blender-axi 0.3.0 · official server blender-mcp 1.0.2 (dbbf836)
 
 Unit: **tokens**, counted with `claude-opus-5-5`.
 
@@ -12,7 +12,7 @@ What the agent reads for the same question, from the same live Blender: the full
 
 | Item | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving |
 |---|---:|---:|---:|
-| Tool definitions vs. skill text | 7,843 (26 tools, [raw](fixed/tools_list__mcp.json)) | 1,481 ([raw](../../skills/blender-axi/SKILL.md)) | 81.1% |
+| Tool definitions vs. skill text | 7,843 (26 tools, [raw](fixed/tools_list__mcp.json)) | 1,883 ([raw](../../skills/blender-axi/SKILL.md)) | 76.0% |
 
 > The tool-list figure is a lower bound: it is the compact JSON of the server's `tools/list` reply, and real clients serialise tool schemas more verbosely.
 

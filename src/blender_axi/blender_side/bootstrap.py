@@ -28,6 +28,23 @@ _SKIP_PROPS = {"rna_type", "session_uid", "users", "is_evaluated", "original", "
 _SKIP_COLLECTIONS = {"window_managers", "screens", "workspaces", "all_ids"}  # all_ids duplicates the rest
 
 
+def _shown(value) -> str:
+    """repr, except that a bpy_prop_array (colours, ...) shows the numbers instead of naming the property."""
+    if type(value).__name__ == "bpy_prop_array":
+        return repr(tuple(_shown(v) for v in value))
+    return repr(value)
+
+
+def _feed_nodes(mat, feed) -> None:
+    """A material's node tree is an embedded ID the generic walk only names; feed its input values."""
+    tree = getattr(mat, "node_tree", None)
+    for node in (tree.nodes if tree is not None else ()):
+        for index, socket in enumerate(node.inputs):
+            value = getattr(socket, "default_value", None)
+            if value is not None:
+                feed(f"{mat.name}.node.{node.name}.{index}={_shown(value)}")
+
+
 def _walk(bpy, struct, depth: int, prefix: str, feed) -> None:
     for prop in struct.bl_rna.properties:
         pid = prop.identifier
@@ -39,7 +56,7 @@ def _walk(bpy, struct, depth: int, prefix: str, feed) -> None:
             continue
         kind = prop.type
         if kind in _PRIMITIVE:
-            feed(f"{prefix}.{pid}={value!r}")
+            feed(f"{prefix}.{pid}={_shown(value)}")
         elif kind == "POINTER":
             if value is None:
                 feed(f"{prefix}.{pid}=None")
@@ -86,6 +103,8 @@ def fingerprint(bpy) -> str:
                 feed(f"image:{ident.filepath}:{ident.source}")
                 continue
             _walk(bpy, ident, 2, ident.name, feed)
+            if attr == "materials":
+                _feed_nodes(ident, feed)
             if attr == "meshes":
                 arr = array("f", bytes(4 * 3 * len(ident.vertices)))
                 if len(arr):

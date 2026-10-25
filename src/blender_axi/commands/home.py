@@ -13,8 +13,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from .. import __version__, paths
 from ..errors import AxiError
-from ..spec import CommandSpec, Invocation, Result
+from ..spec import DEFAULT_LIVE_HOST, DEFAULT_LIVE_PORT, CommandSpec, Invocation, Result
 
 DESCRIPTION = "Agent-ergonomic CLI for Blender: inspect, render, export and script .blend files headlessly"
 MAX_BLENDS = 20
@@ -91,16 +92,29 @@ def _blends(cwd: Path) -> tuple[list[dict], int]:
     return [r[1] for r in rows[:MAX_BLENDS]], len(rows)
 
 
+def _tmp_line() -> str:
+    """The temp root, plus the count of `exec` copies kept there. Read-only: never creates the directory."""
+    root = paths.tmp_root()
+    try:
+        copies = len(list((root / "exec").glob("*.blend")))
+    except OSError:
+        copies = 0
+    line = collapse_home(root)
+    return f"{line} ({copies} exec {'copy' if copies == 1 else 'copies'})" if copies > 0 else line
+
+
 def _carry(inv: Invocation) -> str:
     """Global flags worth repeating in suggested commands."""
     g = inv.globals
     parts = []
     if g.live:
         parts.append("--live")
-        if g.host != "localhost":
+        if g.host != DEFAULT_LIVE_HOST:
             parts.append(f"--host {g.host}")
-        if g.port != 9876:
+        if g.port != DEFAULT_LIVE_PORT:
             parts.append(f"--port {g.port}")
+    if g.user_prefs:
+        parts.append("--user-prefs")
     if g.blender:
         parts.append(f'--blender "{g.blender}"')
     return (" " + " ".join(parts)) if parts else ""
@@ -117,9 +131,11 @@ def run(inv: Invocation) -> Result:
 
     data: dict = {
         "bin": _bin_path(),
+        "version": __version__,
         "description": DESCRIPTION,
         "blender": blender,
         "live": f"{'reachable' if live_up else 'unreachable'} {g.host}:{g.port}",
+        "tmp": _tmp_line(),
     }
     data["blends"] = rows if rows else f"0 .blend files in {collapse_home(cwd)}"
 
@@ -135,6 +151,10 @@ def run(inv: Invocation) -> Result:
         help_lines.append("A live Blender is reachable: add `--live` to inspect the open session")
     if not found:
         help_lines.append("Pass `--blender <path>` or set BLENDER_AXI_BLENDER to point at blender.exe")
+    if total == 0:
+        help_lines.append("Run `blender-axi new <file.blend>` to create one")
+    if not paths.is_checkout():
+        help_lines.append("Installed from git: upgrade with `uv tool upgrade blender-axi`")
     return Result(data=data, help=help_lines)
 
 

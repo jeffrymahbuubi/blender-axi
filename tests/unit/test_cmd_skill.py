@@ -64,11 +64,20 @@ def test_safety_bullets_follow_registry(monkeypatch):
     assert "--allow-exec" not in text
     assert "Outputs are never overwritten" not in text
     assert "`.tmp/`" in text
+    assert "Modeling commands" not in text
 
 
-def test_description_mentions_new_and_live():
+def test_modeling_bullet_when_a_modeling_command_is_registered(monkeypatch):
+    monkeypatch.setattr(registry, "COMMANDS", {"add": "blender_axi.commands.add:SPEC"})
+    text = skill.render_skill(skill._specs())
+    assert "Modeling commands (`add`, `set`, `delete`, `material`)" in text
+    assert "`new` + `exec --script`" in text
+
+
+def test_description_mentions_new_live_and_modeling():
     assert "create a new .blend" in skill.SKILL_DESCRIPTION
     assert "`--live`" in skill.SKILL_DESCRIPTION
+    assert "assign materials with typed commands" in skill.SKILL_DESCRIPTION
 
 
 def test_install_text_is_git_url_and_never_pypi(fake_registry):

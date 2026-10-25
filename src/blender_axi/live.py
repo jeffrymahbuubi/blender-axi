@@ -36,6 +36,7 @@ CONNECT_TIMEOUT = 2.0
 PING_TIMEOUT = 0.3
 RECV_BYTES = 65536
 NON_STRICT_OPS = frozenset({"exec", "exec_code"})  # decision D13: user code may return non-JSON values
+MUTATING_OPS = NON_STRICT_OPS | frozenset({"add", "set", "delete", "material"})  # tracked + undo step in live mode
 SRC_DIR = str(Path(__file__).resolve().parents[1])
 
 # Every request first puts our src on sys.path and purges any cached blender_axi modules (U12), so the code it
@@ -276,8 +277,8 @@ class LiveTransport:
         timeout = self.timeout if timeout is None else timeout
         started = time.perf_counter()
         strict = op not in NON_STRICT_OPS
-        track = save.mode != "none" or op in NON_STRICT_OPS  # exec always reports modified (session marker)
-        undo = op in NON_STRICT_OPS  # best-effort undo step before user code runs
+        track = save.mode != "none" or op in MUTATING_OPS  # mutating ops always report modified (session marker)
+        undo = op in MUTATING_OPS  # best-effort undo step before the op runs
         response = self._execute(build_code(op, params or {}, track=track, undo=undo), strict, timeout)
         envelope = response.get("result")
         if not isinstance(envelope, dict):
