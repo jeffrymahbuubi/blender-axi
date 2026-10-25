@@ -7,6 +7,34 @@ talks to a running Blender through the official MCP add-on's socket.
 
 Licensed GPL-3.0-or-later (see `LICENSE`).
 
+## Why: fewer tokens for AI agents working in Blender
+
+blender-axi exists to cut the context an AI agent spends on Blender. It does this in three ways.
+
+1. **No per-session tool schemas.** An MCP client loads every tool definition into context at the
+   start of every session. blender-axi is a CLI. Its agent skill (`skills/blender-axi/SKILL.md`)
+   loads only when a Blender task comes up, and `blender-axi --help` covers the rest.
+2. **Compact output.** TOON tables instead of indented JSON, and the common fields by default
+   (`--fields` and `--full` give the rest), with counts precomputed ("5 of 12 total").
+3. **Fewer round trips.** Every result ends with the next useful command, errors say how to fix the
+   call, and empty results say so outright (`0 objects matching type=CAMERA in desk.blend`).
+
+Measured on 2026-10-25 against the official Blender Lab MCP server (`blender-mcp`, commit dbbf836),
+both reading the same 13-object scene in a running Blender 5.2:
+
+| What | Official MCP server | blender-axi | Saving |
+|---|---|---|---|
+| Fixed cost per session | 26 tool definitions, 18,911 chars, always loaded | skill 3,225 chars, only when needed | ~83%, or all of it when Blender isn't used |
+| List the scene's objects | `get_objects_summary`: 4,214 chars | `objects --live`: 636 chars | 85% |
+| One object's details | `get_object_detail_summary`: 855 chars | `object Mug --live`: 282 chars | 67% |
+| File/scene overview | `get_blendfile_summary_datablocks`: 771 chars | `scene --live`: 520 chars | 33% |
+| Same data, TOON vs JSON | — | `objects --live`: 636 vs 1,745 chars (`--json`) | 64% |
+
+Characters are a stand-in for tokens; for English and code the two scale roughly together
+(about 4 characters per token). The official tools return more fields than blender-axi's defaults, so
+compare per task, not field for field. To reproduce: run the same command with and without `--json`,
+and pipe it through `wc -c`.
+
 ## Install (development)
 
 ```bash
