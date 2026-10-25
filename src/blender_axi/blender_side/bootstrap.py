@@ -72,6 +72,9 @@ def _walk(bpy, struct, depth: int, prefix: str, feed) -> None:
             feed(f"{prefix}.{pid}#{len(items)}")
             if items and isinstance(items[0], bpy.types.ID):
                 feed(f"{prefix}.{pid}:" + ",".join(i.name for i in items))
+            elif pid == "modifiers" and depth > 0:  # F2: modifier settings are plain structs the ID walk never enters
+                for item in items:
+                    _walk(bpy, item, depth - 1, f"{prefix}.{pid}[{item.name}]", feed)
 
 
 def fingerprint(bpy) -> str:
@@ -103,7 +106,7 @@ def fingerprint(bpy) -> str:
                 feed(f"image:{ident.filepath}:{ident.source}")
                 continue
             _walk(bpy, ident, 2, ident.name, feed)
-            if attr == "materials":
+            if attr in ("materials", "worlds"):  # F3: embedded node trees
                 _feed_nodes(ident, feed)
             if attr == "meshes":
                 arr = array("f", bytes(4 * 3 * len(ident.vertices)))

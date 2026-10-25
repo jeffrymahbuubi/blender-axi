@@ -8,7 +8,7 @@ already there changes nothing: `modified: false` and no file is written.
 from __future__ import annotations
 
 from ..errors import AxiError
-from ..spec import CommandSpec, Flag, Invocation, Positional, Result
+from ..spec import BatchSpec, CommandSpec, Flag, Invocation, Positional, Result
 from . import _mutate
 from ._common import Hints, fmt_vec, invalid, quote_name, translate_not_found
 
@@ -41,11 +41,12 @@ def _describe(change: dict) -> str:
     return f"{change['field']}: {show(change['from'])} -> {show(change['to'])}"
 
 
-def run(inv: Invocation) -> Result:
+def _params(inv: Invocation) -> dict:
+    """The pure checks plus the `set` op params (shared with `apply`)."""
     _validate(inv)
     f = inv.flags
     parent = f.get("parent")
-    params = {
+    return {
         "name": inv.positionals["name"], "new_name": f.get("name"),
         "location": _mutate.parse_vec(SPEC, "--location", f.get("location")),
         "rotation_deg": _mutate.parse_vec(SPEC, "--rotation", f.get("rotation")),
@@ -54,6 +55,14 @@ def run(inv: Invocation) -> Result:
         "collection": f.get("collection"),
         "hide": True if f.get("hide") else False if f.get("show") else None,
     }
+
+
+def _line(r: dict) -> str:
+    return f"{r['name']} ({', '.join(c['field'] for c in r['changed']) or 'no change'})"
+
+
+def run(inv: Invocation) -> Result:
+    params = _params(inv)
     try:
         target, outcome = _mutate.run_mutation(inv, SPEC, "set", params)
     except AxiError as err:
@@ -96,3 +105,5 @@ SPEC = CommandSpec(
     ),
     run=run,
 )
+
+BATCH = BatchSpec("set", _params, _line)

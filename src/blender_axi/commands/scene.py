@@ -42,6 +42,7 @@ def run(inv: Invocation) -> Result:
     with_warnings(data, out.warnings)
     help_ = [f"Run `{hints.cmd('objects <file>')}` to list objects",
              f"Run `{hints.cmd('render <file> --out <path.png>')}` to render a still",
+             f"Run `{hints.cmd('configure <file> --engine CYCLES --resolution 1920x1080 --in-place')}` to change these settings",
              f"Run `{hints.cmd('export <file> --out <path.glb>')}` to export the scene"]
     return Result(data=data, help=help_)
 

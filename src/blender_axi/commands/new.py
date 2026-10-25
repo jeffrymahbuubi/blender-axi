@@ -36,7 +36,7 @@ def run(inv: Invocation) -> Result:
     with_warnings(data, outcome.warnings)
     return Result(data=data, help=[
         f"Run `blender-axi objects {shown}{suffix}` to list its objects",
-        f"Run `blender-axi exec {shown} --script <build.py> --in-place --allow-exec{suffix}` to build the scene",
+        f"Run `blender-axi apply <steps.json> {shown} --in-place{suffix}` to build the scene from a list of steps",
         f"Run `blender-axi render {shown} --out <path.png>{suffix}` to render it",
     ])
 

@@ -70,14 +70,16 @@ def test_safety_bullets_follow_registry(monkeypatch):
 def test_modeling_bullet_when_a_modeling_command_is_registered(monkeypatch):
     monkeypatch.setattr(registry, "COMMANDS", {"add": "blender_axi.commands.add:SPEC"})
     text = skill.render_skill(skill._specs())
-    assert "Modeling commands (`add`, `set`, `delete`, `material`)" in text
-    assert "`new` + `exec --script`" in text
+    assert "Modeling commands (`add`, `set`, `delete`, `material`, `modifier`, `configure`, `import`, `apply`)" in text
+    assert "use `apply <steps.json>`" in text
 
 
 def test_description_mentions_new_live_and_modeling():
     assert "create a new .blend" in skill.SKILL_DESCRIPTION
     assert "`--live`" in skill.SKILL_DESCRIPTION
     assert "assign materials with typed commands" in skill.SKILL_DESCRIPTION
+    assert "import glb/fbx/obj/stl assets" in skill.SKILL_DESCRIPTION
+    assert "(`apply`)" in skill.SKILL_DESCRIPTION
 
 
 def test_install_text_is_git_url_and_never_pypi(fake_registry):

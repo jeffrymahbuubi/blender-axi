@@ -74,7 +74,7 @@ def test_hints_name_the_file_and_the_next_steps(work):
     res, _ = invoke(["fresh.blend"])
     assert res.help == [
         "Run `blender-axi objects fresh.blend` to list its objects",
-        "Run `blender-axi exec fresh.blend --script <build.py> --in-place --allow-exec` to build the scene",
+        "Run `blender-axi apply <steps.json> fresh.blend --in-place` to build the scene from a list of steps",
         "Run `blender-axi render fresh.blend --out <path.png>` to render it",
     ]
 
@@ -91,7 +91,7 @@ def test_hints_carry_user_prefs(work):
     assert inv.globals.user_prefs is True
     assert all(h.split("`")[1].endswith("--user-prefs") or "--user-prefs `" in h for h in res.help)
     assert "blender-axi objects fresh.blend --user-prefs" in res.help[0]
-    assert res.help[1].startswith("Run `blender-axi exec fresh.blend --script <build.py> --in-place --allow-exec --user-prefs`")
+    assert res.help[1].startswith("Run `blender-axi apply <steps.json> fresh.blend --in-place --user-prefs`")
 
 
 def test_suffix_must_be_blend(work):

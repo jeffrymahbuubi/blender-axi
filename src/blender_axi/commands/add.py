@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from ..blender_side.op_add import KINDS, LIGHT_TYPES
 from ..errors import AxiError
-from ..spec import CommandSpec, Flag, Invocation, Positional, Result
+from ..spec import BatchSpec, CommandSpec, Flag, Invocation, Positional, Result
 from . import _mutate
 from ._common import Hints, fmt_vec, invalid, quote_name, translate_not_found
 
@@ -61,10 +61,11 @@ def _validate(inv: Invocation) -> str:
     return kind
 
 
-def run(inv: Invocation) -> Result:
+def _params(inv: Invocation) -> dict:
+    """The pure checks plus the `add` op params (shared with `apply`)."""
     kind = _validate(inv)
     f = inv.flags
-    params = {
+    return {
         "kind": kind, "name": f.get("name"),
         "location": _mutate.parse_vec(SPEC, "--location", f.get("location")),
         "rotation_deg": _mutate.parse_vec(SPEC, "--rotation", f.get("rotation")),
@@ -72,6 +73,14 @@ def run(inv: Invocation) -> Result:
         "size": f.get("size"), "radius": f.get("radius"), "depth": f.get("depth"), "segments": f.get("segments"),
         "collection": f.get("collection"), "light_type": f.get("type"), "energy": f.get("energy"),
     }
+
+
+def _line(r: dict) -> str:
+    return f"{r['name']} ({r['type']}) in {r['collection']}"
+
+
+def run(inv: Invocation) -> Result:
+    params = _params(inv)
     try:
         target, outcome = _mutate.run_mutation(inv, SPEC, "add", params)
     except AxiError as err:
@@ -132,3 +141,5 @@ SPEC = CommandSpec(
     ),
     run=run,
 )
+
+BATCH = BatchSpec("add", _params, _line)

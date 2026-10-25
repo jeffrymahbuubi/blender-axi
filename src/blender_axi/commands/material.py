@@ -9,7 +9,7 @@ what `render --engine WORKBENCH` shows.
 from __future__ import annotations
 
 from ..errors import AxiError
-from ..spec import CommandSpec, Flag, Invocation, Positional, Result
+from ..spec import BatchSpec, CommandSpec, Flag, Invocation, Positional, Result
 from . import _mutate
 from ._common import Hints, fmt_num, fmt_vec, invalid, names_summary, quote_name, translate_not_found
 
@@ -32,8 +32,8 @@ def _scalar(inv: Invocation, key: str, high: float | None = 1.0) -> float | None
     return value
 
 
-def _validate(inv: Invocation) -> dict:
-    """Pure argument checks (no Blender, no filesystem); returns the op params."""
+def _params(inv: Invocation) -> dict:
+    """Pure argument checks (no Blender, no filesystem); returns the op params (shared with `apply`)."""
     f = inv.flags
     name = str(f.get("name") or "").strip()
     if not name:
@@ -50,8 +50,12 @@ def _validate(inv: Invocation) -> dict:
     }
 
 
+def _line(r: dict) -> str:
+    return f"{r['object']} <- {r['material']} ({'created' if r['created'] else 'reused'})"
+
+
 def run(inv: Invocation) -> Result:
-    params = _validate(inv)
+    params = _params(inv)
     try:
         target, outcome = _mutate.run_mutation(inv, SPEC, "material", params)
     except AxiError as err:
@@ -95,3 +99,5 @@ SPEC = CommandSpec(
     ),
     run=run,
 )
+
+BATCH = BatchSpec("material", _params, _line)

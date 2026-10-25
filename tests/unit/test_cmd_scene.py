@@ -65,6 +65,7 @@ def test_scene_shape_and_order(blend_dir):
     assert op == "scene_summary" and params == {} and blend == (blend_dir / "basic.blend").resolve()
     assert [h.split("`")[1] for h in res.help] == [
         "blender-axi objects <file>", "blender-axi render <file> --out <path.png>",
+        "blender-axi configure <file> --engine CYCLES --resolution 1920x1080 --in-place",
         "blender-axi export <file> --out <path.glb>"]
     toon.encode({**res.data, "help": res.help})  # encodable
 
@@ -92,6 +93,9 @@ def test_scene_live(blend_dir):
     assert t.calls[0][2] is None
     assert res.data["file"] == "C:/x/basic.blend" and res.data["unsaved_changes"] is True
     assert res.help[0] == "Run `blender-axi objects --live --port 9877` to list objects"
+    assert [h for h in res.help if "configure" in h] == [
+        "Run `blender-axi configure --engine CYCLES --resolution 1920x1080 --in-place --live --port 9877` "
+        "to change these settings"]
 
 
 def test_scene_live_file_uses_forward_slashes(blend_dir):

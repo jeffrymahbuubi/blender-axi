@@ -71,6 +71,18 @@ def test_fingerprint_of_stub_changes_with_names(world):
     assert bootstrap.fingerprint(world) != before
 
 
+def test_fingerprint_sees_modifier_settings(world):
+    """F2 (v1.3 P4): modifier structs are walked, so a width edit alone changes the fingerprint."""
+    prop = SimpleNamespace
+    bevel = SimpleNamespace(name="Bevel", width=0.1, bl_rna=SimpleNamespace(properties=[prop(identifier="width", type="FLOAT")]))
+    cube = world.data.objects[0]
+    cube.modifiers = [bevel]
+    cube.bl_rna = SimpleNamespace(properties=[prop(identifier="modifiers", type="COLLECTION")])
+    before = bootstrap.fingerprint(world)
+    bevel.width = 0.05
+    assert bootstrap.fingerprint(world) != before
+
+
 def test_frame_moved_alone_is_not_modified(world):
     base = bootstrap.baseline(world)
     assert base.frame == 1

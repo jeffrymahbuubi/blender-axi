@@ -78,11 +78,15 @@ Blender 5.2 LTS is verified. blender-axi finds it via `--blender <path>`, `BLEND
 |---|---|
 | `blender-axi` | Home view: Blender found, live status, `.blend` files here |
 | `scene [<file>]` | Overview of a .blend file: engine, resolution, frames, camera, object and collection counts (collections include the Scene Collection, e.g. `3 (Scene Collection, Collection, Props)`) |
-| `new <file.blend> [--template empty\|default] [--force]` | Create a new .blend (empty, or Blender's default Camera, Cube and Light); headless only, refuses to overwrite without `--force`. Build the scene with `exec <file> --script build.py --in-place --allow-exec` |
+| `new <file.blend> [--template empty\|default] [--force]` | Create a new .blend (empty, or Blender's default Camera, Cube and Light); headless only, refuses to overwrite without `--force`. Build the scene with `apply <steps.json> <file> --in-place` |
 | `add <kind> [<file>] [--name N] [--location x,y,z] [--rotation x,y,z] [--scale x,y,z] [--size n \| --radius n --depth n --segments n] [--collection C] [--type POINT\|SUN\|SPOT\|AREA --energy n] --in-place \| --out <copy.blend>` | Add a cube, plane, sphere, icosphere, cylinder, cone, monkey, camera, light or empty (see [Modeling](#modeling)) |
 | `set <name> [<file>] [--name N] [--location x,y,z] [--rotation x,y,z] [--scale x,y,z] [--parent P\|none] [--collection C] [--hide \| --show] --in-place \| --out <copy.blend>` | Move, rotate, scale, rename, reparent, move to a collection or hide/show one object; reports `changed` |
 | `delete <a,b,...> [<file>] --in-place \| --out <copy.blend>` | Delete objects (all or nothing); children stay in place and are listed as `children_kept` |
 | `material <object> [<file>] --name M [--color r,g,b[,a]] [--metallic n] [--roughness n] [--emission r,g,b --emission-strength n] [--slot replace\|add] --in-place \| --out <copy.blend>` | Give a mesh a Principled BSDF material (reused by name, created if missing); replaces slot 0 unless `--slot add` |
+| `modifier <object> <kind> [<file>] [--name N] [--width n --segments n --limit NONE\|ANGLE\|WEIGHT --angle deg] [--levels n --render-levels n --simple] [--count n --offset x,y,z --constant x,y,z] [--axis xyz --clip --object O] [--operation DIFFERENCE\|UNION\|INTERSECT --solver EXACT\|FLOAT\|MANIFOLD] [--thickness n --offset n --even] [--prop key=value] [--remove] --in-place \| --out <copy.blend>` | Add, configure or remove a modifier: bevel, subdivision, array, mirror, boolean, solidify, or any Blender type as `IDENT --prop key=value`. Upsert by name (a rerun changes nothing); `--remove` deletes; the file may come before or after `<kind>` |
+| `configure [<file>] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--frames a..b] [--fps n] [--samples n] [--camera name] [--world r,g,b] [--world-strength n] --in-place \| --out <copy.blend>` | Persist scene settings; needs at least one setting flag; `--samples` warns on WORKBENCH; `--world` creates a world when the file has none |
+| `import <source> [<file>] [--format F] [--collection C] [--new] --in-place \| --out <copy.blend>` | Import glb, gltf, fbx, obj, stl, ply, usd or abc into a .blend (or a new one with `--new --out x.blend`, or the open session with `--live`); `--collection C` puts the objects in C, creating it when missing |
+| `apply <steps.json\|-> [<file>] [--check] --in-place \| --out <copy.blend> [--force]` | Run many add/set/delete/material/modifier/configure/import steps in ONE Blender start (see [Batch](#batch-apply)); every step is validated first; headless is all-or-nothing, live stops at the failing step |
 | `objects [<file>] [--type T] [--collection C] [--name-contains S] [--limit N] [--fields a,b]` | List objects (name, type, collection, visible); extra columns: location, dimensions, parent, verts, faces, materials, modifiers, data |
 | `object <name> [<file>]` | One object's transform, dimensions, parent/children, materials, modifiers, custom props |
 | `exec [<file>] --code <python> \| --script <path> --allow-exec [--live]` | Run Python inside Blender; `bpy` is predefined, assign a dict to `result` |
@@ -107,7 +111,7 @@ is reported as `frame_changed: "1 -> 10"`. Code that assigns no `result` reports
 
 ### Modeling
 
-`add`, `set`, `delete` and `material` make bounded edits without `--allow-exec`. Headless, they write only
+`add`, `set`, `delete`, `material`, `modifier`, `configure` and `import` make bounded edits without `--allow-exec`. Headless, they write only
 when told where: `--in-place` writes the file (Blender keeps `<file>.blend1`, reported as `backup:`) and
 `--out <copy.blend>` writes a copy; with neither they exit 2 and print both full commands. A request that
 changes nothing writes nothing (`modified: false`, `saved: none (no changes)`). Rotations are in degrees.
@@ -115,8 +119,34 @@ changes nothing writes nothing (`modified: false`, `saved: none (no changes)`). 
 `add camera` + `render` works; an existing scene camera is kept (`scene_camera: unchanged (<name>)`).
 They use Blender's data API rather than operators, so the same command works headless, against a headless
 MCP server and in the GUI. With `--live` they change the open session like `exec --live` (no copy,
-`--in-place` saves the open file, an undo step is pushed when Blender allows it). For a whole scene, one
-`new` + `exec --script build.py --in-place --allow-exec` is still cheaper than many single commands.
+`--in-place` saves the open file, an undo step is pushed when Blender allows it). `import --collection` creates a
+missing collection, while `add --collection` stays strict. For a whole scene use `new` + `apply <steps.json>`: one
+Blender start instead of one per command (about 2.3 s each).
+
+### Batch (`apply`)
+
+`apply` takes a JSON file (or `-` for stdin): a list of steps, or `{"steps": [...]}`. A step is a string, split like a
+shell (`"add cube --name Box --location 0,0,1"`; a leading `blender-axi` is tolerated), or an object
+(`{"cmd": "add", "kind": "cube", "name": "Box", "location": [0, 0, 1]}`): `cmd`, then positional names and flag names
+without dashes (`_` or `-`). A list is comma-joined, `true` is a bare flag, `false` is `--no-<flag>`, `null` is skipped.
+
+When a key is both a positional and a flag (`set`'s `name`, `modifier`'s `object`), the key fills the positional. Give
+the flag as `"--name": "Crate"` or through `"args": ["--object", "Cutter"]` (raw argv tokens appended after the
+generated ones), or use the string form. Steps cannot carry `<file>`, `--in-place/--out/--force`, `--new` or global
+flags: the file and the write mode belong to `apply`.
+
+```
+blender-axi new scene.blend
+blender-axi apply steps.json scene.blend --check      # normalised plan, status: valid, no Blender
+blender-axi apply steps.json scene.blend --in-place   # applied: N, results: one line per step
+```
+
+Every step is checked with its command's own validation before Blender starts: a bad step exits 2 as
+`step 3 (set): set needs at least one change flag` and nothing runs. Headless the batch is all-or-nothing (a failing
+step exits 1 and the file is untouched). With `--live` the steps before a failing one stay applied, and one Ctrl+Z
+reverts them if Blender pushed an undo step. The default timeout is 600 s (`--timeout` overrides). `results` shows the
+first 20 step lines; `--full` shows all. In string steps on Windows use forward slashes in paths (posix splitting eats
+backslashes), or the object form.
 
 ## Live mode
 

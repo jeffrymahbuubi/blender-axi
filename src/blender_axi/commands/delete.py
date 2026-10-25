@@ -8,7 +8,7 @@ Headless writes need `--in-place` or `--out <copy.blend>` (`_mutate`).
 from __future__ import annotations
 
 from ..errors import AxiError
-from ..spec import CommandSpec, Invocation, Positional, Result
+from ..spec import BatchSpec, CommandSpec, Invocation, Positional, Result
 from . import _mutate
 from ._common import Hints, invalid, quote_name, translate_not_found
 
@@ -25,10 +25,20 @@ def _names(inv: Invocation) -> list[str]:
     return names
 
 
+def _params(inv: Invocation) -> dict:
+    """The pure checks plus the `delete` op params (shared with `apply`)."""
+    return {"names": _names(inv)}
+
+
+def _line(r: dict) -> str:
+    n = r["remaining"]
+    return f"{', '.join(r['deleted'])} (remaining {n} object{'s' if n != 1 else ''})"
+
+
 def run(inv: Invocation) -> Result:
-    names = _names(inv)
+    params = _params(inv)
     try:
-        target, outcome = _mutate.run_mutation(inv, SPEC, "delete", {"names": names})
+        target, outcome = _mutate.run_mutation(inv, SPEC, "delete", params)
     except AxiError as err:
         if err.message.startswith("file not found"):
             raise
@@ -59,3 +69,5 @@ SPEC = CommandSpec(
     ),
     run=run,
 )
+
+BATCH = BatchSpec("delete", _params, _line)

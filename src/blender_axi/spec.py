@@ -75,6 +75,15 @@ class CommandSpec:
     subcommands: dict[str, "CommandSpec"] | None = None  # e.g. skill -> gen
 
 
+@dataclass(frozen=True)
+class BatchSpec:
+    """How `apply` runs a command as one step: `params(inv)` = the command's pure checks + op params (raises AxiError,
+    never touches Blender; read-only filesystem checks allowed), `line(result)` = one-line summary of the op result."""
+    op: str
+    params: Callable[[Invocation], dict]
+    line: Callable[[dict], str]
+
+
 GLOBAL_FLAGS: tuple[Flag, ...] = (
     Flag("--help", "bool", help="Show help for the command"),
     Flag("--json", "bool", help="Emit JSON instead of TOON"),
