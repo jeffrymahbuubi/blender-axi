@@ -42,6 +42,8 @@ DEFAULT_CANNED = {
 }
 _OP_MARKER = re.compile(r"^_AXI_OP = (.+)$", re.MULTILINE)
 _PARAMS_MARKER = re.compile(r"^_AXI_PARAMS = (.+)$", re.MULTILINE)
+_FLAG_MARKERS = {"track": re.compile(r"^_AXI_TRACK = (True|False)$", re.MULTILINE),
+                 "undo": re.compile(r"^_AXI_UNDO = (True|False)$", re.MULTILINE)}
 
 
 def _encode(response: dict) -> bytes:
@@ -122,8 +124,11 @@ class MockLiveServer:
         except ValueError:
             return {"status": "error", "message": "invalid JSON"}
         record = {"raw": request, "type": request.get("type"), "code": request.get("code", ""),
-                  "strict_json": request.get("strict_json"), "op": None, "params": None}
+                  "strict_json": request.get("strict_json"), "op": None, "params": None, "track": None, "undo": None}
         code = record["code"]
+        for key, pattern in _FLAG_MARKERS.items():  # what the generated code was asked to do
+            found = pattern.search(code)
+            record[key] = found.group(1) == "True" if found else None
         m = _OP_MARKER.search(code)
         if m:
             record["op"] = ast.literal_eval(m.group(1))
@@ -155,9 +160,14 @@ class MockLiveServer:
         if isinstance(value, dict) and value.get("__error__"):
             return {"status": "ok", "result": {"ok": False, **value["__error__"]}}
         envelope = {"ok": True, "result": value, "modified": False, "blender_version": "5.2.0 LTS"}
-        if isinstance(value, dict) and "__modified__" in value:
+        if isinstance(value, dict) and any(k in value for k in ("__modified__", "__undo__", "__frame_changed__")):
             value = dict(value)
-            envelope["modified"] = bool(value.pop("__modified__"))
+            envelope["modified"] = bool(value.pop("__modified__", False))
+            if "__undo__" in value:  # True pushed / False unavailable; only answered when the request asked for undo
+                undo = value.pop("__undo__")
+                envelope["undo"] = undo if record["undo"] else None
+            if "__frame_changed__" in value:
+                envelope["frame_changed"] = value.pop("__frame_changed__")
             envelope["result"] = value
         return {"status": "ok", "result": envelope}
 

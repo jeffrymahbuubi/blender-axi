@@ -143,3 +143,36 @@ def test_gate_does_not_start_blender(work):
     with pytest.raises(AxiError) as e:
         run(Boom(), [str(work), "--code", "result={}"])
     assert e.value.exit_code == 2
+
+
+FRAME_CODE = "bpy.context.scene.frame_set(10)\nresult = {'f': bpy.context.scene.frame_current}"
+
+
+def test_frame_set_alone_is_not_a_modification(transport, work):
+    """v1.1 K4: moving the current frame reports `frame_changed`, never `modified`, and writes no copy."""
+    mtime, before = work.stat().st_mtime_ns, exec_files()
+    res = run(transport, [str(work), "--code", FRAME_CODE, "--allow-exec"])
+    assert res.data["result"] == {"f": 10} and res.data["modified"] is False
+    assert res.data["frame_changed"] == "1 -> 10" and res.data["saved"] == "none (no changes)"
+    assert work.stat().st_mtime_ns == mtime and exec_files() == before and res.help == []
+    assert list(res.data)[-2:] == ["frame_changed", "duration_ms"]
+
+
+def test_frame_set_plus_a_real_change_is_both(transport, work):
+    code = FRAME_CODE + "\nbpy.data.objects['Cube'].name = 'Renamed'"
+    res = run(transport, [str(work), "--code", code, "--allow-exec"])
+    assert res.data["modified"] is True and res.data["frame_changed"] == "1 -> 10"
+    saved = Path(res.data["saved"]).resolve()
+    assert saved.is_file()
+    saved.unlink()
+
+
+def test_no_frame_move_has_no_frame_changed_key(transport, work):
+    res = run(transport, [str(work), "--code", "result={'n': 1}", "--allow-exec"])
+    assert "frame_changed" not in res.data
+
+
+@pytest.mark.parametrize("code", ["pass", "result = {}"])
+def test_empty_result_is_the_none_string(transport, work, code):
+    res = run(transport, [str(work), "--code", code, "--allow-exec"])
+    assert res.data["result"] == "none (the code did not assign result)"

@@ -6,6 +6,7 @@ objects (list[str] | None), force.
 `FORMAT_EXTS` / `GEOMETRY_TYPES` are pure data the CLI imports for validation.
 """
 
+import contextlib
 import os
 
 from .ops import OpError
@@ -38,6 +39,25 @@ def _call(bpy, fmt: str, path: str, selected: bool) -> None:
         ops.wm.alembic_export(filepath=path, selected=selected)
     else:
         raise OpError("OP_FAILED", f"unsupported export format {fmt!r}")
+
+
+def _override(bpy, objs: list | None):
+    """Context for the exporter call.
+
+    A headless MCP server has `context.window` None (but a window in the window manager) and no
+    `selected_objects`/`active_object`, so the C++ exporters fail `poll()` and glTF raises. Supply the missing
+    window, and the selection when a selective export is requested. In the GUI and in headless non-live runs the
+    window already exists, so nothing is overridden for whole-scene exports.
+    """
+    kw: dict = {}
+    if getattr(bpy.context, "window", None) is None:
+        windows = getattr(getattr(bpy.context, "window_manager", None), "windows", None)
+        if windows is not None and len(windows):
+            kw["window"] = windows[0]
+    if objs:
+        kw["selected_objects"] = objs
+        kw["active_object"] = objs[0]
+    return bpy.context.temp_override(**kw) if kw else contextlib.nullcontext()
 
 
 def _collect(bpy, scene, collection: str | None, names: list[str] | None) -> list | None:
@@ -130,6 +150,7 @@ def run(params: dict) -> dict:
     selected = objs is not None
     snap = _snapshot_selection(bpy, scene)
     try:
+        chosen = None
         if selected:
             chosen = _select(bpy, scene, objs)
             geometry = [o for o in chosen if o.type in GEOMETRY_TYPES]
@@ -137,7 +158,8 @@ def run(params: dict) -> dict:
                 raise OpError("OP_FAILED", "none of the requested objects can be selected for export (hidden or excluded?)")
 
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-        _call(bpy, fmt, path, selected)
+        with _override(bpy, chosen):
+            _call(bpy, fmt, path, selected)
         if not os.path.isfile(path):
             raise OpError("OP_FAILED", f"the {fmt} exporter finished but wrote no file at {path}")
     finally:

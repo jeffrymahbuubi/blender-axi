@@ -34,7 +34,7 @@ def run(inv: Invocation) -> Result:
         "fps": _fps(r),
         "camera": r["camera"] or "none",
         "objects": objects,
-        "collections": names_summary(r["collections"]),
+        "collections": names_summary(["Scene Collection", *r["collections"]]),
         "materials": names_summary(r["materials"]),
     }
     if inv.globals.live:

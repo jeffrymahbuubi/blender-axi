@@ -7,7 +7,7 @@ frames: 1-48 (current 1)
 fps: 24
 camera: Camera
 objects: "13 (MESH 10, LIGHT 2, CAMERA 1)"
-collections: "0"
+collections: 1 (Scene Collection)
 materials: "5 (BookGreenCover, BookYellowCover, Ceramic, Floor, Wood)"
 unsaved_changes: false
 help[3]:

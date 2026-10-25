@@ -45,6 +45,7 @@ class GlobalOpts:
     live: bool = False
     host: str = DEFAULT_LIVE_HOST
     port: int = DEFAULT_LIVE_PORT
+    user_prefs: bool = False
 
 
 @dataclass
@@ -81,6 +82,7 @@ GLOBAL_FLAGS: tuple[Flag, ...] = (
     Flag("--debug", "bool", help="Print tracebacks and Blender stderr to stderr"),
     Flag("--keep-tmp", "bool", help="Keep per-run temp directories under .tmp/"),
     Flag("--blender", "path", help="Path to the Blender executable (or set BLENDER_AXI_BLENDER)"),
+    Flag("--user-prefs", "bool", help="Headless only: load your preferences and add-ons instead of --factory-startup"),
     Flag("--timeout", "float", help="Timeout in seconds (default 120, render 600, live 300)"),
     Flag("--live", "bool", help="Talk to a running Blender instead of starting one"),
     Flag("--host", "str", default=DEFAULT_LIVE_HOST, help="Live-mode host"),

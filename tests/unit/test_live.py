@@ -136,7 +136,12 @@ def test_generated_code_is_valid_python_and_roundtrips_params():
     import ast
 
     assert json.loads(ast.literal_eval(marker.split(" = ", 1)[1])) == params
-    assert f"_AXI_SRC = {live.SRC_DIR!r}" in code and "_AXI_TRACK = True" in code
+    assert f"_AXI_SRC = {live.SRC_DIR!r}" in code and "_AXI_TRACK = True" in code and "_AXI_UNDO = False" in code
+    undo_code = live.build_code("exec", params, track=True, undo=True)
+    compile(undo_code, "<live>", "exec")
+    for needle in ("_AXI_UNDO = True", "session.undo_push", "bootstrap.baseline", "bootstrap.modified_since",
+                   "session.mark_modified", '"frame_changed": _frame', '"undo": _undo'):
+        assert needle in undo_code
     assert Path(live.SRC_DIR, "blender_axi", "live.py").is_file()
 
 
@@ -235,9 +240,36 @@ def test_save_copy_request_only_when_modified(mock, tmp_path):
 
 
 def test_no_tracking_and_no_save_request_without_save_spec(mock):
-    mock.canned["exec"] = {"result": {}, "stdout": "", "__modified__": True}
-    out = transport_for(mock).run("exec", {"code": "result={}"})
+    out = transport_for(mock).run("scene_summary", {})
     assert out.saved is None and len(mock.requests) == 1 and "_AXI_TRACK = False" in mock.requests[0]["code"]
+    assert mock.requests[0]["track"] is False and mock.requests[0]["undo"] is False
+
+
+def test_exec_is_always_tracked_with_undo_even_without_save_spec(mock):
+    """v1.1: the session marker needs `modified` from every live exec, saved or not."""
+    mock.canned["exec"] = {"result": {}, "stdout": "", "__modified__": True, "__undo__": False}
+    out = transport_for(mock).run("exec", {"code": "result={}"})
+    assert out.saved is None and out.modified is True and len(mock.requests) == 1
+    assert mock.requests[0]["track"] is True and mock.requests[0]["undo"] is True
+    assert "_AXI_TRACK = True" in mock.requests[0]["code"] and "_AXI_UNDO = True" in mock.requests[0]["code"]
+
+
+def test_outcome_carries_undo_and_frame_changed(mock):
+    t = transport_for(mock)
+    mock.canned["exec"] = {"result": {}, "stdout": "", "__undo__": True, "__frame_changed__": "1 -> 10"}
+    out = t.run("exec", {"code": "x"})
+    assert (out.undo, out.frame_changed, out.modified) == ("pushed", "1 -> 10", False)
+    mock.canned["exec"] = {"result": {}, "stdout": "", "__undo__": False}
+    out = t.run("exec", {"code": "x"})
+    assert (out.undo, out.frame_changed) == ("unavailable", None)
+    mock.canned["exec"] = {"result": {}, "stdout": ""}
+    assert t.run("exec", {"code": "x"}).undo is None
+
+
+def test_undo_only_asked_for_exec_ops(mock):
+    t = transport_for(mock)
+    out = t.run("scene_summary", {})
+    assert mock.requests[0]["undo"] is False and out.undo is None and out.frame_changed is None
 
 
 def test_save_in_place_request_only_when_modified(mock):
@@ -311,10 +343,16 @@ def test_generated_save_code_keeps_blender_save_chatter_out_of_stdout(fake_bpy, 
         print(f"Info: Saved copy as {kw['filepath']}")
 
     fake_bpy.ops.wm = types.SimpleNamespace(save_as_mainfile=chatty, save_mainfile=lambda: print("Info: Saved x.blend"))
-    for code in (live.SAVE_COPY_CODE.format(path=str(tmp_path / "o.blend")), live.SAVE_IN_PLACE_CODE):
-        with MockLiveServer(mode="exec") as srv:
-            resp = srv.respond(json.dumps({"type": "execute", "code": code, "strict_json": True}).encode())
-        assert resp["status"] == "ok" and "stdout" not in resp
+    saved = {n: sys.modules[n] for n in _axi_modules()}  # the in-place code purges and re-imports blender_axi
+    try:
+        for code in (live.SAVE_COPY_CODE.format(path=str(tmp_path / "o.blend")), live.SAVE_IN_PLACE_CODE):
+            with MockLiveServer(mode="exec") as srv:
+                resp = srv.respond(json.dumps({"type": "execute", "code": code, "strict_json": True}).encode())
+            assert resp["status"] == "ok" and "stdout" not in resp
+    finally:
+        for n in _axi_modules():
+            del sys.modules[n]
+        sys.modules.update(saved)
     assert capsys.readouterr().out == ""
 
 
@@ -330,7 +368,8 @@ def test_purge_precedes_the_import_in_every_template_that_imports_blender_axi():
         importing += 1
         purge = [i for i, ln in enumerate(lines) if "sys.modules" in ln and "blender_axi" in ln]
         assert purge and min(purge) < min(imports)
-    assert importing == 2  # the op request (tracked and untracked); the save requests do not import the package
+    # the op request (tracked and untracked) and the in-place save (it clears the session marker)
+    assert importing == 3
 
 
 def test_stale_blender_axi_modules_are_replaced_by_fresh_ones(exec_mock):

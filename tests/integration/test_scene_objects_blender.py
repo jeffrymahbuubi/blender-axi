@@ -43,7 +43,7 @@ def test_scene_basic(transport, basic):
     assert d["scene"] == "Scene" and d["resolution"] == "64x64@100%" and d["frames"] == "1-24 (current 1)"
     assert d["fps"] == 24 and d["camera"] == "Camera"
     assert d["objects"] == "5 (MESH 2, CAMERA 1, EMPTY 1, LIGHT 1)"
-    assert d["collections"] == "2 (Collection, Props)" and d["materials"].startswith("1 (")
+    assert d["collections"] == "3 (Scene Collection, Collection, Props)" and d["materials"].startswith("1 (")
     assert d["engine"] in {"EEVEE", "CYCLES", "WORKBENCH"}
     assert "unsaved_changes" not in d
     toon.encode({**d, "help": res.help})
@@ -51,7 +51,7 @@ def test_scene_basic(transport, basic):
 
 def test_scene_empty(transport, empty):
     d = invoke(cmd_scene.SPEC, [empty], transport).data
-    assert d["objects"] == "0" and d["camera"] == "none" and d["collections"] == "0"
+    assert d["objects"] == "0" and d["camera"] == "none" and d["collections"] == "1 (Scene Collection)"
 
 
 def test_objects_default(transport, basic):

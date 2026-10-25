@@ -18,8 +18,10 @@ SKILL_NAME = "blender-axi"
 SKILL_DESCRIPTION = (
     "Inspect, render, export and script Blender (.blend) files from the terminal with the blender-axi CLI. "
     "Use when asked what is in a .blend file, to list its objects, render a still or frames, "
-    "export glb/fbx/obj/stl, or run a Blender Python script headlessly."
+    "export glb/fbx/obj/stl, run a Blender Python script headlessly, create a new .blend, "
+    "or run Python inside an open Blender (`--live`)."
 )
+INSTALL_URL = "git+https://github.com/jeffrymahbuubi/blender-axi"
 DEFAULT_REL = Path("skills") / SKILL_NAME / "SKILL.md"
 
 
@@ -59,6 +61,8 @@ def _safety(names: set[str]) -> list[str]:
     if "exec" in names:
         lines.append("- `exec` refuses to run without `--allow-exec` (`EXEC_NOT_ALLOWED`, exit 2); "
                      "it works on a copy unless `--in-place` is given.")
+        lines.append("- With `--live`, `exec` changes the open session directly (no copy); `--in-place` saves it.")
+    lines.append("- `--user-prefs` loads your add-ons; the default is `--factory-startup`.")
     lines.append("- Temp files stay under the project-local `.tmp/` (or `BLENDER_AXI_TMP`), never the system temp.")
     lines.append("- Errors are data on stdout with a `code` and `help`; exit 2 means a usage problem, 1 a runtime failure.")
     return lines
@@ -80,8 +84,9 @@ def render_skill(specs: dict[str, CommandSpec]) -> str:
         "reachability and the `.blend` files in the current directory. "
         "Output is TOON on stdout (use `--json` for JSON); every response ends with `help` next steps.",
         "",
-        "Not on PATH yet? Run `python -m blender_axi ...` from the project's virtualenv. "
-        "Once published, `uvx blender-axi ...` runs it without installing.",
+        f"Install with `uv tool install {INSTALL_URL}` "
+        f"(or run once with `uvx --from {INSTALL_URL} blender-axi ...`); "
+        "from a checkout use `.venv/Scripts/blender-axi`.",
         "",
         "## Commands",
         "",

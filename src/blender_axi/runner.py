@@ -1,7 +1,8 @@
 """Transport protocol and the headless transport (plan section 3.7).
 
-`HeadlessTransport` starts `blender --background --factory-startup`, hands it a request file and
-reads a response file; see `blender_side/bootstrap.py` for the other end.
+`HeadlessTransport` starts `blender --background --factory-startup` (without `--factory-startup` when
+`user_prefs` is set), hands it a request file and reads a response file; see `blender_side/bootstrap.py`
+for the other end.
 """
 
 import json
@@ -39,6 +40,8 @@ class RunOutcome:
     duration_ms: int
     stdout: str
     warnings: list[str] = field(default_factory=list)
+    frame_changed: str | None = None  # "1 -> 10" when the op moved the current frame; never counts as modified
+    undo: str | None = None  # live exec only: "pushed" | "unavailable"
 
 
 class Transport(Protocol):
@@ -53,12 +56,15 @@ class Transport(Protocol):
 class HeadlessTransport:
     name = "headless"
 
-    def __init__(self, blender: BlenderInfo, keep_tmp: bool = False):
+    def __init__(self, blender: BlenderInfo, keep_tmp: bool = False, user_prefs: bool = False):
         self.blender = blender
         self.keep_tmp = keep_tmp
+        self.user_prefs = user_prefs  # True: load the user's preferences and add-ons (no --factory-startup)
 
     def build_argv(self, blend: Path | None, request_path: Path) -> list[str]:
-        argv = [str(self.blender.path), "--background", "--factory-startup"]
+        argv = [str(self.blender.path), "--background"]
+        if not self.user_prefs:
+            argv.append("--factory-startup")
         if blend is not None:
             argv.append(str(blend))
         argv += ["--python-exit-code", "3", "--python", str(BOOTSTRAP), "--", "--request", str(request_path)]
@@ -131,5 +137,5 @@ class HeadlessTransport:
             result=response.get("result") or {}, modified=bool(response.get("modified")),
             saved=response.get("saved"), blender_version=str(response.get("blender_version", "")),
             duration_ms=int(response.get("duration_ms", 0)), stdout=str(response.get("stdout", "")),
-            warnings=warnings,
+            warnings=warnings, frame_changed=response.get("frame_changed"),
         )

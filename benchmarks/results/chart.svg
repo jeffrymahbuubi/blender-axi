@@ -34,8 +34,8 @@ text{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;fill:var(-
 <text x="250" y="94.0" text-anchor="end">desk · Scene overview</text>
 <rect class="bar mcp" x="262.0" y="75.0" width="249.5" height="14" rx="2"><title>Official MCP (get_blendfile_summary_datablocks): 319 tokens</title></rect>
 <text class="val" x="517.5" y="86.0">319</text>
-<rect class="bar axi" x="262.0" y="91.0" width="249.5" height="14" rx="2"><title>blender-axi (blender-axi scene --live): 319 tokens</title></rect>
-<text class="val" x="517.5" y="102.0">319</text>
+<rect class="bar axi" x="262.0" y="91.0" width="250.6" height="14" rx="2"><title>blender-axi (blender-axi scene --live): 327 tokens</title></rect>
+<text class="val" x="518.6" y="102.0">327</text>
 <text x="250" y="134.0" text-anchor="end">desk · List objects (13)</text>
 <rect class="bar mcp" x="262.0" y="115.0" width="305.3" height="14" rx="2"><title>Official MCP (get_objects_summary): 1157 tokens</title></rect>
 <text class="val" x="573.3" y="126.0">1,157</text>
@@ -49,8 +49,8 @@ text{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;fill:var(-
 <text x="250" y="214.0" text-anchor="end">city · Scene overview</text>
 <rect class="bar mcp" x="262.0" y="195.0" width="248.3" height="14" rx="2"><title>Official MCP (get_blendfile_summary_datablocks): 310 tokens</title></rect>
 <text class="val" x="516.3" y="206.0">310</text>
-<rect class="bar axi" x="262.0" y="211.0" width="252.4" height="14" rx="2"><title>blender-axi (blender-axi scene --live): 341 tokens</title></rect>
-<text class="val" x="520.4" y="222.0">341</text>
+<rect class="bar axi" x="262.0" y="211.0" width="252.9" height="14" rx="2"><title>blender-axi (blender-axi scene --live): 345 tokens</title></rect>
+<text class="val" x="520.9" y="222.0">345</text>
 <text x="250" y="254.0" text-anchor="end">city · List objects (default --li…</text>
 <rect class="bar mcp" x="262.0" y="235.0" width="460.3" height="14" rx="2"><title>Official MCP (get_objects_summary): 41531 tokens</title></rect>
 <text class="val" x="728.3" y="246.0">41,531</text>
@@ -80,6 +80,6 @@ text{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;fill:var(-
 <text x="250" y="454.0" text-anchor="end">fixed · tool list vs SKILL.md</text>
 <rect class="bar mcp" x="262.0" y="435.0" width="388.2" height="14" rx="2"><title>Official MCP (tools/list (lower bound)): 7843 tokens</title></rect>
 <text class="val" x="656.2" y="446.0">7,843</text>
-<rect class="bar axi" x="262.0" y="451.0" width="308.8" height="14" rx="2"><title>blender-axi (SKILL.md): 1255 tokens</title></rect>
-<text class="val" x="576.8" y="462.0">1,255</text>
+<rect class="bar axi" x="262.0" y="451.0" width="316.0" height="14" rx="2"><title>blender-axi (SKILL.md): 1481 tokens</title></rect>
+<text class="val" x="584.0" y="462.0">1,481</text>
 </svg>

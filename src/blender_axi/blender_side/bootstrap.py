@@ -7,6 +7,9 @@ Imports only stdlib at module level; `bpy` is imported inside `main`.
 Change detection: `bpy.data.is_dirty` is only set by operators/UI edits, not by direct `bpy.data`
 edits such as `bpy.data.objects.remove(...)` (verified on Blender 5.2). When a save is requested we
 therefore also compare a fingerprint of `bpy.data` taken before and after the op.
+
+Moving the current frame alone is not a modification (plan K4): the fingerprint is compared at the frame the
+op started on, and a moved frame is reported separately (`frame_changed: "1 -> 10"`).
 """
 
 import contextlib
@@ -17,6 +20,7 @@ import os
 import sys
 import time
 import traceback
+from dataclasses import dataclass
 from pathlib import Path
 
 _PRIMITIVE = {"BOOLEAN", "INT", "FLOAT", "STRING", "ENUM"}
@@ -90,6 +94,40 @@ def fingerprint(bpy) -> str:
     return h.hexdigest()
 
 
+@dataclass
+class Baseline:
+    fingerprint: str
+    frame: int | None
+
+
+def _frame(bpy) -> int | None:
+    scene = getattr(bpy.context, "scene", None)
+    return scene.frame_current if scene is not None else None
+
+
+def baseline(bpy) -> Baseline:
+    """Fingerprint of `bpy.data` plus the current frame, taken before the op runs."""
+    return Baseline(fingerprint(bpy), _frame(bpy))
+
+
+def modified_since(bpy, base: Baseline) -> tuple[bool, str | None]:
+    """(fingerprint differs at `base.frame`, "old -> new" when the frame moved).
+
+    If the frame moved it is set back to the original for the comparison (which also neutralises animated
+    properties) and then returned to where the op left it.
+    """
+    now = _frame(bpy)
+    if base.frame is None or now is None or now == base.frame:
+        return fingerprint(bpy) != base.fingerprint, None
+    scene = bpy.context.scene
+    scene.frame_set(base.frame)
+    try:
+        changed = fingerprint(bpy) != base.fingerprint
+    finally:
+        scene.frame_set(now)
+    return changed, f"{base.frame} -> {now}"
+
+
 def _parse(argv: list[str]) -> str:
     if "--request" not in argv or argv.index("--request") + 1 >= len(argv):
         raise SystemExit("bootstrap: missing --request <path>")
@@ -116,9 +154,13 @@ def main(argv: list[str]) -> int:
         save = request.get("save") or {}
         mode = save.get("mode", "none")
         with contextlib.redirect_stdout(buf):
-            before = fingerprint(bpy) if mode != "none" else None
+            before = baseline(bpy) if mode != "none" else None
             result = ops.run(request["op"], request.get("params") or {})
-            modified = bool(bpy.data.is_dirty) or (before is not None and fingerprint(bpy) != before)
+            modified = bool(bpy.data.is_dirty)
+            frame_changed = None
+            if before is not None:
+                changed, frame_changed = modified_since(bpy, before)
+                modified = modified or changed
         saved = None
         with contextlib.redirect_stdout(io.StringIO()):  # the save's own `Info: Saved copy as ...` is not op output
             if modified and mode == "copy" and save.get("path"):
@@ -132,7 +174,7 @@ def main(argv: list[str]) -> int:
             "protocol": 1, "ok": True, "result": result, "modified": modified, "saved": saved,
             "blender_version": bpy.app.version_string,
             "duration_ms": int((time.perf_counter() - started) * 1000),
-            "stdout": buf.getvalue(), "warnings": [],
+            "stdout": buf.getvalue(), "warnings": [], "frame_changed": frame_changed,
         }
     except BaseException as exc:  # errors are data
         if isinstance(exc, KeyboardInterrupt):

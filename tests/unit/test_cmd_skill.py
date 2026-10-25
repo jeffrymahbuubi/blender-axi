@@ -66,6 +66,32 @@ def test_safety_bullets_follow_registry(monkeypatch):
     assert "`.tmp/`" in text
 
 
+def test_description_mentions_new_and_live():
+    assert "create a new .blend" in skill.SKILL_DESCRIPTION
+    assert "`--live`" in skill.SKILL_DESCRIPTION
+
+
+def test_install_text_is_git_url_and_never_pypi(fake_registry):
+    text = skill.render_skill(skill._specs())
+    url = "git+https://github.com/jeffrymahbuubi/blender-axi"
+    assert f"`uv tool install {url}`" in text
+    assert f"`uvx --from {url} blender-axi ...`" in text
+    assert "`.venv/Scripts/blender-axi`" in text
+    assert "Once published" not in text and "uv tool install blender-axi" not in text
+    assert "PyPI" not in text and "pypi" not in text.lower()
+    assert "python -m blender_axi" not in text
+
+
+def test_safety_live_exec_and_user_prefs_lines(fake_registry, monkeypatch):
+    text = skill.render_skill(skill._specs())
+    assert "- With `--live`, `exec` changes the open session directly (no copy); `--in-place` saves it." in text
+    assert "- `--user-prefs` loads your add-ons; the default is `--factory-startup`." in text
+    monkeypatch.setattr(registry, "COMMANDS", {})
+    bare = skill.render_skill(skill._specs())
+    assert "With `--live`, `exec`" not in bare  # tied to exec being registered
+    assert "--user-prefs` loads your add-ons" in bare
+
+
 def test_render_is_deterministic_and_static(fake_registry):
     a = skill.render_skill(skill._specs())
     assert a == skill.render_skill(skill._specs())

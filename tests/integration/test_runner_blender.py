@@ -49,6 +49,26 @@ def test_ping(transport):
     assert out.blender_version == out.result["blender_version"]
 
 
+def test_ping_factory_prefs_and_addons(transport):
+    res = transport.run("ping", {}, blend=None).result
+    assert res["prefs"] == "factory"
+    assert "io_scene_gltf2" in res["addons"]
+    assert not any(a.endswith(".mcp") for a in res["addons"])  # user extension is not loaded
+
+
+def test_ping_user_prefs(blender_info):
+    out = HeadlessTransport(blender_info, user_prefs=True).run("ping", {}, blend=None)
+    assert out.result["prefs"] == "user"
+    if not any(a.endswith(".mcp") for a in out.result["addons"]):
+        pytest.skip("this machine's user prefs do not enable the mcp extension (prefs verified only)")
+    assert "bl_ext.user_default.mcp" in out.result["addons"]
+
+
+def test_user_prefs_with_a_blend_still_loads_that_file(blender_info, fixtures_dir):
+    out = HeadlessTransport(blender_info, user_prefs=True).run("ping", {}, blend=fixtures_dir / "basic.blend")
+    assert out.result["file"].endswith("basic.blend") and out.result["prefs"] == "user"
+
+
 def test_blender_temp_is_project_local(transport):
     out = transport.run("ping", {}, blend=None)
     want = Path(paths.blender_tmp()).resolve()

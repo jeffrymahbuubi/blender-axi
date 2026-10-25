@@ -55,23 +55,11 @@ result = {
 """
 
 
-SELECTIVE_EXPORT = """
-import sys
-import bpy
-sys.path.insert(0, {src!r})
-from blender_axi.blender_side import ops, op_export
-seen = []
-real_call = op_export._call
-op_export._call = lambda b, f, p, s: (seen.append(sorted(o.name for o in bpy.context.scene.objects if o.select_get())),
-                                      real_call(b, f, p, s))[1]
-objs = [bpy.data.objects[n] for n in {names!r}]
-try:
-    with bpy.context.temp_override(selected_objects=objs, active_object=objs[0]):
-        result = ops.run('export', {params!r})
-finally:
-    op_export._call = real_call
-result["selected_during"] = seen[0]
-"""
+# (selector flags, expected exported object count): Props = Ball + the Anchor empty -> 1 geometry object
+SELECTIVE = (
+    (["--collection", "Props"], 1, ("glb", "fbx", "obj", "stl")),
+    (["--objects", "Cube,Ball"], 2, ("fbx", "obj")),
+)
 
 
 @pytest.fixture(scope="module")
@@ -116,23 +104,22 @@ def test_render_and_export_live_leave_the_session_untouched(session, capsys):
         assert png.read_bytes()[:8] == PNG_MAGIC
         assert _exec(port, READ_STATE) == before
 
-        # A windowless headless server has no context.selected_objects / window, so the exporters cannot honour
-        # `use_selection` through the CLI there (pre-existing, unrelated to side effects; the GUI has them). The
-        # export op is therefore also run inside the server under a temp_override that supplies them, which
-        # exercises the real select / export / restore path with the FBX exporter.
-        cases = (({"collection": "Props"}, ["Ball"], ["Anchor", "Ball"]),  # Props = Ball + the Anchor empty
-                 ({"objects": ["Cube", "Ball"]}, ["Cube", "Ball"], ["Ball", "Cube"]))
-        for i, (params, exported, selected_during) in enumerate(cases):
-            out = work / f"sel{round_}_{i}.fbx"
-            res = _exec(port, SELECTIVE_EXPORT.format(src=live.SRC_DIR, names=exported,
-                                                      params={"out": str(out), "format": "fbx", "force": True, **params}))
-            assert res["objects"] == len(exported) and out.stat().st_size > 0
-            assert res["selected_during"] == selected_during  # the op really replaced the selection ...
-            assert _exec(port, READ_STATE) == before  # ... and put it back
+        # v1.1 K5: op_export supplies the window and the selection context a windowless headless server lacks, so
+        # selective exports and glTF work through the real CLI there; the select / export / restore path is exercised.
+        for flags, count, formats in SELECTIVE:
+            for fmt in formats:
+                out = work / f"sel{round_}_{flags[0].lstrip('-')}.{fmt}"
+                code, data = _axi(capsys, "export", *live_args, *flags, "--out", out, "--force")
+                assert code == 0, (flags, fmt, data)
+                assert data["objects"] == count and data["format"] == fmt and out.stat().st_size > 0, data
+                assert _exec(port, READ_STATE) == before  # the user's selection / active object are put back
 
-        code, data = _axi(capsys, "export", *live_args, "--out", work / f"all{round_}.fbx", "--force")
-        assert code == 0, data  # whole scene through the real CLI
-        assert _exec(port, READ_STATE) == before
+        for fmt in ("glb", "fbx", "obj", "stl"):  # whole scene through the real CLI (A2: glTF needs no selection)
+            out = work / f"all{round_}.{fmt}"
+            code, data = _axi(capsys, "export", *live_args, "--out", out, "--force")
+            assert code == 0, (fmt, data)
+            assert data["objects"] == 2 and out.stat().st_size > 0, data  # Cube + Ball; camera/light/empty are not geometry
+            assert _exec(port, READ_STATE) == before
 
 
 def test_failed_render_and_export_live_also_restore(session, capsys):
@@ -150,8 +137,10 @@ def test_failed_render_and_export_live_also_restore(session, capsys):
     assert code == 1 and data["code"] == "NOT_FOUND"
     assert _exec(port, READ_STATE) == before
 
-    # an exporter that blows up after the selection was replaced (glTF needs a context a headless server lacks)
-    code, data = _axi(capsys, "export", *live_args, "--collection", "Props", "--out", work / "never.glb")
-    assert code == 1 and data["code"] == "LIVE_ERROR"  # (if a future Blender allows it, drop this case)
+    # a failure after the selection was replaced: the output's parent directory is a regular file
+    blocker = work / "blocker.txt"
+    blocker.write_text("not a directory")
+    code, data = _axi(capsys, "export", *live_args, "--collection", "Props", "--out", blocker / "never.glb")
+    assert code == 1, data
     assert _exec(port, READ_STATE) == before
-    assert not (work / "never.png").exists() and not (work / "never.glb").exists()
+    assert not (work / "never.png").exists() and not (blocker / "never.glb").exists()

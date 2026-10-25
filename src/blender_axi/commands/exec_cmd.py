@@ -3,6 +3,9 @@
 Safety: without --allow-exec this exits 2 before Blender is located or started. The original .blend is
 never written unless --in-place; otherwise a modified file is saved as a copy (`--out` or under
 `<tmp_root>/exec/`). A file that the code did not change is not saved at all.
+
+With --live (v1.1) the code runs inside the OPEN Blender session and changes it directly: there is no copy
+(`--out` is refused), nothing reaches the disk unless `--in-place`, and a best-effort undo step is reported.
 """
 
 import os
@@ -15,9 +18,12 @@ from .. import paths, text
 from ..errors import AxiError
 from ..runner import SaveSpec
 from ..spec import CommandSpec, Flag, Invocation, Positional, Result
-from ._common import blend_candidates, display_path, invalid
+from ._common import Hints, blend_candidates, display_path, invalid, posix_path
 
 NO_CHANGES = "none (no changes)"
+NO_RESULT = "none (the code did not assign result)"
+LIVE_UNSAVED = "none (live session, unsaved)"
+UNDO_TEXT = {"pushed": "pushed (Ctrl+Z in Blender reverts)", "unavailable": "unavailable (headless server)"}
 _SAFE = re.compile(r"^[A-Za-z0-9_@%+=:,./\\~-]+$")
 _MAX_INLINE_CODE = 200
 
@@ -39,6 +45,8 @@ def _globals_args(inv: Invocation) -> list[str]:
         out.append("--keep-tmp")
     if g.blender:
         out += ["--blender", _quote(g.blender)]
+    if g.user_prefs:
+        out.append("--user-prefs")
     if g.timeout is not None:
         out += ["--timeout", f"{g.timeout:g}"]
     if g.live:
@@ -129,11 +137,90 @@ def _validate_args(inv: Invocation) -> tuple[bool, str | None]:
     return bool(f.get("in_place")), (str(out) if out is not None else None)
 
 
+def _stdout_and_hints(inv: Invocation, outcome) -> tuple[str, list[str]]:
+    stdout = str(outcome.result.get("stdout") or outcome.stdout or "")
+    shown, total, truncated = text.truncate(stdout, full=inv.globals.full)
+    hints: list[str] = []
+    if truncated:
+        shown += f"\n... (truncated, {total} chars total)"
+        hints.append("Run again with --full to see the whole stdout")
+    return shown, hints
+
+
+def _result_of(outcome) -> dict | str:
+    """The user's `result` dict, or a definitive string when the code assigned nothing (no bare `result:` line)."""
+    return outcome.result.get("result") or NO_RESULT
+
+
+def _backup_if_new(data: dict, probe: tuple[Path, int | None] | None) -> None:
+    if probe is not None:
+        bak, before = probe
+        if bak.exists() and (before is None or bak.stat().st_mtime_ns != before):
+            data["backup"] = display_path(str(bak))
+
+
+def _run_live(inv: Invocation, in_place: bool) -> Result:
+    """exec inside the open Blender session: no copy, optional in-place save of the open file."""
+    f = inv.flags
+    if not f.get("allow_exec"):
+        raise AxiError(
+            "EXEC_NOT_ALLOWED",
+            "exec runs arbitrary Python inside the OPEN Blender session (--live) and changes it directly; "
+            "needs --allow-exec",
+            help=[f"Run the same command with --allow-exec: {_command_with_allow_exec(inv)}",
+                  "Nothing is saved to disk unless you pass --in-place"],
+        )
+    code = f["code"] if f.get("code") is not None else _read_script(Path(f["script"]))
+    timeout = inv.globals.timeout
+    opened = str(inv.transport.run("ping", {}, blend=None, timeout=timeout).result.get("file") or "")
+    if in_place and not opened:
+        raise _usage_error("the open session has no file; save it in Blender first",
+                           ["Save the session in Blender (File > Save), then rerun with --in-place",
+                            "Or drop --in-place to keep the changes in the open session"])
+    probe: tuple[Path, int | None] | None = None
+    if in_place:
+        bak = Path(opened + "1")
+        probe = (bak, bak.stat().st_mtime_ns if bak.exists() else None)
+    save = SaveSpec("in_place", opened) if in_place else SaveSpec("none")
+    outcome = inv.transport.run("exec", {"code": code}, blend=None, save=save, timeout=timeout)
+
+    shown, hints = _stdout_and_hints(inv, outcome)
+    data: dict = {
+        "file": posix_path(opened) or "(unsaved)",
+        "status": "ok",
+        "result": _result_of(outcome),
+        "stdout": shown,
+        "modified": outcome.modified,
+        "saved": display_path(outcome.saved) if outcome.saved else (LIVE_UNSAVED if outcome.modified else NO_CHANGES),
+    }
+    if outcome.saved:
+        _backup_if_new(data, probe)
+    if outcome.undo in UNDO_TEXT:
+        data["undo"] = UNDO_TEXT[outcome.undo]
+    if outcome.frame_changed:
+        data["frame_changed"] = outcome.frame_changed
+    data["duration_ms"] = outcome.duration_ms
+    if outcome.warnings:
+        data["warning"] = "; ".join(outcome.warnings)
+    hints.insert(0, f"Inspect the session: `{Hints(inv).cmd('objects')}`")
+    if outcome.modified and not outcome.saved:
+        hints.append("Changes are only in the open session: save in Blender, or rerun with --in-place "
+                     "to save the open file")
+    return Result(data=data, help=hints)
+
+
 def run(inv: Invocation) -> Result:
     f = inv.flags
     if inv.globals.live:  # before anything else: nothing may reach a live server
-        raise _usage_error("exec does not support --live in v1",
-                           ["Run it headless on a file: `blender-axi exec <file.blend> --code <python> --allow-exec`"])
+        if inv.positionals.get("file"):
+            raise _usage_error("--live uses the file open in Blender; drop <file>",
+                               ["Run it on the open session: `blender-axi exec --live --code <python> --allow-exec`"])
+        if f.get("out") is not None:
+            raise _usage_error("live mode has no copy: changes stay in the open session; "
+                               "add --in-place to save the open file",
+                               ["Keep the changes in the session, or save the open file with --in-place"])
+        in_place, _ = _validate_args(inv)
+        return _run_live(inv, in_place)
     in_place, out_arg = _validate_args(inv)
 
     # The gate: nothing below touches Blender or the filesystem until --allow-exec is present.
@@ -172,25 +259,19 @@ def run(inv: Invocation) -> Result:
 
     outcome = inv.transport.run("exec", {"code": code}, blend=blend, save=save, timeout=inv.globals.timeout)
 
-    stdout = str(outcome.result.get("stdout") or outcome.stdout or "")
-    shown, total, truncated = text.truncate(stdout, full=inv.globals.full)
-    hints: list[str] = []
-    if truncated:
-        shown += f"\n... (truncated, {total} chars total)"
-        hints.append("Run again with --full to see the whole stdout")
-
+    shown, hints = _stdout_and_hints(inv, outcome)
     data: dict = {
         "file": display,
         "status": "ok",
-        "result": outcome.result.get("result", {}),
+        "result": _result_of(outcome),
         "stdout": shown,
         "modified": outcome.modified,
         "saved": display_path(outcome.saved) if outcome.saved else NO_CHANGES,
     }
-    if outcome.saved and backup_probe is not None:
-        bak, before = backup_probe
-        if bak.exists() and (before is None or bak.stat().st_mtime_ns != before):
-            data["backup"] = display_path(str(bak))
+    if outcome.saved:
+        _backup_if_new(data, backup_probe)
+    if outcome.frame_changed:
+        data["frame_changed"] = outcome.frame_changed
     data["duration_ms"] = outcome.duration_ms
     if outcome.warnings:
         data["warning"] = "; ".join(outcome.warnings)
@@ -201,20 +282,21 @@ def run(inv: Invocation) -> Result:
 
 SPEC = CommandSpec(
     name="exec",
-    summary="Run Python inside Blender on a .blend (requires --allow-exec; original only changed with --in-place)",
+    summary="Run Python inside Blender on a .blend, or the open session with --live (requires --allow-exec; original only changed with --in-place)",
     positionals=(Positional("file", required=False, help="The .blend file (default: the single .blend in the current directory)"),),
     flags=(
         Flag("--code", "str", help="Python to run; `bpy` is predefined; assign a dict to `result`"),
         Flag("--script", "path", help="Path to a Python file to run instead of --code"),
         Flag("--allow-exec", "bool", help="Required: confirm that arbitrary Python may run inside Blender"),
-        Flag("--in-place", "bool", help="Save changes into the original file (a .blend1 backup may appear)"),
-        Flag("--out", "path", help="Save changes as a copy at this .blend path (default: a copy under .tmp/exec/)"),
+        Flag("--in-place", "bool", help="Save changes into the original file (a .blend1 backup may appear); with --live, the open file"),
+        Flag("--out", "path", help="Save changes as a copy at this .blend path (default: a copy under .tmp/exec/); not with --live"),
         Flag("--force", "bool", help="Allow --out to overwrite an existing file"),
     ),
     examples=(
         "blender-axi exec scene.blend --code \"result={'n': len(bpy.data.objects)}\" --allow-exec",
         "blender-axi exec scene.blend --script fix.py --out fixed.blend --allow-exec",
         "blender-axi exec scene.blend --script fix.py --in-place --allow-exec",
+        "blender-axi exec --live --code \"bpy.ops.mesh.primitive_cube_add(); result={}\" --allow-exec",
     ),
     run=run,
 )

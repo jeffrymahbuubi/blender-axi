@@ -32,7 +32,7 @@ blender-axi's defaults, so compare per task, not field for field. To reproduce:
 
 | Task | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving | Note |
 |---|---:|---:|---:|---|
-| Scene overview | 310 ([raw](benchmarks/results/city/scene__mcp.json)) | 341 ([raw](benchmarks/results/city/scene__axi.txt)) | -10.0% |  |
+| Scene overview | 310 ([raw](benchmarks/results/city/scene__mcp.json)) | 345 ([raw](benchmarks/results/city/scene__axi.txt)) | -11.3% |  |
 | List objects (default --limit 100) | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 2,100 ([raw](benchmarks/results/city/objects__axi.txt)) | 94.9% |  |
 | List all 502 objects | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 9,494 ([raw](benchmarks/results/city/objects_all__axi.txt)) | 77.1% | MCP call shared with objects |
 | Objects in District05 | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 540 ([raw](benchmarks/results/city/objects_collection__axi.txt)) | 98.7% | MCP has no collection filter: full list; MCP call shared with objects |
@@ -41,7 +41,7 @@ blender-axi's defaults, so compare per task, not field for field. To reproduce:
 
 | Item | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving |
 |---|---:|---:|---:|
-| Tool definitions vs. skill text | 7,843 (26 tools, [raw](benchmarks/results/fixed/tools_list__mcp.json)) | 1,255 ([raw](skills/blender-axi/SKILL.md)) | 84.0% |
+| Tool definitions vs. skill text | 7,843 (26 tools, [raw](benchmarks/results/fixed/tools_list__mcp.json)) | 1,481 ([raw](skills/blender-axi/SKILL.md)) | 81.1% |
 
 *The tool-list figure is a lower bound: it is the compact JSON of the server's `tools/list` reply, and real clients serialise tool schemas more verbosely.*
 
@@ -52,7 +52,16 @@ blender-axi's defaults, so compare per task, not field for field. To reproduce:
 Unit: tokens (claude-opus-5-5), measured 2026-10-25. Details: [results.md](benchmarks/results/results.md).
 <!-- bench:end -->
 
-## Install (development)
+## Install
+
+Needs Python 3.13+ and [uv](https://docs.astral.sh/uv/). Blender is installed separately.
+
+```bash
+uv tool install git+https://github.com/jeffrymahbuubi/blender-axi        # installs `blender-axi`
+uvx --from git+https://github.com/jeffrymahbuubi/blender-axi blender-axi  # or run once without installing
+```
+
+Development, from a checkout:
 
 ```bash
 uv venv .venv --python 3.13
@@ -68,14 +77,13 @@ Blender 5.2 LTS is verified. blender-axi finds it via `--blender <path>`, `BLEND
 | Command | What it does |
 |---|---|
 | `blender-axi` | Home view: Blender found, live status, `.blend` files here |
-| `scene [<file>]` | Overview of a .blend file: engine, resolution, frames, camera, object/collection counts |
+| `scene [<file>]` | Overview of a .blend file: engine, resolution, frames, camera, object and collection counts (collections include the Scene Collection, e.g. `3 (Scene Collection, Collection, Props)`) |
+| `new <file.blend> [--template empty\|default] [--force]` | Create a new .blend (empty, or Blender's default Camera, Cube and Light); headless only, refuses to overwrite without `--force`. Build the scene with `exec <file> --script build.py --in-place --allow-exec` |
 | `objects [<file>] [--type T] [--collection C] [--name-contains S] [--limit N] [--fields a,b]` | List objects (name, type, collection, visible); extra columns: location, dimensions, parent, verts, faces, materials, modifiers, data |
 | `object <name> [<file>]` | One object's transform, dimensions, parent/children, materials, modifiers, custom props |
-| `exec [<file>] --code <python> \| --script <path> --allow-exec` | Run Python inside Blender; `bpy` is predefined, assign a dict to `result` |
-
+| `exec [<file>] --code <python> \| --script <path> --allow-exec [--live]` | Run Python inside Blender; `bpy` is predefined, assign a dict to `result` |
 | `render [<file>] [--frame n \| --frames a..b] [--out path] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--samples n] [--camera name] [--format PNG\|JPEG\|…] [--force]` | Render stills or a frame range (default `./<stem>_f####.png`) |
 | `export [<file>] --out path [--format glb\|gltf\|fbx\|obj\|stl\|ply\|usd\|usdc\|usda\|abc] [--collection name \| --objects a,b] [--force]` | Export the scene, a collection or objects to a 3D file |
-
 | `live` | Check a running Blender (MCP add-on server) and show the open file |
 
 `<file>` is optional when the current directory has exactly one `.blend` (it is echoed as `file:`).
@@ -89,7 +97,9 @@ error shows the same command with the flag added; Blender is not launched). The 
 written unless you pass `--in-place`. When the code changes the scene, the result is saved as a copy under
 `.tmp/exec/` (or at `--out <path.blend>`; an existing file is refused without `--force`). Code that changes
 nothing writes nothing (`modified: false`). With `--in-place`, Blender keeps the previous version as
-`<file>.blend1` and the result reports it as `backup:`.
+`<file>.blend1` and the result reports it as `backup:`. Moving the current frame is not a modification; it
+is reported as `frame_changed: "1 -> 10"`. Code that assigns no `result` reports
+`result: none (the code did not assign result)`.
 
 ## Live mode
 
@@ -104,9 +114,20 @@ Blender Lab, Blender 5.1 or newer) over its local TCP socket, default `localhost
 - Check it with `blender-axi live`, then `blender-axi scene --live`, `blender-axi objects --live`,
   `blender-axi object Cube --live`. Other address: `--host <host> --port <n>`. Socket timeout 300 s.
 - In live mode the file is whatever is open in Blender, so do not pass a `<file>` argument.
+- `export --live` supports `--collection` / `--objects` and glTF against a headless MCP server too (the
+  exporter context is supplied internally); your selection and active object are restored afterwards.
 - Blender must run on the same machine: the code sent to it imports `blender_axi` from this install's
   `src` directory. The MCP add-on executes arbitrary code with no sandbox, so only run its server on a
   trusted machine and loopback.
+
+**Running code in the open session.** `blender-axi exec --live --code "…" --allow-exec` runs Python inside
+the Blender you already have open (the same `--allow-exec` gate, with wording that says the code changes the
+open session directly). There is no copy in live mode: `--out` is refused, and nothing is written to disk
+unless you add `--in-place`, which saves the open file only when the code changed something. Before the code
+runs, blender-axi tries to push an undo step and reports `undo: pushed (Ctrl+Z in Blender reverts)` or
+`undo: unavailable (headless server)`. Changes made by blender-axi are remembered, so `live` and
+`scene --live` show `unsaved_changes: true` until the file is saved; edits other tools make directly through
+`bpy.data` cannot be detected.
 
 The socket protocol (NUL-terminated JSON `execute` requests) is the one defined by the Blender Lab MCP
 add-on, GPL-3.0-or-later, https://projects.blender.org/lab/blender_mcp (commit dbbf836);
@@ -120,6 +141,7 @@ add-on, GPL-3.0-or-later, https://projects.blender.org/lab/blender_mcp (commit d
 - `--debug` — print tracebacks and Blender stderr to stderr
 - `--keep-tmp` — keep per-run temp directories under `.tmp/`
 - `--blender <path>` — Blender executable (or set `BLENDER_AXI_BLENDER`)
+- `--user-prefs` — headless only: load your preferences and add-ons instead of `--factory-startup`; not valid with `--live`
 - `--timeout <seconds>` — override timeouts (default 120, render 600, live 300)
 - `--live` — talk to a running Blender instead of starting one
 - `--host <host>` / `--port <n>` — live-mode address (default localhost:9876)
@@ -132,7 +154,7 @@ blender-axi never writes to the system temp directory. Run directories, Blender'
 `TEMP`/`TMP`/`TMPDIR`, `exec` copies and test output all live under one root: `$BLENDER_AXI_TMP` if
 set, else `<checkout>/.tmp` when running from a source checkout, else `%LOCALAPPDATA%\blender-axi\tmp`
 (or `~/.cache/blender-axi/tmp`). Run directories are deleted after each command unless you pass
-`--keep-tmp`. Blender is always started with `--factory-startup`.
+`--keep-tmp`. Blender is started with `--factory-startup` unless you pass `--user-prefs`.
 
 ## Skill
 

@@ -299,9 +299,29 @@ def test_op_runs_through_ops_dispatch(op):
     assert ops.run("exec", {"code": "result = {'ok': True}"})["result"] == {"ok": True}
 
 
-def test_live_is_rejected_without_touching_the_transport(blend):
-    t = FakeTransport()
-    err = fail(["--live", "--code", "x=1", "--allow-exec"], t)
-    assert err.code == "VALIDATION_ERROR" and err.exit_code == 2
-    assert err.message == "exec does not support --live in v1"
-    assert any("headless" in h for h in err.help) and t.calls == []
+# --- K9, frame_changed (headless) -------------------------------------------------------------------
+
+def test_empty_result_is_a_definitive_string_in_toon_and_json(blend):
+    from blender_axi import toon
+
+    out = RunOutcome({"result": {}, "stdout": ""}, False, None, "5.2", 1, "")
+    res, _ = invoke([str(blend), "--code", "pass", "--allow-exec"], FakeTransport(out))
+    assert res.data["result"] == exec_cmd.NO_RESULT == "none (the code did not assign result)"
+    assert "result: none (the code did not assign result)" in toon.encode(res.data)
+    assert json.loads(toon.encode_json(res.data))["result"] == "none (the code did not assign result)"
+    assert "\nresult:\n" not in toon.encode(res.data) + "\n"  # never a bare `result:` line
+
+
+def test_missing_result_key_is_also_none_string(blend):
+    out = RunOutcome({"stdout": ""}, False, None, "5.2", 1, "")
+    res, _ = invoke([str(blend), "--code", "pass", "--allow-exec"], FakeTransport(out))
+    assert res.data["result"] == exec_cmd.NO_RESULT
+
+
+def test_headless_frame_changed_only_when_set(blend):
+    out = RunOutcome({"result": {"f": 10}, "stdout": ""}, False, None, "5.2", 1, "", frame_changed="1 -> 10")
+    res, _ = invoke([str(blend), "--code", "x=1", "--allow-exec"], FakeTransport(out))
+    assert res.data["frame_changed"] == "1 -> 10" and res.data["modified"] is False
+    assert list(res.data) == ["file", "status", "result", "stdout", "modified", "saved", "frame_changed", "duration_ms"]
+    res, _ = invoke([str(blend), "--code", "x=1", "--allow-exec"])
+    assert "frame_changed" not in res.data and "undo" not in res.data

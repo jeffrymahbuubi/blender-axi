@@ -333,3 +333,69 @@ def test_relative_blend_is_made_absolute(monkeypatch, blend):
     argv = fake.calls[0][0]
     assert argv[argv.index("--factory-startup") + 1] == str(blend)
     assert Path(argv[3]).is_absolute()
+
+
+# ---- --user-prefs (v1.1 U3) ----
+
+def test_build_argv_factory_startup_by_default():
+    argv = HeadlessTransport(INFO).build_argv(None, Path("req.json"))
+    assert argv == [str(INFO.path), "--background", "--factory-startup", "--python-exit-code", "3",
+                    "--python", str(runner.BOOTSTRAP), "--", "--request", "req.json"]
+
+
+def test_build_argv_user_prefs_only_drops_factory_startup():
+    default = HeadlessTransport(INFO).build_argv(None, Path("req.json"))
+    prefs = HeadlessTransport(INFO, user_prefs=True).build_argv(None, Path("req.json"))
+    assert "--factory-startup" not in prefs
+    assert prefs == [a for a in default if a != "--factory-startup"]
+
+
+def test_build_argv_user_prefs_with_blend(blend):
+    argv = HeadlessTransport(INFO, user_prefs=True).build_argv(blend, Path("req.json"))
+    assert argv[:3] == [str(INFO.path), "--background", str(blend)] and "--factory-startup" not in argv
+
+
+def test_user_prefs_reaches_subprocess(monkeypatch):
+    fake = use(monkeypatch, FakeBlender(OK))
+    HeadlessTransport(INFO, user_prefs=True).run("ping", {}, blend=None)
+    assert "--factory-startup" not in fake.calls[0][0]
+
+
+def test_op_ping_reports_prefs_and_addons(fake_bpy, monkeypatch):
+    fake_bpy.app.tempdir = str(REPO / ".tmp" / "tests" / "blender" / "blender_123") + "/"
+    fake_bpy.context.preferences = SimpleNamespace(addons=[SimpleNamespace(module="b"), SimpleNamespace(module="a")])
+    monkeypatch.setattr(sys, "argv", ["blender", "--background", "--factory-startup"])
+    res = ops.run("ping", {})
+    assert res["prefs"] == "factory" and res["addons"] == ["a", "b"]
+    monkeypatch.setattr(sys, "argv", ["blender", "--background"])
+    assert ops.run("ping", {})["prefs"] == "user"
+
+
+def test_op_ping_without_preferences_object(fake_bpy):
+    fake_bpy.app.tempdir = ""
+    assert ops.run("ping", {})["addons"] == []
+
+
+@pytest.mark.parametrize("template,use_empty", [("empty", True), ("default", False)])
+def test_op_new_with_fake_bpy(fake_bpy, template, use_empty):
+    calls = []
+    out = REPO / ".tmp" / "tests" / "unit_new" / "sub" / "a.blend"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.unlink(missing_ok=True)
+
+    def save(**kw):
+        calls.append(("save", kw))
+        Path(kw["filepath"]).write_bytes(b"x" * 2048)
+
+    fake_bpy.ops = SimpleNamespace(wm=SimpleNamespace(
+        read_factory_settings=lambda **kw: calls.append(("read", kw)), save_as_mainfile=save))
+    fake_bpy.data.objects = [] if use_empty else ["Camera", "Cube", "Light"]
+    res = ops.run("new", {"out": str(out), "template": template})
+    assert calls == [("read", {"use_empty": use_empty}), ("save", {"filepath": str(out)})]
+    assert res == {"path": str(out), "template": template, "objects": 0 if use_empty else 3, "size_bytes": 2048}
+    out.unlink()
+
+
+def test_op_new_rejects_unknown_template(fake_bpy):
+    with pytest.raises(ops.OpError):
+        ops.run("new", {"out": "x.blend", "template": "huge"})

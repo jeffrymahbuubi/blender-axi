@@ -1,5 +1,6 @@
 """Unit tests for `export`: flag validation, format inference, write refusal, op param mapping with fake bpy."""
 
+import contextlib
 import types
 from pathlib import Path
 
@@ -173,9 +174,25 @@ def scene(fake_bpy):
     selection_at_call = []  # names selected at the moment the exporter ran
     fake_bpy.context.view_layer = types.SimpleNamespace(objects=types.SimpleNamespace(active=None))
 
+    overrides, depth, seen = [], [0], []  # temp_override kwargs, nesting, "was an override active at the exporter"
+
+    @contextlib.contextmanager
+    def temp_override(**kw):
+        overrides.append(kw)
+        depth[0] += 1
+        try:
+            yield
+        finally:
+            depth[0] -= 1
+
+    ctx = fake_bpy.context  # a headless MCP server: no window, one window in the window manager
+    ctx.window, ctx.window_manager, ctx.temp_override = None, types.SimpleNamespace(windows=["win0"]), temp_override
+    fake_bpy.overrides, fake_bpy.override_depth, fake_bpy.override_seen_by_exporter = overrides, depth, seen
+
     def recorder(name):
         def call(**kw):
             calls.append((name, kw))
+            seen.append(depth[0] > 0)
             selection_at_call.append([o.name for o in objs if o.selected])
             Path(kw["filepath"]).write_bytes(b"x" * 1500)
         return call
@@ -336,3 +353,51 @@ def test_active_none_is_restored(scene):
     op_export.run({"out": out_path("s7.glb"), "format": "glb", "objects": ["Ball"]})
     assert scene.context.view_layer.objects.active is None and scene.objs["Cube"].selected
     assert not scene.objs["Ball"].selected
+
+
+# --- context override for the exporter call (headless MCP server: no window, no selection context) ------
+
+def test_headless_server_gets_window_override_for_whole_scene(scene):
+    # context.window is None but the window manager has one window (F1): glTF/obj/stl need it
+    op_export.run({"out": out_path("w.glb"), "format": "glb"})
+    assert scene.overrides == [{"window": "win0"}]
+    assert scene.override_seen_by_exporter == [True]
+    assert scene.override_depth[0] == 0  # context left again
+
+
+def test_gui_or_headless_with_a_window_needs_no_override_for_whole_scene(scene):
+    scene.context.window = "real window"
+    op_export.run({"out": out_path("w2.glb"), "format": "glb"})
+    assert scene.overrides == [] and scene.override_seen_by_exporter == [False]
+
+
+def test_no_window_anywhere_adds_no_window_key(scene):
+    scene.context.window_manager = types.SimpleNamespace(windows=[])
+    op_export.run({"out": out_path("w3.obj"), "format": "obj"})
+    assert scene.overrides == []
+    op_export.run({"out": out_path("w4.fbx"), "format": "fbx", "objects": ["Cube"]})
+    assert list(scene.overrides[0]) == ["selected_objects", "active_object"]
+
+
+def test_selective_export_overrides_selection_and_window(scene):
+    op_export.run({"out": out_path("w5.fbx"), "format": "fbx", "objects": ["Cube", "Ball"]})
+    kw = scene.overrides[0]
+    assert kw["window"] == "win0"
+    assert [o.name for o in kw["selected_objects"]] == ["Cube", "Ball"] and kw["active_object"].name == "Cube"
+    scene.context.window = "real window"
+    op_export.run({"out": out_path("w6.glb"), "format": "glb", "collection": "Props"})
+    kw = scene.overrides[1]
+    assert "window" not in kw and [o.name for o in kw["selected_objects"]] == ["Ball", "Anchor"]
+
+
+def test_override_is_exited_and_selection_restored_when_the_exporter_raises(scene):
+    set_user_selection(scene, ["Cube"], "Cube")
+    before = user_selection(scene)
+
+    def boom(**kw):
+        raise RuntimeError("exporter crashed")
+
+    scene.ops.export_scene.gltf = boom
+    with pytest.raises(RuntimeError, match="exporter crashed"):
+        op_export.run({"out": out_path("w7.glb"), "format": "glb", "objects": ["Ball"]})
+    assert scene.overrides and scene.override_depth[0] == 0 and user_selection(scene) == before

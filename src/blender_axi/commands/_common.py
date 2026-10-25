@@ -97,25 +97,30 @@ def resolve_blend_inferred(inv: Invocation, cmd: str) -> tuple[Path | None, bool
 
 # -- hints ----------------------------------------------------------------------------------------
 
-def live_suffix(inv: Invocation) -> str:
-    """Flags that keep a hint on the same Blender: ` --live [--host h] [--port p]` or empty."""
+def carry_suffix(inv: Invocation) -> str:
+    """Flags that keep a hint on the same Blender: ` --live [--host h] [--port p] [--user-prefs]` or empty."""
     g = inv.globals
-    if not g.live:
-        return ""
-    out = " --live"
-    if g.host != DEFAULT_LIVE_HOST:
-        out += f" --host {g.host}"
-    if g.port != DEFAULT_LIVE_PORT:
-        out += f" --port {g.port}"
+    out = ""
+    if g.live:
+        out += " --live"
+        if g.host != DEFAULT_LIVE_HOST:
+            out += f" --host {g.host}"
+        if g.port != DEFAULT_LIVE_PORT:
+            out += f" --port {g.port}"
+    if g.user_prefs:
+        out += " --user-prefs"
     return out
 
 
+live_suffix = carry_suffix  # v1 name, still imported by render/export/exec
+
+
 class Hints:
-    """Builds `blender-axi ...` hint lines that carry --live/--host/--port forward and drop <file> in live mode."""
+    """Builds `blender-axi ...` hint lines that carry --live/--host/--port/--user-prefs forward and drop <file> in live mode."""
 
     def __init__(self, inv: Invocation):
         self.live = inv.globals.live
-        self.suffix = live_suffix(inv)
+        self.suffix = carry_suffix(inv)
 
     def cmd(self, text: str) -> str:
         if self.live:
@@ -150,13 +155,14 @@ def replay_command(inv: Invocation, spec: CommandSpec, extra: str) -> str:
         if value is None or value is False or value == flag.default or flag.name == "--force":
             continue
         parts.append(flag.name if value is True else f"{flag.name} {quote_name(str(value))}")
-    return " ".join(parts) + live_suffix(inv) + " " + extra
+    return " ".join(parts) + carry_suffix(inv) + " " + extra
 
 
-def refused(inv: Invocation, spec: CommandSpec, path: str) -> AxiError:
-    """WRITE_REFUSED for an existing render/export output."""
+def refused(inv: Invocation, spec: CommandSpec, path: str,
+            alternative: str = "Or choose another path with --out <path>") -> AxiError:
+    """WRITE_REFUSED for an existing render/export/new output."""
     return AxiError("WRITE_REFUSED", f"output exists: {display_path(path)}", help=[
-        f"Run `{replay_command(inv, spec, '--force')}` to overwrite", "Or choose another path with --out <path>"])
+        f"Run `{replay_command(inv, spec, '--force')}` to overwrite", alternative])
 
 
 # -- formatting -----------------------------------------------------------------------------------

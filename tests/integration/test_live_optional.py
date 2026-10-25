@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import shutil
 import socket
 import subprocess
 import sys
@@ -186,3 +187,75 @@ def test_modifying_exec_saves_a_copy_in_a_private_server(blender_info, fixtures_
         # the live session now differs from the file on disk, which the scene summary reports
         assert t.run("scene_summary", {}).result["object_count"] == 4
     target.unlink(missing_ok=True)
+
+
+# -- v1.1 U1: `exec --live`, the session marker, frame-neutral tracking (private server on a COPY of basic.blend) ----
+
+REMOVE_BALL = "bpy.data.objects.remove(bpy.data.objects['Ball'])\nresult = {'n': len(bpy.data.objects)}"
+
+
+def _live_state(run_cli, port) -> bool:
+    code, data, _ = run_cli(["live", *_addr(port)])
+    assert code == 0
+    code, scene, _ = run_cli(["scene", "--live", *_addr(port)])
+    assert code == 0 and scene["unsaved_changes"] is data["unsaved_changes"]  # `live` and `scene --live` agree
+    return data["unsaved_changes"]
+
+
+def test_exec_live_story_on_a_headless_server(blender_info, fixtures_dir, run_cli):
+    work_dir = paths.run_dir("live-exec")
+    work = work_dir / "basic.blend"
+    shutil.copy2(fixtures_dir / "basic.blend", work)
+    try:
+        with real_server(blender_info, work) as (port, _log):
+            addr = _addr(port)
+            assert _live_state(run_cli, port) is False
+
+            # the gate comes first and never reaches the server's session
+            code, data, err = run_cli(["exec", "--live", *addr, "--code", REMOVE_BALL])
+            assert code == 2 and data["code"] == "EXEC_NOT_ALLOWED" and "OPEN Blender session" in data["error"]
+            assert any("--allow-exec" in h and f"--port {port}" in h for h in data["help"])
+            assert _live_state(run_cli, port) is False
+
+            # no copy in live mode
+            code, data, _ = run_cli(["exec", "--live", *addr, "--code", REMOVE_BALL, "--out", "x.blend", "--allow-exec"])
+            assert code == 2 and "no copy" in data["error"] and _live_state(run_cli, port) is False
+
+            # moving the frame is not a modification and leaves the session clean
+            code, data, err = run_cli(["exec", "--live", *addr, "--allow-exec", "--code",
+                                       "bpy.context.scene.frame_set(10)\nresult = {'f': bpy.context.scene.frame_current}"])
+            assert code == 0 and err == "" and data["modified"] is False and data["result"] == {"f": 10}
+            assert data["frame_changed"] == "1 -> 10" and data["saved"] == "none (no changes)"
+            assert _live_state(run_cli, port) is False
+            run_cli(["exec", "--live", *addr, "--allow-exec", "--code", "bpy.context.scene.frame_set(1)"])
+
+            # a real change: not saved, reported, and remembered by the session marker
+            code, data, err = run_cli(["exec", "--live", *addr, "--allow-exec", "--code", REMOVE_BALL])
+            assert code == 0 and err == "" and data["result"] == {"n": 4} and data["modified"] is True
+            assert data["saved"] == "none (live session, unsaved)" and "frame_changed" not in data
+            assert data["file"] == work.as_posix() and data["undo"] == "unavailable (headless server)"
+            assert any("only in the open session" in h for h in data["help"])
+            assert _live_state(run_cli, port) is True
+            assert work.stat().st_size > 0 and not work.with_name(work.name + "1").exists()
+
+            # read-only exec on the dirty session: nothing new, marker stays
+            code, data, _ = run_cli(["exec", "--live", *addr, "--allow-exec", "--code", "result={'n': len(bpy.data.objects)}"])
+            assert code == 0 and data["modified"] is False and data["result"] == {"n": 4}
+            assert data["saved"] == "none (no changes)" and _live_state(run_cli, port) is True
+
+            # --in-place without any change writes nothing and keeps the marker
+            before = work.stat().st_mtime_ns
+            code, data, _ = run_cli(["exec", "--live", *addr, "--allow-exec", "--in-place", "--code", "result={}"])
+            assert code == 0 and data["modified"] is False and data["saved"] == "none (no changes)"
+            assert data["result"] == "none (the code did not assign result)"
+            assert work.stat().st_mtime_ns == before and _live_state(run_cli, port) is True
+
+            # --in-place with a change saves the open file and the session is clean again
+            code, data, _ = run_cli(["exec", "--live", *addr, "--allow-exec", "--in-place", "--code",
+                                     "bpy.data.objects.remove(bpy.data.objects['Cube'])\nresult = {'n': len(bpy.data.objects)}"])
+            assert code == 0 and data["modified"] is True and data["result"] == {"n": 3}
+            assert Path(data["saved"]).name == "basic.blend" and Path(data["saved"]).resolve() == work.resolve()
+            assert data["backup"].endswith("basic.blend1")
+            assert work.stat().st_mtime_ns > before and _live_state(run_cli, port) is False
+    finally:
+        paths.cleanup(work_dir, False)

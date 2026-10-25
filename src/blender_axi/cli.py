@@ -41,7 +41,8 @@ class _LazyHeadless:
             from .locate import find_blender
             from .runner import HeadlessTransport
 
-            self._inner = HeadlessTransport(find_blender(self._opts.blender), keep_tmp=self._opts.keep_tmp)
+            self._inner = HeadlessTransport(find_blender(self._opts.blender), keep_tmp=self._opts.keep_tmp,
+                                            user_prefs=self._opts.user_prefs)
         return self._inner.run(op, params, **kwargs)
 
 
@@ -148,6 +149,13 @@ def _dispatch(argv: list[str]) -> int:
         _emit(helptext.render(spec), inv.globals.json)
         return 0
 
+    if inv.globals.live and inv.globals.user_prefs:
+        from .errors import AxiError
+
+        raise AxiError("VALIDATION_ERROR",
+                       "--user-prefs applies to headless runs; live mode uses the running Blender's preferences",
+                       help=[f"blender-axi {inv.command} --live", f"blender-axi {inv.command} <file> --user-prefs"],
+                       exit_code=2)
     if inv.globals.live:
         from .live import LiveTransport
 

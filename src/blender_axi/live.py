@@ -38,29 +38,47 @@ RECV_BYTES = 65536
 NON_STRICT_OPS = frozenset({"exec", "exec_code"})  # decision D13: user code may return non-JSON values
 SRC_DIR = str(Path(__file__).resolve().parents[1])
 
-# Markers on their own lines (`_AXI_OP = ...`) are also what tests/support/mock_live_server.py parses.
-OP_CODE = """\
-import json, sys
+# Every request first puts our src on sys.path and purges any cached blender_axi modules (U12), so the code it
+# imports is the code on disk, however long the Blender session has been running.
+_PRELUDE = """\
+import sys
 _AXI_SRC = {src!r}
-_AXI_OP = {op!r}
-_AXI_PARAMS = {params!r}
-_AXI_TRACK = {track!r}
 if _AXI_SRC not in sys.path:
     sys.path.insert(0, _AXI_SRC)
 for _name in [_n for _n in sys.modules if _n == "blender_axi" or _n.startswith("blender_axi.")]:
     del sys.modules[_name]  # U12: a long-lived Blender would otherwise keep running stale cached op code
+"""
+
+# Markers on their own lines (`_AXI_OP = ...`) are also what tests/support/mock_live_server.py parses.
+OP_CODE = """\
+import json
+_AXI_OP = {op!r}
+_AXI_PARAMS = {params!r}
+_AXI_TRACK = {track!r}
+_AXI_UNDO = {undo!r}
+""" + _PRELUDE + """\
 import bpy
-from blender_axi.blender_side import ops
-_before_dirty = bool(bpy.data.is_dirty)
-_before = None
+from blender_axi.blender_side import ops, session
+_undo = session.undo_push(bpy, "blender-axi exec") if _AXI_UNDO else None
+_before_dirty = bool(bpy.data.is_dirty)  # after the undo push, which may tag the file
+_base = None
 if _AXI_TRACK:
-    from blender_axi.blender_side.bootstrap import fingerprint
-    _before = fingerprint(bpy)
+    from blender_axi.blender_side import bootstrap
+    _base = bootstrap.baseline(bpy)
 try:
     _out = ops.run(_AXI_OP, json.loads(_AXI_PARAMS))
-    _modified = (bool(bpy.data.is_dirty) and not _before_dirty) or (_before is not None and fingerprint(bpy) != _before)
-    result = {{"ok": True, "result": _out, "modified": _modified, "blender_version": bpy.app.version_string}}
+    _modified = bool(bpy.data.is_dirty) and not _before_dirty
+    _frame = None
+    if _base is not None:
+        _changed, _frame = bootstrap.modified_since(bpy, _base)
+        _modified = _modified or _changed
+    if _modified:
+        session.mark_modified(bpy)
+    result = {{"ok": True, "result": _out, "modified": _modified, "blender_version": bpy.app.version_string,
+              "frame_changed": _frame, "undo": _undo}}
 except ops.OpError as _exc:
+    if _base is not None and bootstrap.modified_since(bpy, _base)[0]:
+        session.mark_modified(bpy)  # the code changed the session before it failed
     result = {{"ok": False, "code": _exc.code, "message": _exc.message}}
 """
 
@@ -74,17 +92,20 @@ with contextlib.redirect_stdout(io.StringIO()):
 result = {{"saved": _AXI_SAVE}}
 """
 
-SAVE_IN_PLACE_CODE = """\
+# Saving in place makes the file clean again, so the "modified by blender-axi" marker is dropped with it.
+SAVE_IN_PLACE_CODE = (_PRELUDE + """\
 import contextlib, io
 import bpy
+from blender_axi.blender_side import session
 with contextlib.redirect_stdout(io.StringIO()):
     bpy.ops.wm.save_mainfile()
-result = {"saved": bpy.data.filepath}
-"""
+session.clear_marker(bpy)
+result = {{"saved": bpy.data.filepath}}
+""").format(src=SRC_DIR)
 
 
-def build_code(op: str, params: dict, track: bool = False) -> str:
-    return OP_CODE.format(src=SRC_DIR, op=op, params=json.dumps(params), track=track)
+def build_code(op: str, params: dict, track: bool = False, undo: bool = False) -> str:
+    return OP_CODE.format(src=SRC_DIR, op=op, params=json.dumps(params), track=track, undo=undo)
 
 
 def _unreachable(host: str, port: int, reason: str) -> AxiError:
@@ -255,7 +276,9 @@ class LiveTransport:
         timeout = self.timeout if timeout is None else timeout
         started = time.perf_counter()
         strict = op not in NON_STRICT_OPS
-        response = self._execute(build_code(op, params or {}, track=save.mode != "none"), strict, timeout)
+        track = save.mode != "none" or op in NON_STRICT_OPS  # exec always reports modified (session marker)
+        undo = op in NON_STRICT_OPS  # best-effort undo step before user code runs
+        response = self._execute(build_code(op, params or {}, track=track, undo=undo), strict, timeout)
         envelope = response.get("result")
         if not isinstance(envelope, dict):
             raise AxiError("LIVE_ERROR", "Blender returned no result", help=["Rerun with `--debug` for details"])
@@ -276,4 +299,6 @@ class LiveTransport:
             blender_version=str(envelope.get("blender_version") or ""),
             duration_ms=int((time.perf_counter() - started) * 1000),
             stdout=str(response.get("stdout") or ""), warnings=[],
+            frame_changed=envelope.get("frame_changed") or None,
+            undo={True: "pushed", False: "unavailable"}.get(envelope.get("undo")),
         )

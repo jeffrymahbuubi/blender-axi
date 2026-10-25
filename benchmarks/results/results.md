@@ -1,6 +1,6 @@
 # Token-savings benchmark
 
-Measured 2026-10-25 · Blender 5.2.0 LTS · blender-axi 0.1.1 · official server blender-mcp 1.0.2 (dbbf836)
+Measured 2026-10-25 · Blender 5.2.0 LTS · blender-axi 0.2.0 · official server blender-mcp 1.0.2 (dbbf836)
 
 Unit: **tokens**, counted with `claude-opus-5-5`.
 
@@ -12,7 +12,7 @@ What the agent reads for the same question, from the same live Blender: the full
 
 | Item | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving |
 |---|---:|---:|---:|
-| Tool definitions vs. skill text | 7,843 (26 tools, [raw](fixed/tools_list__mcp.json)) | 1,255 ([raw](../../skills/blender-axi/SKILL.md)) | 84.0% |
+| Tool definitions vs. skill text | 7,843 (26 tools, [raw](fixed/tools_list__mcp.json)) | 1,481 ([raw](../../skills/blender-axi/SKILL.md)) | 81.1% |
 
 > The tool-list figure is a lower bound: it is the compact JSON of the server's `tools/list` reply, and real clients serialise tool schemas more verbosely.
 
@@ -22,7 +22,7 @@ What the agent reads for the same question, from the same live Blender: the full
 
 | Task | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving | Note |
 |---|---:|---:|---:|---|
-| Scene overview | 319 ([raw](desk/scene__mcp.json)) | 319 ([raw](desk/scene__axi.txt)) | 0.0% |  |
+| Scene overview | 319 ([raw](desk/scene__mcp.json)) | 327 ([raw](desk/scene__axi.txt)) | -2.5% |  |
 | List objects (13) | 1,157 ([raw](desk/objects__mcp.json)) | 409 ([raw](desk/objects__axi.txt)) | 64.6% |  |
 | One object: Mug | 387 ([raw](desk/object_mug__mcp.json)) | 168 ([raw](desk/object_mug__axi.txt)) | 56.6% |  |
 | List objects, --json | — | 792 ([raw](desk/objects_json__axi.txt)) | — | TOON vs JSON, blender-axi only |
@@ -33,7 +33,7 @@ What the agent reads for the same question, from the same live Blender: the full
 
 | Task | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving | Note |
 |---|---:|---:|---:|---|
-| Scene overview | 310 ([raw](city/scene__mcp.json)) | 341 ([raw](city/scene__axi.txt)) | -10.0% |  |
+| Scene overview | 310 ([raw](city/scene__mcp.json)) | 345 ([raw](city/scene__axi.txt)) | -11.3% |  |
 | List objects (default --limit 100) | 41,531 ([raw, truncated](city/objects__mcp.json)) | 2,100 ([raw](city/objects__axi.txt)) | 94.9% |  |
 | List all 502 objects | 41,531 ([raw, truncated](city/objects__mcp.json)) | 9,494 ([raw](city/objects_all__axi.txt)) | 77.1% | MCP call shared with objects |
 | Objects in District05 | 41,531 ([raw, truncated](city/objects__mcp.json)) | 540 ([raw](city/objects_collection__axi.txt)) | 98.7% | MCP has no collection filter: full list; MCP call shared with objects |

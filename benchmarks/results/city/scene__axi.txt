@@ -7,7 +7,7 @@ frames: 1-250 (current 1)
 fps: 24
 camera: Camera
 objects: "502 (MESH 500, CAMERA 1, LIGHT 1)"
-collections: "21 (District00, District01, District02, District03, District04, +16 more)"
+collections: "22 (Scene Collection, District00, District01, District02, District03, +17 more)"
 materials: "30 (Facade00, Facade01, Facade02, Facade03, Facade04, +25 more)"
 unsaved_changes: false
 help[3]:

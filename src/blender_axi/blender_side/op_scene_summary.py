@@ -4,6 +4,8 @@
 def run(params: dict) -> dict:
     import bpy
 
+    from blender_axi.blender_side import session
+
     scene = bpy.context.scene
     render = scene.render
     types: dict[str, int] = {}
@@ -32,5 +34,5 @@ def run(params: dict) -> dict:
         "types": types,
         "collections": collections,
         "materials": [m.name for m in bpy.data.materials],
-        "is_dirty": bool(bpy.data.is_dirty),
+        "is_dirty": session.unsaved_changes(bpy),  # dirty flag or a valid blender-axi marker (live)
     }

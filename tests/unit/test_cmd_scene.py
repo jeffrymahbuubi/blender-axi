@@ -59,7 +59,7 @@ def test_scene_shape_and_order(blend_dir):
     assert d["resolution"] == "64x64@100%" and d["frames"] == "1-24 (current 1)" and d["fps"] == 24
     assert d["camera"] == "Camera"
     assert d["objects"] == "5 (MESH 2, CAMERA 1, EMPTY 1, LIGHT 1)"
-    assert d["collections"] == "1 (Props)" and d["materials"] == "1 (Material)"
+    assert d["collections"] == "2 (Scene Collection, Props)" and d["materials"] == "1 (Material)"
     assert "unsaved_changes" not in d
     op, params, blend, timeout = t.calls[0]
     assert op == "scene_summary" and params == {} and blend == (blend_dir / "basic.blend").resolve()
@@ -72,13 +72,13 @@ def test_scene_shape_and_order(blend_dir):
 def test_scene_empty_states_and_fps(blend_dir):
     r = dict(SUMMARY, object_count=0, types={}, collections=[], materials=[], camera=None, fps=30, fps_base=1.001)
     d = invoke(scene.SPEC, [], FakeTransport(r)).data
-    assert d["objects"] == "0" and d["collections"] == "0" and d["materials"] == "0"
+    assert d["objects"] == "0" and d["collections"] == "1 (Scene Collection)" and d["materials"] == "0"
     assert d["camera"] == "none" and d["fps"] == 29.97
 
 
 def test_scene_names_capped(blend_dir):
     r = dict(SUMMARY, collections=[f"C{i}" for i in range(8)])
-    assert invoke(scene.SPEC, [], FakeTransport(r)).data["collections"] == "8 (C0, C1, C2, C3, C4, +3 more)"
+    assert invoke(scene.SPEC, [], FakeTransport(r)).data["collections"] == "9 (Scene Collection, C0, C1, C2, C3, +4 more)"
 
 
 def test_scene_warning_key(blend_dir):
