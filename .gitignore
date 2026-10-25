@@ -1,0 +1,23 @@
+# Python
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# Project-local temp (tests, renders, Blender TEMP)
+.tmp/
+
+# Secrets
+.env
+.env.*
+
+# Development tooling (lives on feature/v* branches, never on main)
+.claude/
+.claude-flow/
+.swarm/
+CLAUDE.md
+AGENTS.md
+docs/
+scripts/promote-to-main.sh

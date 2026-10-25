@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blender-axi"
+dynamic = ["version"]
+description = "Agent-ergonomic CLI for Blender (AXI principles): TOON output, headless by default, optional live mode."
+readme = "README.md"
+requires-python = ">=3.13"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+
+[project.scripts]
+blender-axi = "blender_axi.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "blender_axi.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["blender: needs a real Blender installation"]
