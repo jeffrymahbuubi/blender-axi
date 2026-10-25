@@ -3,17 +3,19 @@
 params: kind, name, location[3], rotation_deg[3], scale[3], size, radius, depth, segments, collection, light_type,
 energy (all but `kind` may be None = the default). Meshes are built with `bmesh.ops.create_*`; `size` is the full
 edge of a cube/plane, `segments` the UV segments (sphere, cylinder, cone) or the subdivisions (icosphere).
-Result: {name, type, kind, collection, location, dimensions, verts, faces} (verts/faces None for non-meshes).
+Result: {name, type, kind, collection, location, dimensions, verts, faces, scene_camera_set, scene_camera} (verts/faces
+None for non-meshes). A camera becomes the scene camera only when the scene has none (`scene_camera_set`);
+`scene_camera` is the scene camera's name after the op (None when there is none).
 """
 
 import math
 
+from .common import find_collection
 from .ops import OpError
 
 MESH_KINDS = ("cube", "plane", "sphere", "icosphere", "cylinder", "cone", "monkey")
 KINDS = MESH_KINDS + ("camera", "light", "empty")
 LIGHT_TYPES = ("POINT", "SUN", "SPOT", "AREA")
-SCENE_COLLECTION = "Scene Collection"
 DEFAULT_NAMES = {"cube": "Cube", "plane": "Plane", "sphere": "Sphere", "icosphere": "Icosphere", "cylinder": "Cylinder",
                  "cone": "Cone", "monkey": "Suzanne", "camera": "Camera", "empty": "Empty"}
 
@@ -47,20 +49,6 @@ def _fill(bm, kind: str, params: dict) -> None:
                         radius2=radius if kind == "cylinder" else 0.0, depth=_number(params, "depth", 2.0))
     else:
         ops.create_monkey(bm)
-
-
-def _collection(bpy, scene, wanted):
-    if not wanted:
-        coll = getattr(bpy.context, "collection", None)
-        return coll if coll is not None else scene.collection
-    if wanted == SCENE_COLLECTION or scene.collection.name == wanted:
-        return scene.collection
-    for coll in bpy.data.collections:
-        if coll.name == wanted:
-            return coll
-    names = [c.name for c in bpy.data.collections]
-    raise OpError("NOT_FOUND", f"collection '{wanted}' not found"
-                  + (f" (available: {', '.join(names)})" if names else " (the file has no collections)"))
 
 
 def _new_object(bpy, kind: str, name: str | None, params: dict):
@@ -99,7 +87,7 @@ def run(params: dict) -> dict:
     if kind not in KINDS:
         raise OpError("OP_FAILED", f"unknown kind {kind!r}; one of {', '.join(KINDS)}")
     scene = bpy.context.scene
-    coll = _collection(bpy, scene, params.get("collection"))  # before creating anything: a bad name leaves no orphan data
+    coll = find_collection(bpy, scene, params.get("collection"))  # before creating anything: a bad name leaves no orphan data
     obj, mesh = _new_object(bpy, kind, params.get("name"), params)
     if params.get("location") is not None:
         obj.location = tuple(float(x) for x in params["location"])
@@ -108,6 +96,10 @@ def run(params: dict) -> dict:
     if params.get("scale") is not None:
         obj.scale = tuple(float(x) for x in params["scale"])
     coll.objects.link(obj)
+    made_active = False
+    if obj.type == "CAMERA" and scene.camera is None:  # the first camera makes `render` work; an existing one is kept
+        scene.camera = obj
+        made_active = True
     view_layer = getattr(bpy.context, "view_layer", None)
     if view_layer is not None:
         view_layer.update()  # object.dimensions reads the world matrix, which is stale until the depsgraph runs
@@ -116,4 +108,6 @@ def run(params: dict) -> dict:
         "location": _vec(obj.location), "dimensions": _vec(obj.dimensions),
         "verts": len(mesh.vertices) if mesh is not None else None,
         "faces": len(mesh.polygons) if mesh is not None else None,
+        "scene_camera_set": made_active,
+        "scene_camera": scene.camera.name if scene.camera is not None else None,
     }

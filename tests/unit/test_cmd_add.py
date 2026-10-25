@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from blender_axi import flags as flagparser
-from blender_axi.blender_side import op_add
+from blender_axi.blender_side import common, op_add
 from blender_axi.blender_side.ops import OpError
 from blender_axi.commands import add as cmd
 from blender_axi.errors import AxiError
@@ -18,7 +18,9 @@ from blender_axi.runner import RunOutcome, SaveSpec
 WORK = Path(__file__).resolve().parents[2] / ".tmp" / "tests" / "unit_cmd_add"
 LIVE = ["--live", "--host", "127.0.0.1", "--port", "9999"]
 MESH_RESULT = {"name": "Box", "type": "MESH", "kind": "cube", "collection": "Collection", "location": [0, 0, 1],
-               "dimensions": [2, 2, 2], "verts": 8, "faces": 6}
+               "dimensions": [2, 2, 2], "verts": 8, "faces": 6, "scene_camera_set": False, "scene_camera": None}
+CAMERA_RESULT = {**MESH_RESULT, "name": "Cam", "type": "CAMERA", "kind": "camera", "verts": None, "faces": None,
+                 "scene_camera_set": True, "scene_camera": "Cam"}
 
 
 class Fake:
@@ -185,6 +187,33 @@ def test_non_mesh_has_no_verts_and_no_material_hint(work):
     assert not any("material" in h for h in res.help) and any(" set Point " in h for h in res.help)
 
 
+def test_camera_that_became_the_scene_camera(work):
+    res, _ = invoke(["camera", "scene.blend", "--in-place"], Fake(CAMERA_RESULT))
+    assert list(res.data) == ["file", "added", "type", "collection", "location", "dimensions", "scene_camera",
+                              "modified", "saved", "duration_ms"]
+    assert res.data["scene_camera"] == "set" and not any("material" in h for h in res.help)
+    assert res.help[-1] == "Run `blender-axi render scene.blend --engine WORKBENCH --out <path.png>` to render through it"
+
+
+def test_camera_hint_follows_out_and_live(work):
+    res, _ = invoke(["camera", "scene.blend", "--out", "copy.blend"], Fake(CAMERA_RESULT))
+    assert res.help[-1].startswith("Run `blender-axi render copy.blend --engine WORKBENCH")
+    res, _ = invoke(["camera", *LIVE], Fake(CAMERA_RESULT))
+    assert any(h.startswith("Run `blender-axi render --engine WORKBENCH --out <path.png> --live --host 127.0.0.1 "
+                            "--port 9999` to render through it") for h in res.help)
+
+
+def test_camera_that_left_the_scene_camera_alone(work):
+    res, _ = invoke(["camera", "scene.blend", "--in-place"],
+                    Fake({**CAMERA_RESULT, "scene_camera_set": False, "scene_camera": "Camera"}))
+    assert res.data["scene_camera"] == "unchanged (Camera)" and not any("render" in h for h in res.help)
+
+
+def test_non_camera_results_have_no_scene_camera_field(work):
+    res, _ = invoke(["cube", "scene.blend", "--in-place"])
+    assert "scene_camera" not in res.data and not any("render" in h for h in res.help)
+
+
 def test_hint_names_with_spaces_are_quoted(work):
     res, _ = invoke(["cube", "scene.blend", "--in-place"], Fake({**MESH_RESULT, "name": "My Box"}))
     assert 'blender-axi set "My Box" scene.blend' in res.help[1]
@@ -306,7 +335,7 @@ def world(fake_bpy, monkeypatch):
         lights=Registry(lambda name, type: types.SimpleNamespace(name=name, type=type, energy=1000.0)),
         objects=Registry(new_object), collections=[props])
     fake_bpy.context = types.SimpleNamespace(
-        scene=types.SimpleNamespace(collection=scene_coll), collection=active,
+        scene=types.SimpleNamespace(collection=scene_coll, camera=None), collection=active,
         view_layer=types.SimpleNamespace(update=lambda: calls.append(("view_layer.update", {}))))
     return types.SimpleNamespace(bpy=fake_bpy, calls=calls, scene=scene_coll, props=props, active=active,
                                  bmesh=sys.modules["bmesh"])
@@ -379,6 +408,28 @@ def test_op_camera_light_empty_use_the_data_api(world):
     empty = add_op(kind="empty", name="Anchor")
     assert empty["type"] == "EMPTY" and empty["name"] == "Anchor"
     assert world.calls == [("view_layer.update", {})] * 4  # no bmesh op for any of them
+
+
+def test_op_first_camera_becomes_the_scene_camera_a_second_does_not(world):
+    scene = world.bpy.context.scene
+    first = add_op(kind="camera")
+    assert first["scene_camera_set"] is True and first["scene_camera"] == "Camera"
+    assert scene.camera is world.active.objects.linked[0]
+    second = add_op(kind="camera", name="Cam2")
+    assert second["scene_camera_set"] is False and second["scene_camera"] == "Camera"
+    assert scene.camera is world.active.objects.linked[0]
+
+
+def test_op_non_cameras_never_become_the_scene_camera(world):
+    for kind in ("cube", "light", "empty"):
+        r = add_op(kind=kind)
+        assert r["scene_camera_set"] is False and r["scene_camera"] is None
+    assert world.bpy.context.scene.camera is None
+
+
+def test_op_collection_helper_moved_to_common(world):
+    assert not hasattr(op_add, "_collection") and not hasattr(op_add, "SCENE_COLLECTION")
+    assert op_add.find_collection is common.find_collection
 
 
 def test_op_collection_lookup(world):

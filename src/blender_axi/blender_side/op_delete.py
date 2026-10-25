@@ -6,6 +6,7 @@ Result: {deleted: [names], children_kept: [names of children that survive], rema
 
 import difflib
 
+from .common import count
 from .ops import OpError
 
 
@@ -24,7 +25,7 @@ def run(params: dict) -> dict:
         close = {m: difflib.get_close_matches(str(m), list(by_name), n=1, cutoff=0.5) for m in missing}
         shown = ", ".join(f"'{m}' (did you mean: {close[m][0]}?)" if close[m] else f"'{m}'" for m in missing)
         label = "object" if len(missing) == 1 else "objects"
-        raise OpError("NOT_FOUND", f"{label} {shown} not found (the file has {len(by_name)} objects); nothing deleted")
+        raise OpError("NOT_FOUND", f"{label} {shown} not found (the file has {count(len(by_name), 'object')}); nothing deleted")
 
     doomed = [by_name[n] for n in wanted]
     doomed_names = set(wanted)

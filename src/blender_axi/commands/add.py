@@ -87,6 +87,9 @@ def run(inv: Invocation) -> Result:
     }
     if r.get("verts") is not None:
         data["verts"], data["faces"] = r["verts"], r["faces"]
+    camera_set = r["type"] == "CAMERA" and bool(r.get("scene_camera_set"))
+    if r["type"] == "CAMERA":
+        data["scene_camera"] = "set" if camera_set else f"unchanged ({r.get('scene_camera')})"
     name = quote_name(r["name"])
     write = "" if inv.globals.live else " --in-place"
     hints = [f"Run `{_mutate.hint_cmd(inv, target, outcome, f'set {name} <file> --location x,y,z{write}')}` to move it"]
@@ -94,6 +97,9 @@ def run(inv: Invocation) -> Result:
         hints.append("Run `" + _mutate.hint_cmd(inv, target, outcome,
                                                  f"material {name} <file> --name <mat> --color r,g,b{write}")
                      + "` to give it a material")
+    if camera_set:
+        hints.append("Run `" + _mutate.hint_cmd(inv, target, outcome, "render <file> --engine WORKBENCH --out <path.png>")
+                     + "` to render through it")
     return _mutate.finish(inv, SPEC, target, outcome, data, hints)
 
 

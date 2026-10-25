@@ -11,7 +11,7 @@ Everything referenced is looked up before anything is changed, so a bad name lea
 import difflib
 import math
 
-from .op_add import _collection
+from .common import count, find_collection
 from .ops import OpError
 
 TOLERANCE = 1e-6
@@ -24,7 +24,7 @@ def _find(bpy, name, label: str = "object"):
             return candidate
     names = [o.name for o in bpy.data.objects]
     close = difflib.get_close_matches(str(name), names, n=3, cutoff=0.5)
-    hint = f" (did you mean: {', '.join(close)}?)" if close else f" (the file has {len(names)} objects)"
+    hint = f" (did you mean: {', '.join(close)}?)" if close else f" (the file has {count(len(names), 'object')})"
     raise OpError("NOT_FOUND", f"{label} '{name}' not found{hint}")
 
 
@@ -94,7 +94,7 @@ def run(params: dict) -> dict:
                           + ("it is the same object" if parent is ob else "that would make a loop"))
     coll = None
     if params.get("collection"):
-        coll = _collection(bpy, bpy.context.scene, params["collection"])
+        coll = find_collection(bpy, bpy.context.scene, params["collection"])
 
     if parent_req is not None:
         before = ob.parent.name if ob.parent is not None else None

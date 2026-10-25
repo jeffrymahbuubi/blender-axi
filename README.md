@@ -111,6 +111,8 @@ is reported as `frame_changed: "1 -> 10"`. Code that assigns no `result` reports
 when told where: `--in-place` writes the file (Blender keeps `<file>.blend1`, reported as `backup:`) and
 `--out <copy.blend>` writes a copy; with neither they exit 2 and print both full commands. A request that
 changes nothing writes nothing (`modified: false`, `saved: none (no changes)`). Rotations are in degrees.
+`add camera` becomes the scene camera when the file has none (reported as `scene_camera: set`), so `new` +
+`add camera` + `render` works; an existing scene camera is kept (`scene_camera: unchanged (<name>)`).
 They use Blender's data API rather than operators, so the same command works headless, against a headless
 MCP server and in the GUI. With `--live` they change the open session like `exec --live` (no copy,
 `--in-place` saves the open file, an undo step is pushed when Blender allows it). For a whole scene, one

@@ -39,7 +39,8 @@ def run(inv: Invocation) -> Result:
     data: dict = {"file": target.label, "deleted": r["deleted"]}
     if r["children_kept"]:
         data["children_kept"] = r["children_kept"]
-    data["remaining"] = f"{r['remaining']} objects"
+    n = r["remaining"]
+    data["remaining"] = f"{n} object{'s' if n != 1 else ''}"
     return _mutate.finish(inv, SPEC, target, outcome, data, [])
 
 

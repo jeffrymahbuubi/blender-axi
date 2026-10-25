@@ -185,6 +185,10 @@ def test_delete_in_place_and_out(capsys, basic):
     assert axi(capsys, "objects", basic)[1]["count"] == "4 of 4 total"
     code, data = axi(capsys, "delete", "Cube, Light", basic, "--in-place")
     assert code == 0 and data["deleted"] == ["Cube", "Light"] and data["remaining"] == "2 objects"
+    code, data = axi(capsys, "delete", "Camera", basic, "--in-place")  # 2 -> 1: singular
+    assert code == 0 and data["remaining"] == "1 object"
+    code, data = axi(capsys, "delete", "Ghost", basic, "--in-place")
+    assert code == 1 and data["code"] == "NOT_FOUND" and "(the file has 1 object)" in data["error"]
 
 
 def test_delete_neither_flag_is_exit_2(capsys, basic):

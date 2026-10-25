@@ -9,6 +9,7 @@ Result: {object, material, created, color[4], metallic, roughness, slots[names]}
 
 import difflib
 
+from .common import count
 from .ops import OpError
 
 PRINCIPLED = "BSDF_PRINCIPLED"
@@ -34,7 +35,7 @@ def _object(bpy, name):
     if obj is None:
         names = [o.name for o in bpy.data.objects]
         close = difflib.get_close_matches(str(name), names, n=3, cutoff=0.5)
-        hint = f" (did you mean: {', '.join(close)}?)" if close else f" (the file has {len(names)} objects)"
+        hint = f" (did you mean: {', '.join(close)}?)" if close else f" (the file has {count(len(names), 'object')})"
         raise OpError("NOT_FOUND", f"object '{name}' not found{hint}")
     return obj
 

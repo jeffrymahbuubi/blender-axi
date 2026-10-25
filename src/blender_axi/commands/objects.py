@@ -79,7 +79,7 @@ def run_objects(inv: Invocation) -> Result:
         data["objects"] = (f"0 objects matching {', '.join(filters)} in {where}" if filters
                            else f"0 objects in {where}")
         if filters and total:
-            help_.append(f"Run `{hints.cmd('objects <file>')}` to list all {total} objects")
+            help_.append(f"Run `{hints.cmd('objects <file>')}` to list all {total} object{'s' if total != 1 else ''}")
         else:
             help_.append(f"Run `{hints.cmd('scene <file>')}` for the scene overview")
     else:

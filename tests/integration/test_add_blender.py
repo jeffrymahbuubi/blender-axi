@@ -94,17 +94,29 @@ def test_a2_cylinder_depth_runs_along_z(capsys, empty):  # ASSUMED A2
     assert obj["dimensions"] == "1,1,3"
 
 
-def test_camera_light_empty_and_light_options(capsys, empty):
+def test_camera_light_empty_and_light_options(capsys, empty, work):
     code, cam = axi(capsys, "add", "camera", empty, "--name", "Cam", "--location", "0,-5,2", "--in-place")
     assert code == 0 and cam["type"] == "CAMERA" and cam["location"] == "0,-5,2" and "verts" not in cam
+    assert cam["scene_camera"] == "set" and axi(capsys, "scene", empty)[1]["camera"] == "Cam"
+    assert any("to render through it" in h for h in cam["help"])
     code, sun = axi(capsys, "add", "light", empty, "--type", "SUN", "--energy", "3", "--in-place")
-    assert code == 0 and sun["type"] == "LIGHT" and sun["added"] == "Sun"
+    assert code == 0 and sun["type"] == "LIGHT" and sun["added"] == "Sun" and "scene_camera" not in sun
     code, obj = axi(capsys, "add", "empty", empty, "--name", "Anchor", "--in-place")
-    assert code == 0 and obj["type"] == "EMPTY"
+    assert code == 0 and obj["type"] == "EMPTY" and "scene_camera" not in obj
+    png = work / "cam.png"  # 0.3.0: NOT_FOUND "scene has no active camera"
+    code, _ = axi(capsys, "render", empty, "--engine", "WORKBENCH", "--resolution", "32x32", "--out", png)
+    assert code == 0 and png.exists()
     assert axi(capsys, "object", "Sun", empty)[1]["type"] == "LIGHT"
     code, ex = axi(capsys, "exec", empty, "--allow-exec", "--code",
                    "l = bpy.data.lights['Sun']\nresult = {'type': l.type, 'energy': l.energy}")
     assert code == 0 and ex["result"] == {"type": "SUN", "energy": 3.0}
+
+
+def test_second_camera_keeps_the_scene_camera(capsys, basic):
+    code, cam = axi(capsys, "add", "camera", basic, "--name", "Cam2", "--in-place")
+    assert code == 0 and cam["scene_camera"] == "unchanged (Camera)"
+    assert not any("to render through it" in h for h in cam["help"])
+    assert axi(capsys, "scene", basic)[1]["camera"] == "Camera"
 
 
 def test_location_rotation_scale_round_trip(capsys, empty):
@@ -225,3 +237,12 @@ def test_live_story(capsys, session):
     assert code == 0 and data["modified"] is True and data["saved"].endswith("session.blend")
     assert blend.stat().st_mtime_ns > before
     assert axi(capsys, "live", "--host", "127.0.0.1", "--port", port)[1]["unsaved_changes"] is False
+
+    # the session already has a scene camera: keep it; clear it and the next camera takes over
+    code, data = axi(capsys, "add", "camera", *live, "--name", "LiveCam")
+    assert code == 0 and data["scene_camera"] == "unchanged (Camera)", data
+    code, _ = axi(capsys, "exec", *live, "--allow-exec", "--code", "bpy.context.scene.camera = None")
+    assert code == 0
+    code, data = axi(capsys, "add", "camera", *live, "--name", "LiveCam2")
+    assert code == 0 and data["scene_camera"] == "set", data
+    assert axi(capsys, "scene", *live)[1]["camera"] == "LiveCam2"

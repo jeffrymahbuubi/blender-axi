@@ -115,6 +115,12 @@ def test_children_kept_appears_only_when_any(work):
     assert res.data["children_kept"] == ["Ball", "Cube"] and res.data["remaining"] == "3 objects"
 
 
+def test_remaining_is_singular_for_one_object(work):
+    for remaining, text in ((1, "1 object"), (0, "0 objects"), (2, "2 objects")):
+        res, _ = invoke(["Ball", "scene.blend", "--in-place"], Fake(remaining=remaining))
+        assert res.data["remaining"] == text
+
+
 def test_out_hints_use_the_written_copy(work):
     res, _ = invoke(["Ball", "scene.blend", "--out", "copy.blend"])
     assert res.data["saved"] == "copy.blend" and res.help[0] == "Run `blender-axi objects copy.blend` to list the objects"
@@ -210,6 +216,16 @@ def test_op_missing_names_are_all_reported_and_nothing_is_removed(world):
     assert "'Ghost'" in msg and "'Anchr' (did you mean: Anchor?)" in msg and "nothing deleted" in msg
     assert world.bpy.data.objects.removed == [] and len(world.bpy.data.objects) == 4
     assert world.ball.parent is world.anchor
+
+
+def test_op_not_found_hint_counts_objects_in_the_singular(world):
+    with pytest.raises(OpError) as exc:
+        op_delete.run({"names": ["Qqqqqq"]})
+    assert "(the file has 4 objects)" in exc.value.message
+    world.bpy.data.objects[:] = [world.cube]
+    with pytest.raises(OpError) as exc:
+        op_delete.run({"names": ["Qqqqqq"]})
+    assert "(the file has 1 object)" in exc.value.message
 
 
 def test_op_children_are_unparented_with_world_matrix_preserved(world):

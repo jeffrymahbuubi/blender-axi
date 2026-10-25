@@ -3,6 +3,7 @@
 import difflib
 import math
 
+from .common import count
 from .ops import OpError
 
 
@@ -33,7 +34,7 @@ def run(params: dict) -> dict:
     if obj is None:
         names = [o.name for o in bpy.data.objects]
         close = difflib.get_close_matches(str(name), names, n=3, cutoff=0.5)
-        hint = f" (did you mean: {', '.join(close)}?)" if close else f" (the file has {len(names)} objects)"
+        hint = f" (did you mean: {', '.join(close)}?)" if close else f" (the file has {count(len(names), 'object')})"
         raise OpError("NOT_FOUND", f"object '{name}' not found{hint}")
 
     if obj.rotation_mode in ("QUATERNION", "AXIS_ANGLE"):

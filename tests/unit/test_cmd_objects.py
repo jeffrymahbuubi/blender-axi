@@ -107,6 +107,12 @@ def test_objects_empty_with_filters():
     assert res.help == ["Run `blender-axi objects <file>` to list all 5 objects"]
 
 
+def test_objects_empty_with_filters_in_a_one_object_file_is_singular():
+    r = {"filepath": "x", "total": 1, "matched": 0, "rows": []}
+    res = invoke(cmd.OBJECTS_SPEC, ["--name-contains", "zzz"], FakeTransport(r))
+    assert res.help == ["Run `blender-axi objects <file>` to list all 1 object"]
+
+
 def test_objects_empty_scene():
     r = {"filepath": "x", "total": 0, "matched": 0, "rows": []}
     res = invoke(cmd.OBJECTS_SPEC, [], FakeTransport(r))
@@ -359,3 +365,7 @@ def test_op_detail_not_found_suggests(scene_bpy):
     with pytest.raises(OpError) as e:
         op_object_detail.run({"name": "Qqqqqq"})
     assert "the file has 4 objects" in e.value.message
+    scene_bpy.data.objects[:] = scene_bpy.data.objects[:1]
+    with pytest.raises(OpError) as e:
+        op_object_detail.run({"name": "Qqqqqq"})
+    assert "(the file has 1 object)" in e.value.message

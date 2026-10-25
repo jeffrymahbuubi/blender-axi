@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from blender_axi import flags as flagparser
-from blender_axi.blender_side import op_set
+from blender_axi.blender_side import common, op_set
 from blender_axi.blender_side.ops import OpError
 from blender_axi.commands import set_cmd as cmd
 from blender_axi.errors import AxiError
@@ -345,6 +345,17 @@ def test_op_missing_parent_collection_or_object_is_not_found_and_changes_nothing
         set_op(name="Cub")
     assert exc.value.code == "NOT_FOUND" and "did you mean: Cube" in exc.value.message
     assert world.cube.location == (0.0, 0.0, 0.0) and world.cube.name == "Cube"
+
+
+def test_op_set_uses_the_shared_collection_lookup_and_counts_in_the_singular(world):
+    assert op_set.find_collection is common.find_collection and not hasattr(op_set, "_collection")
+    with pytest.raises(OpError) as exc:
+        set_op(name="Qqqqqq")
+    assert "(the file has 2 objects)" in exc.value.message
+    world.bpy.data.objects[:] = [world.cube]
+    with pytest.raises(OpError) as exc:
+        set_op(name="Qqqqqq")
+    assert "(the file has 1 object)" in exc.value.message
 
 
 def test_op_collection_move_unlinks_every_old_collection(world):
