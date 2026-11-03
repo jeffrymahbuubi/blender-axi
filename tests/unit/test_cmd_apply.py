@@ -99,7 +99,7 @@ def sent(t):
 def test_spec_shape():
     assert cmd.SPEC.name == "apply"
     assert [p.name for p in cmd.SPEC.positionals] == ["steps", "file"] and cmd.SPEC.positionals[1].required is False
-    assert [f.name for f in cmd.SPEC.flags] == ["--check", "--in-place", "--out", "--force"]
+    assert [f.name for f in cmd.SPEC.flags] == ["--check", "--strict", "--in-place", "--out", "--force"]
     assert any("--live" in e for e in cmd.SPEC.examples) and all(e.startswith("blender-axi") for e in cmd.SPEC.examples)
 
 
@@ -262,11 +262,11 @@ def test_check_prints_the_plan_without_the_transport(work):
     name = steps_file(work, ["add cube --name Box", {"cmd": "set", "name": "Box", "location": [0, 0, 1]}])
     res, t = invoke([name, "scene.blend", "--check"])
     assert res.exit_code == 0 and t.calls == []
-    assert list(res.data) == ["file", "steps", "plan", "status"]
-    assert res.data == {"file": "scene.blend", "steps": 2, "status": "valid",
+    assert list(res.data) == ["file", "steps", "commands", "targets", "plan", "status"]
+    assert res.data == {"file": "scene.blend", "steps": 2, "commands": "add 1, set 1", "status": "valid",
+                        "targets": "unchecked (add --strict to verify object names against the file)",
                         "plan": ["1 add cube --name Box", "2 set Box --location 0,0,1"]}
-    assert res.help == ["Run `blender-axi apply steps.json scene.blend --in-place` to apply them (a .blend1 backup is kept)",
-                        "Run `blender-axi apply steps.json scene.blend --out <copy.blend>` to keep the original and write a copy"]
+    assert res.help == ["Run `blender-axi apply steps.json scene.blend --in-place` to apply them"]
 
 
 def test_check_with_a_write_flag_validates_it(work):
@@ -286,7 +286,8 @@ def test_check_without_a_file_follows_the_cwd_rule(work):
     res, _ = invoke([steps_file(work, ["add cube"]), "--check"])
     assert res.data["file"] == "scene.blend"
     (work / "other.blend").write_bytes(b"BLEND")
-    assert fails([steps_file(work, ["add cube"]), "--check"]).exit_code == 2
+    res, _ = invoke([steps_file(work, ["add cube"]), "--check"])  # several files: no error, the file is just unknown
+    assert res.data["file"] == "(none)" and res.help[0].startswith("Run `blender-axi apply steps.json <file.blend> --in-place`")
 
 
 def test_success_sends_one_batch_with_the_per_command_params(work):

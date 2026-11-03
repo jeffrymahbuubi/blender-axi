@@ -10,6 +10,8 @@ def _placeholder(flag: Flag) -> str:
         return flag.name
     if flag.choices:
         return f"{flag.name} <{'|'.join(flag.choices)}>"
+    if flag.kind == "list" and not flag.split:
+        return f"{flag.name} <text>"
     word = {"str": "text", "int": "n", "float": "n", "path": "path", "list": "a,b"}.get(flag.kind, flag.kind)
     return f"{flag.name} <{word}>"
 

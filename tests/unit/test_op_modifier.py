@@ -46,9 +46,9 @@ SCHEMA = {
 }
 
 
-def make_modifier(name, kind):
+def make_modifier(name, kind, cls=types.SimpleNamespace):
     values, props = SCHEMA[kind]
-    mod = types.SimpleNamespace(name=name, type=kind, bl_rna=types.SimpleNamespace(properties=Props(props)))
+    mod = cls(name=name, type=kind, bl_rna=types.SimpleNamespace(properties=Props(props)))
     for key, value in values.items():
         if key not in ("name", "type"):
             setattr(mod, key, value)
@@ -180,8 +180,46 @@ def test_op_boolean_with_object(world):
 def test_op_boolean_created_without_object_is_op_failed(world):
     with pytest.raises(OpError) as exc:
         modifier_op(kind="BOOLEAN", settings={"operation": "UNION"})
-    assert exc.value.code == "OP_FAILED" and exc.value.message == "boolean needs --object <cutter>"
+    assert exc.value.code == "OP_FAILED" and exc.value.message == "boolean needs --cutter <object>"
     assert len(world.cube.modifiers) == 0
+
+
+class Picky(types.SimpleNamespace):
+    """A modifier whose object pointers drop cameras silently, like Blender's pointer poll (mesh-only)."""
+
+    def __setattr__(self, key, value):
+        if key in ("object", "mirror_object") and getattr(value, "type", "MESH") == "CAMERA":
+            return
+        super().__setattr__(key, value)
+
+
+@pytest.fixture
+def picky(world, monkeypatch):
+    original = make_modifier
+    monkeypatch.setitem(globals(), "make_modifier", lambda name, kind: original(name, kind, Picky))
+    return world
+
+
+@pytest.mark.parametrize("kind,key,label", [("BOOLEAN", "object", "cutter"),
+                                            ("MIRROR", "mirror_object", "mirror object")])
+def test_op_rejected_pointer_is_op_failed_and_the_new_modifier_is_removed(picky, kind, key, label):
+    with pytest.raises(OpError) as exc:
+        modifier_op(kind=kind, settings={key: "Camera"})
+    assert exc.value.code == "OP_FAILED" and exc.value.message == f"cannot use 'Camera' (CAMERA) as the {label}"
+    assert len(picky.cube.modifiers) == 0
+
+
+def test_op_rejected_pointer_via_prop_is_op_failed_too(picky):
+    with pytest.raises(OpError) as exc:
+        modifier_op(kind="BOOLEAN", props={"object": "Camera"})
+    assert exc.value.message == "cannot use 'Camera' (CAMERA) as the cutter" and len(picky.cube.modifiers) == 0
+
+
+def test_op_rejected_pointer_keeps_an_existing_modifier(picky):
+    modifier_op(kind="BOOLEAN", settings={"object": "Cutter"})
+    with pytest.raises(OpError):
+        modifier_op(kind="BOOLEAN", settings={"object": "Camera"})
+    assert len(picky.cube.modifiers) == 1 and picky.cube.modifiers[0].object is picky.cutter
 
 
 def test_op_boolean_cutter_via_prop_is_enough(world):

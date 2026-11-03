@@ -11,7 +11,8 @@ mode belong to `apply`.
 Every step is parsed with its command's own spec and pure checks BEFORE Blender starts (`registry.BATCH` maps command to
 `BatchSpec`), so a bad step exits 2 with the command's own message and `step N (cmd): ` in front, and nothing ran.
 Headless the whole batch is all-or-nothing (a failing step raises, the bootstrap saves nothing); live it is best effort:
-steps before the failing one stay applied and one undo step was pushed before step 1. `--check` stops after validation.
+steps before the failing one stay applied and one undo step was pushed before step 1. `--check` stops after validation
+and needs no file (`_apply_check`); `--strict` also verifies every targeted object and collection against the file.
 """
 
 from __future__ import annotations
@@ -28,12 +29,12 @@ from .. import flags as flagparser
 from .. import registry
 from ..errors import AxiError
 from ..spec import BatchSpec, CommandSpec, Flag, GlobalOpts, Invocation, Positional, Result
-from . import _mutate
-from ._common import Hints, display_path, invalid, quote_name, resolve_blend
+from . import _apply_check, _mutate
+from ._apply_check import CANONICAL
+from ._common import Hints, display_path, invalid, quote_name
 
 BATCH_TIMEOUT = 600.0  # a long recipe (imports, 20+ steps) can exceed the 120 s default
 RESULT_LINES = 20
-CANONICAL = ("add", "set", "delete", "material", "modifier", "configure", "import")
 GUIDE = ("A steps file is a JSON list, e.g. [\"add cube --name Box\", {\"cmd\": \"set\", \"name\": \"Box\", "
          "\"location\": [0, 0, 1]}]")
 
@@ -68,7 +69,8 @@ def _rewrap(i: int, cmd: str, label: str, err: AxiError) -> AxiError:
 
 # -- reading the document -------------------------------------------------------------------------
 
-def _read_steps(inv: Invocation) -> tuple[list, str]:
+def _read_steps(inv: Invocation) -> tuple[list, str, list[str]]:
+    """(steps, label of the document, top-level keys other than `steps`)."""
     raw = inv.positionals["steps"]
     if raw == "-":
         stream = sys.stdin
@@ -93,7 +95,8 @@ def _read_steps(inv: Invocation) -> tuple[list, str]:
         raise invalid('steps: expected a list of steps or {"steps": [...]}', [GUIDE])
     if not steps:
         raise invalid("no steps", [GUIDE])
-    return steps, label
+    extra = sorted(str(k) for k in doc if k != "steps") if isinstance(doc, dict) else []
+    return steps, label, extra
 
 
 # -- one step -------------------------------------------------------------------------------------
@@ -210,32 +213,6 @@ def _prepare_one(i: int, label: str, step) -> _Step:
 
 # -- the command ----------------------------------------------------------------------------------
 
-def _check_label(inv: Invocation) -> str:
-    """The `file:` of a --check: never contacts Blender (so no ping in live mode)."""
-    if inv.globals.live:
-        if inv.positionals.get("file"):
-            raise invalid("--live uses the file open in Blender; drop <file>", ["blender-axi apply <steps> --live"])
-        return "(live session)"
-    if inv.flags.get("in_place") or inv.flags.get("out"):
-        return _mutate.resolve_target(inv, SPEC).label
-    label = resolve_blend(inv)[1]
-    assert label is not None
-    return label
-
-
-def _check(inv: Invocation, steps: list[_Step]) -> Result:
-    data = {"file": _check_label(inv), "steps": len(steps),
-            "plan": [f"{i} " + " ".join(quote_name(t) for t in (s.cmd, *s.argv)) for i, s in enumerate(steps, 1)],
-            "status": "valid"}
-    drop = ("--check", "--force", "--in-place", "--out")
-    if inv.globals.live:
-        help_ = [f"Run `{_mutate.replay(inv, SPEC, '', drop).rstrip()}` to apply them to the open session"]
-    else:
-        help_ = [f"Run `{_mutate.replay(inv, SPEC, '--in-place', drop)}` to apply them (a .blend1 backup is kept)",
-                 f"Run `{_mutate.replay(inv, SPEC, '--out <copy.blend>', drop)}` to keep the original and write a copy"]
-    return Result(data=data, help=help_)
-
-
 def _explain(err: AxiError, inv: Invocation, label: str) -> AxiError:
     """Help for a step that failed inside Blender (its message starts `step N (cmd): `); other errors pass through."""
     if not err.message.startswith("step "):
@@ -257,17 +234,28 @@ def _explain(err: AxiError, inv: Invocation, label: str) -> AxiError:
 
 
 def run(inv: Invocation) -> Result:
-    raw_steps, label = _read_steps(inv)
+    raw_steps, label, extra = _read_steps(inv)
+    strict = bool(inv.flags.get("strict"))
+    warnings: list[str] = []
+    if extra:
+        keys = ", ".join(extra)
+        if strict:
+            raise invalid(f'steps: unknown top-level key(s) {keys}; only "steps" is read', [GUIDE, "Drop --strict to ignore them"])
+        warnings.append(f'ignored top-level keys: {keys} (only "steps" is read)')
     steps = [_prepare_one(i, label, s) for i, s in enumerate(raw_steps, 1)]
     if inv.flags.get("check"):
-        return _check(inv, steps)
+        return _apply_check.check(inv, SPEC, steps, label, warnings, strict)
     target = _mutate.resolve_target(inv, SPEC)
+    if strict:
+        more = _apply_check.verify(inv, steps, target.label, target.blend, label)[1]
+        warnings += more
     request = {"steps": [{"op": s.batch.op, "params": s.params} for s in steps]}
     try:
         outcome = inv.transport.run("batch", request, blend=target.blend, save=target.save,
                                     timeout=inv.globals.timeout or BATCH_TIMEOUT)
     except AxiError as err:
         raise _explain(err, inv, label) from err
+    outcome.warnings = [*warnings, *outcome.warnings]
     r = outcome.result
     lines = [f"{i} {s.cmd}: {s.batch.line(res['result'])}" for i, (s, res) in enumerate(zip(steps, r["results"]), 1)]
     if not inv.globals.full and len(lines) > RESULT_LINES:
@@ -287,6 +275,8 @@ SPEC = CommandSpec(
     ),
     flags=(
         Flag("--check", "bool", help="Validate every step and print the plan; Blender is not started and nothing is written"),
+        Flag("--strict", "bool", help="Unknown top-level keys are errors, and every object or collection a step targets is "
+                                       "verified against <file> before anything runs (one read-only Blender start)"),
         *_mutate.MUTATE_FLAGS,
     ),
     examples=(

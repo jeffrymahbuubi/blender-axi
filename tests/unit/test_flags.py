@@ -164,3 +164,11 @@ def test_command_flag_colliding_with_global_goes_to_globals():
 def test_unknown_flag_help_when_no_own_flags():
     e = err(make(), ["--x"])
     assert "no flags besides the global" in e.help[0]
+
+
+def test_list_flag_split_false_is_repeatable_verbatim():
+    s = make(Flag("--object", "list", split=False))
+    inv, _ = flags.parse(s, ["--object", "A,B", "--object", "C"])
+    assert inv.flags["object"] == ["A,B", "C"]
+    inv, _ = flags.parse(s, ["--object="])
+    assert inv.flags["object"] == []

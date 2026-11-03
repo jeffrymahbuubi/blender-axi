@@ -61,6 +61,9 @@ def _safety(names: set[str]) -> list[str]:
     lines = ["- Read-only commands never modify the `.blend`; Blender runs headless with `--factory-startup`."]
     if names & {"render", "export"}:
         lines.append("- Outputs are never overwritten without `--force` (`WRITE_REFUSED`, exit 1).")
+    if "export" in names:
+        lines.append("- `export` applies modifiers and skips hidden objects by default "
+                     "(`--no-apply-modifiers`, `--include-hidden`; `--dry-run` lists the set).")
     if "exec" in names:
         lines.append("- `exec` refuses to run without `--allow-exec` (`EXEC_NOT_ALLOWED`, exit 2); "
                      "it works on a copy unless `--in-place` is given.")
@@ -69,7 +72,8 @@ def _safety(names: set[str]) -> list[str]:
         lines.append("- Modeling commands (`add`, `set`, `delete`, `material`, `modifier`, `configure`, `import`, `apply`) "
                      "write a file only with `--in-place` (a `.blend1` backup is kept) or `--out <copy.blend>`; "
                      "with `--live` they change the open session. "
-                     "For many steps use `apply <steps.json>` (one Blender start, all-or-nothing headless).")
+                     "For many steps use `apply <steps.json>` (one Blender start, all-or-nothing headless); "
+                     "`apply --check --strict` verifies targets without writing.")
     lines.append("- `--user-prefs` loads your add-ons; the default is `--factory-startup`.")
     lines.append("- Temp files stay under the project-local `.tmp/` (or `BLENDER_AXI_TMP`), never the system temp.")
     lines.append("- Errors are data on stdout with a `code` and `help`; exit 2 means a usage problem, 1 a runtime failure.")

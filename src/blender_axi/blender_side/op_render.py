@@ -2,7 +2,9 @@
 
 params: out (absolute path or `name_####.png` template), frames (list[int] | None = current frame),
 engine (WORKBENCH|EEVEE|CYCLES | None), resolution ([w, h] | None), percent, samples, camera,
-format (image format enum | None), force.
+format (image format enum | None), force, fit (bool), fit_margin (float >= 1), temp_camera_ok (bool: headless
+may use a temporary camera when the scene has none). `fit` frames all visible geometry (see `camera_fit`)
+and the camera is put back afterwards.
 
 Pure-Python helpers (`output_paths`, `ENGINE_IDS`, `EXT_FORMATS`) have no `bpy` dependency; the CLI
 imports them so the write-refusal pre-check and the op agree on every path.
@@ -11,6 +13,7 @@ imports them so the write-refusal pre-check and the op agree on every path.
 import os
 import re
 
+from . import camera_fit
 from .ops import OpError
 
 ENGINE_IDS = {"WORKBENCH": "BLENDER_WORKBENCH", "EEVEE": "BLENDER_EEVEE", "CYCLES": "CYCLES"}
@@ -148,7 +151,7 @@ def _restore(scene, snap: dict) -> list[str]:
     return failures
 
 
-def _render(bpy, scene, params: dict) -> dict:
+def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState") -> dict:
     render = scene.render
 
     if params.get("engine"):
@@ -167,6 +170,10 @@ def _render(bpy, scene, params: dict) -> dict:
         if obj is None or obj.type != "CAMERA":
             raise OpError("NOT_FOUND", f"camera not found: {camera}")
         scene.camera = obj
+    fit = None
+    if params.get("fit"):
+        fit = camera_fit.fit_scene(bpy, scene, float(params.get("fit_margin") or 1.1),
+                                   bool(params.get("temp_camera_ok")), fit_state)
     elif scene.camera is None:
         raise OpError("NOT_FOUND", "scene has no active camera")
 
@@ -191,7 +198,7 @@ def _render(bpy, scene, params: dict) -> dict:
             raise OpError("OP_FAILED", f"Blender rendered frame {frame} but wrote no file at {path}")
 
     scale = render.resolution_percentage / 100
-    return {
+    result = {
         "frames": frames,
         "files": files,
         "size": f"{int(render.resolution_x * scale)}x{int(render.resolution_y * scale)}",
@@ -200,6 +207,9 @@ def _render(bpy, scene, params: dict) -> dict:
         "samples_ignored": samples_ignored,
         "format": fmt,
     }
+    if fit is not None:
+        result["fit"] = fit
+    return result
 
 
 def run(params: dict) -> dict:
@@ -207,10 +217,12 @@ def run(params: dict) -> dict:
 
     scene = bpy.context.scene
     snap = _snapshot(scene)
+    fit_state = camera_fit.FitState()
     try:
-        result = _render(bpy, scene, params)  # the result is computed from the render settings, before restoring
+        result = _render(bpy, scene, params, fit_state)  # the result is computed from the render settings, before restoring
     finally:
         failures = _restore(scene, snap)  # also on failure; never masks the original exception
+        failures += fit_state.undo(bpy)  # after scene.camera is back: a temporary camera is deleted, a fitted one moved back
     if failures:
         result["restore_warnings"] = failures
     return result

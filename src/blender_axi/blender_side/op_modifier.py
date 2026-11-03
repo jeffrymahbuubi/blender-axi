@@ -124,6 +124,9 @@ def _assign(mod, key: str, value) -> None:
         setattr(mod, key, value)
     except (TypeError, ValueError, AttributeError, RuntimeError) as exc:
         raise OpError("OP_FAILED", f"cannot set '{key}' on {mod.type}: {exc}") from None
+    if key in POINTER_LABELS and value is not None and getattr(mod, key, None) is not value:
+        # Blender silently drops an object its pointer poll rejects (e.g. a camera as a boolean cutter)
+        raise OpError("OP_FAILED", f"cannot use '{value.name}' ({value.type}) as the {POINTER_LABELS[key]}")
 
 
 def run(params: dict) -> dict:
@@ -149,7 +152,7 @@ def run(params: dict) -> dict:
     settings = _resolve_settings(bpy, params.get("settings") or {})
     created = mod is None
     if created and kind == "BOOLEAN" and settings.get("object") is None and "object" not in (params.get("props") or {}):
-        raise OpError("OP_FAILED", "boolean needs --object <cutter>")
+        raise OpError("OP_FAILED", "boolean needs --cutter <object>")
     if created:
         try:
             mod = obj.modifiers.new(name, kind)

@@ -145,7 +145,10 @@ def _parse(spec: CommandSpec, args: list[str], strict: bool) -> Invocation:
                 raise _fail(spec, f"{name} requires a value")
             raw, nxt = args[i + 1], i + 2
         if flag.kind == "list":
-            items = [p.strip() for p in raw.split(",") if p.strip()]
+            if flag.split:
+                items = [p.strip() for p in raw.split(",") if p.strip()]
+            else:  # repeatable verbatim: one occurrence = one value (names may contain commas)
+                items = [raw.strip()] if raw.strip() else []
             store(flag, [_convert_one(spec, dataclasses.replace(flag, kind="str"), p) for p in items])
         else:
             store(flag, _convert_one(spec, flag, raw))

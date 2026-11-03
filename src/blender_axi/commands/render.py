@@ -4,16 +4,18 @@ import os
 import re
 from pathlib import Path
 
+from ..blender_side.camera_fit import TEMP_ROTATION_DEG
 from ..blender_side.op_render import ENGINE_IDS, EXT_FORMATS, FORMAT_EXT, output_paths
 from ..errors import AxiError
 from ..spec import CommandSpec, Flag, Invocation, Positional, Result
-from ._common import display_path, invalid, live_suffix, refused, resolve_blend_inferred
+from ._common import Hints, display_path, fmt_vec, invalid, live_suffix, quote_name, refused, resolve_blend_inferred
 
 _RESOLUTION = re.compile(r"^(\d+)[xX](\d+)$")
 _RANGE = re.compile(r"^(\d+)\.\.(\d+)$")
 _FORMATS = ("PNG", "JPEG", "WEBP", "OPEN_EXR", "OPEN_EXR_MULTILAYER", "TIFF", "BMP", "TARGA")
 _MAX_SIDE = 65536
 _MAX_PERCENT = 32767
+_FIT_MARGIN = 1.1
 
 
 # --- render ----------------------------------------------------------------------------------------
@@ -70,6 +72,30 @@ def _pattern(template: str, multi: bool) -> str:
     return template
 
 
+def _fit_text(fit: dict) -> str:
+    """`Cam moved 0,-8,4 -> 0,-17.2,8.3` | `temporary camera at 0,-17.2,8.3 (rotation 63.6,0,46.7)`."""
+    if fit["temporary"]:
+        return f"temporary camera at {fmt_vec(fit['location'])} (rotation {fmt_vec(TEMP_ROTATION_DEG)})"
+    text = f"{fit['camera']} moved {fmt_vec(fit['from'])} -> {fmt_vec(fit['location'])}"
+    if fit.get("ortho_scale") is not None:
+        text += f", ortho scale {fmt_vec([fit['ortho_scale']])}"
+    return text
+
+
+def _keep_hint(inv: Invocation, blend: Path | None, fit: dict) -> str | None:
+    """The one call that makes the fitted framing permanent (the render itself never writes the file)."""
+    h = Hints(inv)
+    loc = fmt_vec(fit["location"])
+    f = quote_name(display_path(str(blend))) if blend is not None else "<file>"
+    if fit["temporary"]:
+        return (f"Run `{h.cmd('add camera ' + f + ' --name Cam --location ' + loc + ' --rotation ' + fmt_vec(TEMP_ROTATION_DEG))}"
+                f"{'' if inv.globals.live else ' --in-place'}` to keep it")
+    if fit.get("ortho_scale") is not None:
+        return None  # `set` cannot change ortho_scale, so a location alone would not reproduce the framing
+    return (f"Run `{h.cmd('set ' + quote_name(fit['camera']) + ' ' + f + ' --location ' + loc)}"
+            f"{'' if inv.globals.live else ' --in-place'}` to keep this framing")
+
+
 def run(inv: Invocation) -> Result:
     flags = inv.flags
     frames = _parse_frames(inv)
@@ -78,6 +104,15 @@ def run(inv: Invocation) -> Result:
         raise invalid(f"--percent must be 1-{_MAX_PERCENT}, got {flags['percent']}", ["blender-axi render --help"])
     if flags.get("samples") is not None and flags["samples"] < 1:
         raise invalid(f"--samples must be >= 1, got {flags['samples']}", ["blender-axi render --help"])
+
+    fit = bool(flags.get("fit"))
+    margin = flags.get("fit_margin")
+    if margin is None:
+        margin = _FIT_MARGIN
+    if margin < 1:
+        raise invalid(f"--fit-margin must be >= 1, got {margin:g}", ["1 = tight, 1.1 = 10% extra room (default)"])
+    if margin != _FIT_MARGIN and not fit:
+        raise invalid("--fit-margin needs --fit", ["Example: blender-axi render <file> --fit --fit-margin 1.3"])
 
     blend, inferred = resolve_blend_inferred(inv, "render")
     out, fmt = _resolve_out(inv, blend)
@@ -92,12 +127,16 @@ def run(inv: Invocation) -> Result:
         "out": out, "frames": frames, "engine": flags.get("engine"), "resolution": resolution,
         "percent": flags.get("percent"), "samples": flags.get("samples"), "camera": flags.get("camera"),
         "format": fmt, "force": bool(flags.get("force")),
+        "fit": fit, "fit_margin": float(margin), "temp_camera_ok": not inv.globals.live,
     }
     try:
         outcome = inv.transport.run("render", params, blend=blend, timeout=inv.globals.timeout)
     except AxiError as err:
         if err.code == "WRITE_REFUSED":
             raise refused(inv, SPEC, err.message.removeprefix("output exists: ")) from err
+        if err.code == "NOT_FOUND" and fit and "no active camera" in err.message:
+            raise AxiError("NOT_FOUND", err.message, help=[
+                f"Run `{Hints(inv).cmd('add camera <file>')}` then rerun with --fit"]) from err
         if err.code == "NOT_FOUND" and "camera" in err.message:
             raise AxiError("NOT_FOUND", err.message, help=[
                 "List cameras with `blender-axi objects <file> --type CAMERA`", "Pick one with --camera <name>"]) from err
@@ -113,6 +152,8 @@ def run(inv: Invocation) -> Result:
     data["size"] = res["size"]
     data["engine"] = res["engine"]
     data["samples"] = res["samples"] if res.get("samples") is not None else "n/a"
+    if res.get("fit"):
+        data["fit"] = _fit_text(res["fit"])
     data["duration_ms"] = outcome.duration_ms
     warnings = list(outcome.warnings)
     if res.get("samples_ignored"):
@@ -120,10 +161,15 @@ def run(inv: Invocation) -> Result:
     if warnings:
         data["warning"] = "; ".join(warnings)
     live = live_suffix(inv)
-    return Result(data=data, help=[
+    help_ = [
         f"Run `blender-axi render <file> --frames <a..b> --out <dir/name_####.png>{live}` to render a range",
         f"Run `blender-axi export <file> --out <path.glb>{live}` to export geometry",
-    ])
+    ]
+    if res.get("fit"):
+        keep = _keep_hint(inv, blend, res["fit"])
+        if keep:
+            help_.insert(0, keep)
+    return Result(data=data, help=help_)
 
 
 SPEC = CommandSpec(
@@ -139,12 +185,16 @@ SPEC = CommandSpec(
         Flag("--percent", "int", help="Resolution percentage, e.g. 50"),
         Flag("--samples", "int", help="Sample count (CYCLES, EEVEE)"),
         Flag("--camera", "str", help="Camera object name (default: the scene camera)"),
+        Flag("--fit", "bool", help="Move the camera back along its view axis so every visible object is in frame "
+             "(the file is not changed)"),
+        Flag("--fit-margin", "float", default=_FIT_MARGIN, help="Extra room around the fitted objects, 1 = tight"),
         Flag("--format", "str", choices=_FORMATS, help="Image format (default: from the --out extension)"),
         Flag("--force", "bool", help="Overwrite existing output files"),
     ),
     examples=(
         "blender-axi render scene.blend --engine WORKBENCH --resolution 640x360 --out preview.png",
         "blender-axi render scene.blend --frames 1..24 --out renders/shot_####.png --force",
+        "blender-axi render scene.blend --fit --out framed.png",
     ),
     run=run,
 )

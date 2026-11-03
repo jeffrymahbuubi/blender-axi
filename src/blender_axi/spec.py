@@ -25,6 +25,7 @@ class Flag:
     help: str = ""
     choices: tuple[str, ...] | None = None
     renamed_from: tuple[str, ...] = ()  # old names; gives a targeted "use --x instead" hint
+    split: bool = True  # list flags: False = repeatable, each occurrence is ONE value (a name may contain commas)
 
 
 @dataclass(frozen=True)

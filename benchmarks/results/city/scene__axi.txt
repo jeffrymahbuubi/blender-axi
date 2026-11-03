@@ -10,7 +10,8 @@ objects: "502 (MESH 500, CAMERA 1, LIGHT 1)"
 collections: "22 (Scene Collection, District00, District01, District02, District03, +17 more)"
 materials: "30 (Facade00, Facade01, Facade02, Facade03, Facade04, +25 more)"
 unsaved_changes: false
-help[3]:
+help[4]:
   - Run `blender-axi objects --live --host 127.0.0.1 --port 50000` to list objects
   - Run `blender-axi render --out <path.png> --live --host 127.0.0.1 --port 50000` to render a still
+  - Run `blender-axi configure --engine CYCLES --resolution 1920x1080 --in-place --live --host 127.0.0.1 --port 50000` to change these settings
   - Run `blender-axi export --out <path.glb> --live --host 127.0.0.1 --port 50000` to export the scene

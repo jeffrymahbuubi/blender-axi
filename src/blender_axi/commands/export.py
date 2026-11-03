@@ -1,13 +1,15 @@
-"""`export`: write a scene, collection or named objects to glb/gltf/fbx/obj/stl/ply/usd/abc (plan U5)."""
+"""`export`: write a scene, collection or named objects to glb/gltf/fbx/obj/stl/ply/usd/abc (plan U5, 0.5.0 U1)."""
 
 import os
 
 from ..blender_side.op_export import FORMAT_EXTS
 from ..errors import AxiError
 from ..spec import CommandSpec, Flag, Invocation, Positional, Result
-from ._common import display_path, invalid, live_suffix, refused, resolve_blend_inferred
+from ._common import (carry_suffix, display_path, invalid, live_suffix, names_summary, quote_name, refused,
+                      resolve_blend_inferred)
 
 _FORMATS = tuple(FORMAT_EXTS)
+SET_ROWS = 20  # `export_set` rows of a dry run (--full shows all)
 
 
 def _resolve_format(out: str, fmt: str | None) -> str:
@@ -23,6 +25,79 @@ def _resolve_format(out: str, fmt: str | None) -> str:
     return fmt
 
 
+def _merged_objects(flags: dict) -> list[str] | None:
+    """`--objects a,b` plus every `--object X` (verbatim), order kept, duplicates dropped."""
+    merged = list(dict.fromkeys([*(flags.get("objects") or []), *(flags.get("object") or [])]))
+    return merged or None
+
+
+def _skipped_text(hidden: list[str], excluded: list[str]) -> str:
+    def group(label: str, names: list[str]) -> str:
+        count, _, rest = names_summary(names).partition(" ")
+        return f"{count} {label} {rest}"
+
+    parts = [group("hidden", hidden)] if hidden else []
+    if excluded:
+        parts.append(group("excluded", excluded))
+    return ", ".join(parts) if parts else "none"
+
+
+def _modifiers_text(res: dict) -> str:
+    if res["modifiers"] == "evaluated":
+        return f"evaluated ({res['format']} exports the evaluated scene)"
+    return res["modifiers"]
+
+
+def _replay(inv: Invocation, out_raw: str) -> str:
+    """The same export without --dry-run (the hint after a dry run)."""
+    f = inv.flags
+    parts = ["blender-axi", "export"]
+    if inv.positionals.get("file"):
+        parts.append(quote_name(inv.positionals["file"]))
+    parts += ["--out", quote_name(out_raw)]
+    if f.get("format"):
+        parts += ["--format", f["format"]]
+    if f.get("collection"):
+        parts += ["--collection", quote_name(f["collection"])]
+    if f.get("objects"):
+        parts += ["--objects", quote_name(",".join(f["objects"]))]
+    for name in f.get("object") or []:
+        parts += ["--object", quote_name(name)]
+    if f.get("exclude"):
+        parts += ["--exclude", quote_name(",".join(f["exclude"]))]
+    if f.get("include_hidden"):
+        parts.append("--include-hidden")
+    if not f.get("apply_modifiers", True):
+        parts.append("--no-apply-modifiers")
+    if f.get("force"):
+        parts.append("--force")
+    return " ".join(parts) + carry_suffix(inv)
+
+
+def _dry_run_result(inv: Invocation, res: dict, outcome, out_raw: str, file_name: str | None) -> Result:
+    geometry = [row["name"] for row in res["export_set"]]
+    rows = res["export_set"] if inv.globals.full else res["export_set"][:SET_ROWS]
+    data: dict = {}
+    if file_name:
+        data["file"] = file_name
+    data["format"] = res["format"]
+    data["dry_run"] = True
+    data["would_export"] = names_summary(geometry)
+    data["export_set"] = rows
+    data["skipped"] = _skipped_text(res["skipped_hidden"], res["excluded"])
+    data["modifiers"] = _modifiers_text(res)
+    data["duration_ms"] = outcome.duration_ms
+    warnings = ([res["modifiers_note"]] if res.get("modifiers_note") else []) + list(outcome.warnings)
+    if warnings:
+        data["warning"] = "; ".join(warnings)
+    help_ = [f"Run `{_replay(inv, out_raw)}` to write it"]
+    if len(rows) < len(geometry):
+        help_.append(f"export_set shows {len(rows)} of {len(geometry)} objects; --full shows all")
+    if res["skipped_hidden"]:
+        help_.append("Hidden objects are skipped; add --include-hidden to export them")
+    return Result(data=data, help=help_)
+
+
 def run(inv: Invocation) -> Result:
     flags = inv.flags
     out_raw = flags.get("out")
@@ -35,17 +110,24 @@ def run(inv: Invocation) -> Result:
     fmt = _resolve_format(out, flags.get("format"))
 
     collection = flags.get("collection")
-    names = flags.get("objects") or None
+    names = _merged_objects(flags)
+    exclude = flags.get("exclude") or None
+    dry_run = bool(flags.get("dry_run"))
     if collection and names:
         raise invalid("--collection and --objects are mutually exclusive",
                        ["Use --collection <name> or --objects <a,b>, not both"])
+    if exclude and flags.get("objects"):  # --object (verbatim names) may still be narrowed by --exclude
+        raise invalid("--exclude and --objects are mutually exclusive (a keep-list already leaves the rest out)",
+                       ["Drop --exclude, or list only the objects to keep in --objects"])
 
     blend, inferred = resolve_blend_inferred(inv, "export")
-    if os.path.exists(out) and not flags.get("force"):
+    if not dry_run and os.path.exists(out) and not flags.get("force"):
         raise refused(inv, SPEC, out)
 
-    params = {"out": out, "format": fmt, "collection": collection, "objects": names,
-              "force": bool(flags.get("force"))}
+    params = {"out": out, "format": fmt, "collection": collection, "objects": names, "exclude": exclude,
+              "include_hidden": bool(flags.get("include_hidden")),
+              "apply_modifiers": bool(flags.get("apply_modifiers", True)),
+              "dry_run": dry_run, "force": bool(flags.get("force"))}
     try:
         outcome = inv.transport.run("export", params, blend=blend, timeout=inv.globals.timeout)
     except AxiError as err:
@@ -57,17 +139,27 @@ def run(inv: Invocation) -> Result:
         raise
 
     res = outcome.result
+    file_name = blend.name if inferred and blend is not None else None
+    if dry_run:
+        return _dry_run_result(inv, res, outcome, str(out_raw), file_name)
+
     data: dict = {}
-    if inferred and blend is not None:
-        data["file"] = blend.name
+    if file_name:
+        data["file"] = file_name
     data["exported"] = display_path(res["path"])
     data["format"] = res["format"]
     data["objects"] = res["objects"]
+    data["modifiers"] = _modifiers_text(res)
+    data["skipped"] = _skipped_text(res.get("skipped_hidden") or [], res.get("excluded") or [])
     data["size_kb"] = round(res["size_bytes"] / 1024, 1)
     data["duration_ms"] = outcome.duration_ms
-    if outcome.warnings:
-        data["warning"] = "; ".join(outcome.warnings)
-    return Result(data=data, help=[f"Run `blender-axi render <file> --out <path.png>{live_suffix(inv)}` to render a preview"])
+    warnings = ([res["modifiers_note"]] if res.get("modifiers_note") else []) + list(outcome.warnings)
+    if warnings:
+        data["warning"] = "; ".join(warnings)
+    help_ = [f"Run `blender-axi render <file> --out <path.png>{live_suffix(inv)}` to render a preview"]
+    if res.get("skipped_hidden"):
+        help_.append("Hidden objects are skipped; add --include-hidden to export them")
+    return Result(data=data, help=help_)
 
 
 SPEC = CommandSpec(
@@ -79,6 +171,14 @@ SPEC = CommandSpec(
         Flag("--format", "str", choices=_FORMATS, help="Export format (default: from the --out extension)"),
         Flag("--collection", "str", help="Export only this collection (and its children)"),
         Flag("--objects", "list", help="Export only these objects, comma-separated"),
+        Flag("--object", "list", split=False,
+             help="One object name, repeatable (use for names that contain a comma)"),
+        Flag("--exclude", "list", help="Leave these objects out, comma-separated"),
+        Flag("--include-hidden", "bool", help="Also export objects hidden in the viewport (visible: false in `objects`)"),
+        Flag("--apply-modifiers", "bool", default=True,
+             help="Export the evaluated meshes (default); --no-apply-modifiers exports the raw meshes "
+                  "(glb, gltf, fbx, obj, stl, ply)"),
+        Flag("--dry-run", "bool", help="Print the export set and write nothing"),
         Flag("--force", "bool", help="Overwrite an existing output file"),
     ),
     examples=(

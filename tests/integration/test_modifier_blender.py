@@ -157,7 +157,7 @@ def test_array_relative_offset(capsys, basic):
 
 
 def test_boolean_with_a_cutter(capsys, basic):
-    code, data = axi(capsys, "modifier", "Cube", basic, "boolean", "--object", "Ball", "--operation", "UNION", "--in-place")
+    code, data = axi(capsys, "modifier", "Cube", basic, "boolean", "--cutter", "Ball", "--operation", "UNION", "--in-place")
     assert code == 0, data
     assert data["created"] is True and "object: none -> Ball" in data["changed"] and "operation: DIFFERENCE -> UNION" in data["changed"]
     code, obj = axi(capsys, "object", "Cube", basic)
@@ -166,16 +166,52 @@ def test_boolean_with_a_cutter(capsys, basic):
     assert m["object"] == "Ball" and m["operation"] == "UNION" and m["solver"] == "EXACT"
 
 
-def test_boolean_without_a_cutter_fails_and_writes_nothing(capsys, basic):
+def test_boolean_object_alias_still_works(capsys, basic):
+    code, data = axi(capsys, "modifier", "Cube", basic, "boolean", "--object", "Ball", "--in-place")
+    assert code == 0, data
+    assert stack(capsys, basic)[0]["object"] == "Ball"
+
+
+def test_boolean_without_a_cutter_is_exit_2_before_blender_and_writes_nothing(capsys, basic):
     before = basic.read_bytes()
     code, data = axi(capsys, "modifier", "Cube", basic, "boolean", "--in-place")
-    assert code == 1 and data["code"] == "OP_FAILED" and data["error"] == "boolean needs --object <cutter>"
+    assert code == 2 and data["code"] == "VALIDATION_ERROR" and data["error"] == "boolean needs --cutter <object>"
+    assert "duration_ms" not in data and "blender" not in data
+    assert any("boolean --cutter Cutter" in h for h in data["help"])
     assert basic.read_bytes() == before and not basic.with_name("basic.blend1").exists()
+
+
+def test_boolean_cutter_and_object_that_differ_are_exit_2(capsys, basic):
+    code, data = axi(capsys, "modifier", "Cube", basic, "boolean", "--cutter", "Ball", "--object", "Cube", "--in-place")
+    assert code == 2 and data["error"] == "--cutter and --object name different objects; use --cutter"
+
+
+def test_boolean_cutter_through_prop_object_still_creates(capsys, basic):
+    code, data = axi(capsys, "modifier", "Cube", basic, "boolean", "--prop", "object=Ball", "--in-place")
+    assert code == 0, data
+    assert stack(capsys, basic)[0]["object"] == "Ball"
+
+
+def test_camera_as_cutter_is_exit_1_and_adds_no_modifier(capsys, basic):
+    code, _ = axi(capsys, "add", "camera", basic, "--name", "Cam", "--in-place")
+    assert code == 0
+    before = basic.read_bytes()
+    code, data = axi(capsys, "modifier", "Cube", basic, "boolean", "--cutter", "Cam", "--in-place")
+    assert code == 1 and data["code"] == "OP_FAILED" and data["error"] == "cannot use 'Cam' (CAMERA) as the cutter"
+    assert basic.read_bytes() == before
+    code, obj = axi(capsys, "object", "Cube", basic)
+    assert code == 0 and obj["modifiers"] == "none"
+
+
+def test_boolean_remove_needs_no_cutter(capsys, basic):
+    axi(capsys, "modifier", "Cube", basic, "boolean", "--cutter", "Ball", "--in-place")
+    code, data = axi(capsys, "modifier", "Cube", basic, "boolean", "--remove", "--in-place")
+    assert code == 0 and data["removed"] is True, data
 
 
 def test_unknown_cutter_is_not_found(capsys, basic):
     before = basic.read_bytes()
-    code, data = axi(capsys, "modifier", "Cube", basic, "boolean", "--object", "Bal", "--in-place")
+    code, data = axi(capsys, "modifier", "Cube", basic, "boolean", "--cutter", "Bal", "--in-place")
     assert code == 1 and data["code"] == "NOT_FOUND" and "Ball" in data["error"]
     assert basic.read_bytes() == before
 

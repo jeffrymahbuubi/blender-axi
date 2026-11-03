@@ -32,7 +32,7 @@ blender-axi's defaults, so compare per task, not field for field. To reproduce:
 
 | Task | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving | Note |
 |---|---:|---:|---:|---|
-| Scene overview | 310 ([raw](benchmarks/results/city/scene__mcp.json)) | 345 ([raw](benchmarks/results/city/scene__axi.txt)) | -11.3% |  |
+| Scene overview | 310 ([raw](benchmarks/results/city/scene__mcp.json)) | 405 ([raw](benchmarks/results/city/scene__axi.txt)) | -30.6% |  |
 | List objects (default --limit 100) | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 2,100 ([raw](benchmarks/results/city/objects__axi.txt)) | 94.9% |  |
 | List all 502 objects | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 9,494 ([raw](benchmarks/results/city/objects_all__axi.txt)) | 77.1% | MCP call shared with objects |
 | Objects in District05 | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 540 ([raw](benchmarks/results/city/objects_collection__axi.txt)) | 98.7% | MCP has no collection filter: full list; MCP call shared with objects |
@@ -41,7 +41,7 @@ blender-axi's defaults, so compare per task, not field for field. To reproduce:
 
 | Item | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving |
 |---|---:|---:|---:|
-| Tool definitions vs. skill text | 7,843 (26 tools, [raw](benchmarks/results/fixed/tools_list__mcp.json)) | 1,883 ([raw](skills/blender-axi/SKILL.md)) | 76.0% |
+| Tool definitions vs. skill text | 7,843 (26 tools, [raw](benchmarks/results/fixed/tools_list__mcp.json)) | 2,381 ([raw](skills/blender-axi/SKILL.md)) | 69.6% |
 
 *The tool-list figure is a lower bound: it is the compact JSON of the server's `tools/list` reply, and real clients serialise tool schemas more verbosely.*
 
@@ -49,7 +49,7 @@ blender-axi's defaults, so compare per task, not field for field. To reproduce:
 
 ![Characters or tokens per call, log scale](benchmarks/results/chart.svg)
 
-Unit: tokens (claude-opus-5-5), measured 2026-10-25. Details: [results.md](benchmarks/results/results.md).
+Unit: tokens (claude-opus-5-5), measured 2026-11-03. Details: [results.md](benchmarks/results/results.md).
 <!-- bench:end -->
 
 ## Install
@@ -83,15 +83,15 @@ Blender 5.2 LTS is verified. blender-axi finds it via `--blender <path>`, `BLEND
 | `set <name> [<file>] [--name N] [--location x,y,z] [--rotation x,y,z] [--scale x,y,z] [--parent P\|none] [--collection C] [--hide \| --show] --in-place \| --out <copy.blend>` | Move, rotate, scale, rename, reparent, move to a collection or hide/show one object; reports `changed` |
 | `delete <a,b,...> [<file>] --in-place \| --out <copy.blend>` | Delete objects (all or nothing); children stay in place and are listed as `children_kept` |
 | `material <object> [<file>] --name M [--color r,g,b[,a]] [--metallic n] [--roughness n] [--emission r,g,b --emission-strength n] [--slot replace\|add] --in-place \| --out <copy.blend>` | Give a mesh a Principled BSDF material (reused by name, created if missing); replaces slot 0 unless `--slot add` |
-| `modifier <object> <kind> [<file>] [--name N] [--width n --segments n --limit NONE\|ANGLE\|WEIGHT --angle deg] [--levels n --render-levels n --simple] [--count n --offset x,y,z --constant x,y,z] [--axis xyz --clip --object O] [--operation DIFFERENCE\|UNION\|INTERSECT --solver EXACT\|FLOAT\|MANIFOLD] [--thickness n --offset n --even] [--prop key=value] [--remove] --in-place \| --out <copy.blend>` | Add, configure or remove a modifier: bevel, subdivision, array, mirror, boolean, solidify, or any Blender type as `IDENT --prop key=value`. Upsert by name (a rerun changes nothing); `--remove` deletes; the file may come before or after `<kind>` |
+| `modifier <object> <kind> [<file>] [--name N] [--width n --segments n --limit NONE\|ANGLE\|WEIGHT --angle deg] [--levels n --render-levels n --simple] [--count n --offset x,y,z --constant x,y,z] [--axis xyz --clip --object O] [--cutter O --operation DIFFERENCE\|UNION\|INTERSECT --solver EXACT\|FLOAT\|MANIFOLD] [--thickness n --offset n --even] [--prop key=value] [--remove] --in-place \| --out <copy.blend>` | Add, configure or remove a modifier: bevel, subdivision, array, mirror, boolean, solidify, or any Blender type as `IDENT --prop key=value`. Upsert by name (a rerun changes nothing); `--remove` deletes; a boolean needs `--cutter` (`--object` is an alias) and a cutter Blender rejects (e.g. a camera) fails with nothing written; the file may come before or after `<kind>` |
 | `configure [<file>] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--frames a..b] [--fps n] [--samples n] [--camera name] [--world r,g,b] [--world-strength n] --in-place \| --out <copy.blend>` | Persist scene settings; needs at least one setting flag; `--samples` warns on WORKBENCH; `--world` creates a world when the file has none |
 | `import <source> [<file>] [--format F] [--collection C] [--new] --in-place \| --out <copy.blend>` | Import glb, gltf, fbx, obj, stl, ply, usd or abc into a .blend (or a new one with `--new --out x.blend`, or the open session with `--live`); `--collection C` puts the objects in C, creating it when missing |
-| `apply <steps.json\|-> [<file>] [--check] --in-place \| --out <copy.blend> [--force]` | Run many add/set/delete/material/modifier/configure/import steps in ONE Blender start (see [Batch](#batch-apply)); every step is validated first; headless is all-or-nothing, live stops at the failing step |
+| `apply <steps.json\|-> [<file>] [--check] [--strict] --in-place \| --out <copy.blend> [--force]` | Run many add/set/delete/material/modifier/configure/import steps in ONE Blender start (see [Batch](#batch-apply)); every step is validated first; headless is all-or-nothing, live stops at the failing step |
 | `objects [<file>] [--type T] [--collection C] [--name-contains S] [--limit N] [--fields a,b]` | List objects (name, type, collection, visible); extra columns: location, dimensions, parent, verts, faces, materials, modifiers, data |
 | `object <name> [<file>]` | One object's transform, dimensions, parent/children, materials, modifiers, custom props |
 | `exec [<file>] --code <python> \| --script <path> --allow-exec [--live]` | Run Python inside Blender; `bpy` is predefined, assign a dict to `result` |
-| `render [<file>] [--frame n \| --frames a..b] [--out path] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--samples n] [--camera name] [--format PNG\|JPEG\|…] [--force]` | Render stills or a frame range (default `./<stem>_f####.png`) |
-| `export [<file>] --out path [--format glb\|gltf\|fbx\|obj\|stl\|ply\|usd\|usdc\|usda\|abc] [--collection name \| --objects a,b] [--force]` | Export the scene, a collection or objects to a 3D file |
+| `render [<file>] [--frame n \| --frames a..b] [--out path] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--samples n] [--camera name] [--fit [--fit-margin n]] [--format PNG\|JPEG\|…] [--force]` | Render stills or a frame range (default `./<stem>_f####.png`); `--fit` frames all visible geometry without changing the file |
+| `export [<file>] --out path [--format glb\|gltf\|fbx\|obj\|stl\|ply\|usd\|usdc\|usda\|abc] [--collection name \| --objects a,b \| --object name…] [--exclude a,b] [--include-hidden] [--no-apply-modifiers] [--dry-run] [--force]` | Export the scene, a collection or objects to a 3D file; modifiers applied and hidden objects skipped by default (see [Export](#export)) |
 | `live` | Check a running Blender (MCP add-on server) and show the open file |
 
 `<file>` is optional when the current directory has exactly one `.blend` (it is echoed as `file:`).
@@ -121,7 +121,9 @@ They use Blender's data API rather than operators, so the same command works hea
 MCP server and in the GUI. With `--live` they change the open session like `exec --live` (no copy,
 `--in-place` saves the open file, an undo step is pushed when Blender allows it). `import --collection` creates a
 missing collection, while `add --collection` stays strict. For a whole scene use `new` + `apply <steps.json>`: one
-Blender start instead of one per command (about 2.3 s each).
+Blender start instead of one per command (about 2.3 s each). `render --fit` frames all visible geometry without changing
+the file and hints the `set <camera> --location …` that keeps the framing; headless without a camera it uses a temporary
+one (`--live` without a camera is `NOT_FOUND`).
 
 ### Batch (`apply`)
 
@@ -131,15 +133,24 @@ shell (`"add cube --name Box --location 0,0,1"`; a leading `blender-axi` is tole
 without dashes (`_` or `-`). A list is comma-joined, `true` is a bare flag, `false` is `--no-<flag>`, `null` is skipped.
 
 When a key is both a positional and a flag (`set`'s `name`, `modifier`'s `object`), the key fills the positional. Give
-the flag as `"--name": "Crate"` or through `"args": ["--object", "Cutter"]` (raw argv tokens appended after the
-generated ones), or use the string form. Steps cannot carry `<file>`, `--in-place/--out/--force`, `--new` or global
+the flag as `"--name": "Crate"` or through `"args": [...]` (raw argv tokens appended after the generated ones), or use
+the string form. A boolean is `{"cmd": "modifier", "object": "Ring", "kind": "boolean", "cutter": "Hole", "operation":
+"DIFFERENCE"}`. Steps cannot carry `<file>`, `--in-place/--out/--force`, `--new` or global
 flags: the file and the write mode belong to `apply`.
 
 ```
 blender-axi new scene.blend
-blender-axi apply steps.json scene.blend --check      # normalised plan, status: valid, no Blender
+blender-axi apply steps.json --check                  # summary + plan, status: valid, no Blender, no file needed
+blender-axi apply steps.json scene.blend --check --strict   # also verifies every target exists (one read-only start)
 blender-axi apply steps.json scene.blend --in-place   # applied: N, results: one line per step
 ```
+
+`apply --check` validates every step and prints a summary (`steps`, `commands`, `targets`, the first 20 `plan` lines, one
+replay hint; `--full` shows all lines). It needs no file and never starts Blender; a missing file shows as `(not found)`.
+`--strict` also verifies, in one read-only Blender start, that every object, cutter, camera and collection a step
+targets exists in the file or is created by an earlier step (a miss exits 1 `NOT_FOUND`; after an `import` step it is a
+warning), and turns unknown top-level keys (anything but `steps`) from a warning into an error. `plan` and `results`
+print one step per line.
 
 Every step is checked with its command's own validation before Blender starts: a bad step exits 2 as
 `step 3 (set): set needs at least one change flag` and nothing runs. Headless the batch is all-or-nothing (a failing
@@ -147,6 +158,40 @@ step exits 1 and the file is untouched). With `--live` the steps before a failin
 reverts them if Blender pushed an undo step. The default timeout is 600 s (`--timeout` overrides). `results` shows the
 first 20 step lines; `--full` shows all. In string steps on Windows use forward slashes in paths (posix splitting eats
 backslashes), or the object form.
+
+### Export
+
+`export` writes the scene, a collection or named objects to glb, gltf, fbx, obj, stl, ply, usd, usdc, usda or abc.
+The extension of `--out` picks the format.
+
+**The export set.** The pool is the whole scene, `--collection`, or `--objects a,b` / repeated `--object name`
+(`--object` takes one name verbatim, so use it for names that contain a comma). From the pool the set drops everything
+in `--exclude a,b` and every object hidden in the viewport (`visible: false` in `objects`). Hidden is not excluded:
+`--include-hidden` brings hidden objects back, `--exclude` removes objects whatever their visibility. `--exclude`
+cannot be combined with `--objects`. The result says what was left out, for example `skipped: 1 hidden (Hole), 2 excluded (A, B)`.
+
+**Modifiers.** Modifiers are applied by default, so the file contains what renders. `--no-apply-modifiers` exports the
+raw meshes (glb, gltf, fbx, obj, stl, ply). usd, usdc, usda and abc always export the evaluated scene; with
+`--no-apply-modifiers` they print a `warning`. The result carries `modifiers: applied | raw | evaluated (...)`.
+
+**`--dry-run`** starts Blender, prints `would_export`, the `export_set` table (first 20 rows, `--full` for all) and
+`skipped`, and writes nothing. The hint is the same command without `--dry-run`.
+
+**Axes (glb/gltf).** glTF is Y-up, so Blender (x, y, z) becomes glTF (x, z, -y):
+
+| Blender object | glTF node |
+|---|---|
+| location (1, 2, 3) | `translation [1, 3, -2]` |
+| scale (1, 2, 3) | `scale [1, 3, 2]` |
+| rotation 90° about X | `rotation [0.7071, 0, 0, 0.7071]` (quaternion x, y, z, w) |
+| identity transform | key omitted |
+
+**Changed in 0.5.0**
+- `export` applies modifiers by default (glb used to export the raw meshes); opt out with `--no-apply-modifiers`.
+- `export` skips objects hidden in the viewport by default; add `--include-hidden` for the old behaviour.
+- The result gains `modifiers` and `skipped`; new flags `--object`, `--exclude`, `--include-hidden`, `--dry-run`.
+- `modifier … boolean` needs `--cutter` (or its alias `--object`) unless `--remove`.
+- `apply --check` no longer needs the file; unknown top-level keys in the steps document produce a warning.
 
 ## Live mode
 

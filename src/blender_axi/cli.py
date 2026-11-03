@@ -6,6 +6,8 @@ Every other path ends in exactly one stdout document; tracebacks go to stderr on
 
 import sys
 
+LIST_KEYS = frozenset({"help", "plan", "results"})  # 0.5.0: one line per step/hint (dogfood item 11)
+
 
 def _plain_stdout() -> None:
     """LF line endings and UTF-8 on every platform (Windows text mode would emit CRLF / cp1252)."""
@@ -89,7 +91,7 @@ def _top_help() -> dict:
 def _emit(data: dict, as_json: bool) -> None:
     from . import toon
 
-    text = toon.encode_json(data) if as_json else toon.encode(data)
+    text = toon.encode_json(data) if as_json else toon.encode(data, list_keys=LIST_KEYS)
     sys.stdout.write(text + "\n")
 
 

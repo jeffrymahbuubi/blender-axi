@@ -125,6 +125,62 @@ def test_check_and_invalid_steps_never_start_blender(capsys, work, fresh):
     assert code == 2 and "--in-place" in " ".join(data["help"]) and "duration_ms" not in data
 
 
+def test_check_needs_no_file_and_strict_does(capsys, work, fresh):
+    steps = steps_file(work, TEN)
+    code, data = axi(capsys, "apply", steps, work / "nothere.blend", "--check")
+    assert code == 0 and data["file"].endswith("nothere.blend (not found)") and data["status"] == "valid", data
+    assert "duration_ms" not in data and data["commands"] == "add 7, set 1, delete 1, material 1"
+    assert data["targets"].startswith("unchecked") and len(data["plan"]) == 10 and len(data["help"]) == 1
+    assert "<file.blend>" in data["help"][0]
+    code, data = axi(capsys, "apply", steps, work / "nothere.blend", "--check", "--strict")
+    assert code == 1 and data["code"] == "NOT_FOUND" and data["error"].startswith("file not found")
+
+
+def test_check_strict_bogus_target_changes_nothing(capsys, work, fresh):
+    steps = steps_file(work, ["add cube --name A", "set A --location 0,0,1", "material Ghost --name Red"])
+    before = (fresh.stat().st_mtime_ns, fresh.read_bytes())
+    for extra in (["--check"], ["--in-place"]):
+        code, data = axi(capsys, "apply", steps, fresh, "--strict", *extra)
+        assert code == 1 and data["code"] == "NOT_FOUND", data
+        assert data["error"].startswith("step 3 (material): object 'Ghost' not found in ")
+        assert data["error"].endswith("(nor created by an earlier step)")
+        assert data["help"][-1].endswith("steps.json (nothing ran)") and "duration_ms" not in data
+    assert (fresh.stat().st_mtime_ns, fresh.read_bytes()) == before and not fresh.with_name("fresh.blend1").exists()
+
+
+def test_strict_happy_path_verifies_then_applies(capsys, work, fresh):
+    steps = steps_file(work, TEN)
+    code, data = axi(capsys, "apply", steps, fresh, "--check", "--strict")
+    assert code == 0 and data["targets"].endswith("(0 objects, 1 collections)") and data["targets"].startswith("verified against "), data
+    code, data = axi(capsys, "apply", steps, fresh, "--in-place", "--strict")
+    assert code == 0 and data["applied"] == 10 and "warning" not in data, data
+    assert names(capsys, fresh) == {"A", "B", "C", "D", "E", "Cam"}
+    # a second strict check now sees the six objects
+    code, data = axi(capsys, "apply", steps_file(work, ["set A --hide", "material Cam --name Red"], "two.json"), fresh, "--check", "--strict")
+    assert code == 0 and "(6 objects, 1 collections)" in data["targets"], data
+
+
+def test_strict_after_an_import_warns_instead_of_failing(capsys, work, fresh):
+    assert axi(capsys, "apply", steps_file(work, ["add cube --name Imp"], "mk.json"), fresh, "--out", work / "src.blend")[0] == 0
+    glb = work / "m.glb"
+    assert axi(capsys, "export", work / "src.blend", "--out", glb, "--force")[0] == 0
+    steps = steps_file(work, [f"import {glb.as_posix()}", "material Imp --name Red --color 1,0,0"], "imp.json")
+    code, data = axi(capsys, "apply", steps, fresh, "--check", "--strict")
+    assert code == 0 and "may come from the import in step 1" in data["warning"], data
+    code, data = axi(capsys, "apply", steps, fresh, "--in-place", "--strict")
+    assert code == 0 and data["applied"] == 2 and "may come from the import in step 1" in data["warning"], data
+    assert "Imp" in names(capsys, fresh)
+
+
+def test_unknown_top_level_keys_warn_and_strict_refuses(capsys, work, fresh):
+    steps = steps_file(work, {"steps": ["add cube --name A"], "export": {}, "typo": 1})
+    code, data = axi(capsys, "apply", steps, fresh, "--check")
+    assert code == 0 and data["warning"] == 'ignored top-level keys: export, typo (only "steps" is read)'
+    code, data = axi(capsys, "apply", steps, fresh, "--check", "--strict")
+    assert code == 2 and data["error"] == 'steps: unknown top-level key(s) export, typo; only "steps" is read'
+    assert "duration_ms" not in data
+
+
 def test_stdin_form_in_a_real_process(work, fresh):
     # the registry entries are patched inside the child too (the lead's splice is not in this worktree)
     code = ("import sys; from blender_axi import cli, registry; "
@@ -170,3 +226,16 @@ def test_live_story(capsys, work, session):
 
     code, data = axi(capsys, "apply", steps_file(work, steps), blend, *live)  # a file positional is refused before anything runs
     assert code == 2 and data["error"] == "--live uses the file open in Blender; drop <file>"
+
+
+def test_live_strict_checks_the_open_session(capsys, work, session):
+    port, _blend = session
+    live = ["--live", "--host", "127.0.0.1", "--port", port]
+    code, data = axi(capsys, "apply", steps_file(work, ["add cube --name StrictA"], "sa.json"), *live)
+    assert code == 0, data
+    steps = steps_file(work, ["set StrictA --hide", "add cube --name StrictB", "set StrictB --show"], "ok.json")
+    code, data = axi(capsys, "apply", steps, *live, "--check", "--strict")
+    assert code == 0 and data["file"] == "(live session)" and data["targets"].startswith("verified against (live session) ("), data
+    code, data = axi(capsys, "apply", steps_file(work, ["set Ghost --hide"], "bad.json"), *live, "--strict")
+    assert code == 1 and data["code"] == "NOT_FOUND" and data["error"].startswith("step 1 (set): object 'Ghost' not found in ") and "session.blend" in data["error"]
+    assert "StrictB" not in names(capsys, None, *live)  # nothing ran

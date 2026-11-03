@@ -27,7 +27,8 @@ class FakeTransport:
         self.calls.append((op, params, blend, timeout))
         if self.error:
             raise self.error
-        result = {"path": params["out"], "format": params["format"], "objects": 2, "size_bytes": 2048}
+        result = {"path": params["out"], "format": params["format"], "objects": 2, "size_bytes": 2048,
+                  "skipped_hidden": [], "excluded": [], "modifiers": "applied", "modifiers_note": None}
         return RunOutcome(result=result, modified=False, saved=None, blender_version="5.2.0 LTS",
                           duration_ms=99, stdout="", warnings=[])
 
@@ -68,7 +69,8 @@ def test_format_inferred_from_extension(work, name, fmt):
 
 def test_result_shape_and_hint(work):
     res, t = invoke(["--out", "sub/m.glb"])
-    assert list(res.data) == ["file", "exported", "format", "objects", "size_kb", "duration_ms"]
+    assert list(res.data) == ["file", "exported", "format", "objects", "modifiers", "skipped", "size_kb", "duration_ms"]
+    assert res.data["modifiers"] == "applied" and res.data["skipped"] == "none"
     assert res.data["file"] == "scene.blend" and res.data["exported"] == "sub/m.glb"
     assert res.data["size_kb"] == 2.0 and res.data["objects"] == 2
     assert t.calls[0][0] == "export" and t.calls[0][2] == work / "scene.blend"
@@ -147,6 +149,10 @@ def test_missing_blend_and_live_hints(work):
 class FakeObj:
     def __init__(self, name, type="MESH", selectable=True):
         self.name, self.type, self.selectable, self.selected = name, type, selectable, False
+        self.hidden = False  # 0.5.0: visible_get() is what the export set looks at
+
+    def visible_get(self):
+        return not self.hidden
 
     def select_set(self, state):
         if state and not self.selectable:
@@ -225,7 +231,9 @@ def test_operator_mapping_whole_scene(scene, fmt, call, selected_key):
     res = op_export.run({"out": path, "format": fmt})
     name, kw = scene.calls[0]
     assert name == call and kw["filepath"] == path and kw[selected_key] is False
-    assert res == {"path": path, "format": fmt, "objects": 2, "size_bytes": 1500}
+    assert {k: res[k] for k in ("path", "format", "objects", "size_bytes")} == {
+        "path": path, "format": fmt, "objects": 2, "size_bytes": 1500}
+    assert res["skipped_hidden"] == [] and res["excluded"] == []  # nothing filtered: whole-scene path, as in 0.4.0
     if fmt == "glb":
         assert kw["export_format"] == "GLB"
     if fmt == "gltf":

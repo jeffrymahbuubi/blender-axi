@@ -1,5 +1,6 @@
 """v1.3 U2: `modifier` at command level with a fake transport (the op is in test_op_modifier.py)."""
 
+import json
 import math
 import shutil
 from pathlib import Path
@@ -78,7 +79,7 @@ def test_spec_shape():
     assert [p.required for p in cmd.SPEC.positionals] == [True, True, False]
     assert [f.name for f in cmd.SPEC.flags] == [
         "--name", "--remove", "--width", "--segments", "--limit", "--angle", "--levels", "--render-levels", "--simple",
-        "--count", "--offset", "--constant", "--axis", "--clip", "--object", "--operation", "--solver", "--thickness",
+        "--count", "--offset", "--constant", "--axis", "--clip", "--object", "--cutter", "--operation", "--solver", "--thickness",
         "--even", "--prop", "--in-place", "--out", "--force"]
     assert isinstance(cmd.BATCH, BatchSpec) and cmd.BATCH.op == "modifier"
     assert cmd.KINDS == {"bevel": "BEVEL", "subdivision": "SUBSURF", "array": "ARRAY", "mirror": "MIRROR",
@@ -100,7 +101,7 @@ def test_choices_are_enforced_by_the_parser(flag, value):
                                         ("solidify", "SOLIDIFY"), ("WIREFRAME", "WIREFRAME"),
                                         ("SIMPLE_DEFORM", "SIMPLE_DEFORM"), ("SUBSURF", "SUBSURF")])
 def test_kind_table_and_identifier_passthrough(work, given, kind):
-    p = params_of(["Cube", "scene.blend", given] if given != "boolean" else ["Cube", "scene.blend", given, "--object", "C"])
+    p = params_of(["Cube", "scene.blend", given] if given != "boolean" else ["Cube", "scene.blend", given, "--cutter", "C"])
     assert p["kind"] == kind and p["object"] == "Cube" and p["remove"] is False and p["name"] is None
 
 
@@ -206,8 +207,81 @@ def test_mirror_axis_becomes_use_axis(work, axis, use_axis):
 
 
 def test_boolean_settings(work):
-    p = params_of(["Cube", "scene.blend", "boolean", "--object", "Cutter", "--operation", "union", "--solver", "float"])
+    p = params_of(["Cube", "scene.blend", "boolean", "--cutter", "Cutter", "--operation", "union", "--solver", "float"])
     assert p["settings"] == {"object": "Cutter", "operation": "UNION", "solver": "FLOAT"}
+
+
+# -- boolean cutter (0.5.0) -----------------------------------------------------------------------------------------
+
+def test_boolean_object_is_an_alias_of_cutter(work):
+    p = params_of(["Cube", "scene.blend", "boolean", "--object", "Cutter"])
+    assert p["settings"] == {"object": "Cutter"}
+
+
+def test_boolean_cutter_and_object_naming_the_same_object_is_fine(work):
+    p = params_of(["Cube", "scene.blend", "boolean", "--cutter", "Cutter", "--object", "Cutter"])
+    assert p["settings"] == {"object": "Cutter"}
+
+
+def test_boolean_cutter_and_object_naming_different_objects_exit_2(work):
+    t = Fake()
+    err = fails(["Cube", "scene.blend", "boolean", "--cutter", "A", "--object", "B", "--in-place"], t)
+    assert err.exit_code == 2 and err.message == "--cutter and --object name different objects; use --cutter"
+    assert err.help == [f"Example: {cmd.SPEC.examples[1]}"] and t.calls == []
+
+
+@pytest.mark.parametrize("extra", [[], ["--operation", "UNION"], ["--solver", "FLOAT"]])
+def test_boolean_without_a_cutter_exit_2_before_blender(work, extra):
+    t = Fake()
+    err = fails(["Cube", "scene.blend", "boolean", *extra, "--in-place"], t)
+    assert err.code == "VALIDATION_ERROR" and err.exit_code == 2 and t.calls == []
+    assert err.message == "boolean needs --cutter <object>"
+    assert err.help == [f"Example: {cmd.SPEC.examples[1]}"]
+    assert "--cutter" in cmd.SPEC.examples[1] and "--object" not in cmd.SPEC.examples[1]
+
+
+def test_boolean_remove_needs_no_cutter(work):
+    p = params_of(["Cube", "scene.blend", "boolean", "--remove"])
+    assert p["remove"] is True and p["settings"] == {} and p["kind"] == "BOOLEAN"
+
+
+def test_boolean_cutter_via_prop_object_satisfies_the_rule(work):
+    p = params_of(["Cube", "scene.blend", "boolean", "--prop", "object=Cutter"])
+    assert p["settings"] == {} and p["props"] == {"object": "Cutter"}
+
+
+def test_cutter_on_another_kind_exit_2(work):
+    t = Fake()
+    err = fails(["Cube", "scene.blend", "bevel", "--cutter", "C", "--in-place"], t)
+    assert err.exit_code == 2 and err.message == "--cutter applies to boolean" and t.calls == []
+
+
+def test_cutter_with_remove_is_rejected_like_other_settings(work):
+    err = fails(["Cube", "scene.blend", "boolean", "--remove", "--cutter", "C", "--in-place"])
+    assert err.exit_code == 2 and "--remove cannot be combined with setting flags (--cutter)" in err.message
+
+
+def test_empty_cutter_exit_2(work):
+    t = Fake()
+    err = fails(["Cube", "scene.blend", "boolean", "--cutter", " ", "--in-place"], t)
+    assert err.exit_code == 2 and err.message == "--cutter is empty" and t.calls == []
+
+
+def test_apply_object_step_with_a_cutter_parses_and_without_one_is_exit_2(work):
+    """The same `_params` path as the single command: `apply --check` needs no Blender."""
+    from blender_axi.commands import apply as apply_cmd
+
+    def check(step):
+        (work / "s.json").write_text(json.dumps([step]), encoding="utf-8")
+        inv, _ = flagparser.parse(apply_cmd.SPEC, ["s.json", "scene.blend", "--check"])
+        inv.transport = Fake()
+        return apply_cmd.run(inv)
+
+    good = {"cmd": "modifier", "object": "Ring", "kind": "boolean", "cutter": "Hole", "operation": "DIFFERENCE"}
+    assert check(good).data["steps"] == 1
+    with pytest.raises(AxiError) as exc:
+        check({"cmd": "modifier", "object": "Ring", "kind": "boolean"})
+    assert exc.value.exit_code == 2 and "boolean needs --cutter <object>" in exc.value.message
 
 
 @pytest.mark.parametrize("argv,message", [

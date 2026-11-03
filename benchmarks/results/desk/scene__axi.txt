@@ -10,7 +10,8 @@ objects: "13 (MESH 10, LIGHT 2, CAMERA 1)"
 collections: 1 (Scene Collection)
 materials: "5 (BookGreenCover, BookYellowCover, Ceramic, Floor, Wood)"
 unsaved_changes: false
-help[3]:
+help[4]:
   - Run `blender-axi objects --live --host 127.0.0.1 --port 50000` to list objects
   - Run `blender-axi render --out <path.png> --live --host 127.0.0.1 --port 50000` to render a still
+  - Run `blender-axi configure --engine CYCLES --resolution 1920x1080 --in-place --live --host 127.0.0.1 --port 50000` to change these settings
   - Run `blender-axi export --out <path.glb> --live --host 127.0.0.1 --port 50000` to export the scene

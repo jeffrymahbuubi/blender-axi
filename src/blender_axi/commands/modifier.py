@@ -32,7 +32,7 @@ APPLIES: dict[str, tuple[str, ...]] = {
     "width": ("BEVEL",), "segments": ("BEVEL",), "limit": ("BEVEL",), "angle": ("BEVEL",),
     "levels": ("SUBSURF",), "render_levels": ("SUBSURF",), "simple": ("SUBSURF",),
     "count": ("ARRAY",), "offset": ("ARRAY", "SOLIDIFY"), "constant": ("ARRAY",),
-    "axis": ("MIRROR",), "clip": ("MIRROR",), "object": ("MIRROR", "BOOLEAN"),
+    "axis": ("MIRROR",), "clip": ("MIRROR",), "object": ("MIRROR", "BOOLEAN"), "cutter": ("BOOLEAN",),
     "operation": ("BOOLEAN",), "solver": ("BOOLEAN",), "thickness": ("SOLIDIFY",), "even": ("SOLIDIFY",),
 }
 
@@ -105,6 +105,20 @@ def _check_ranges(inv: Invocation) -> None:
         raise invalid("--name is empty", ["Example: --name Rim"])
     if f.get("object") is not None and not str(f["object"]).strip():
         raise invalid("--object is empty", ["Example: --object Cutter"])
+    if f.get("cutter") is not None and not str(f["cutter"]).strip():
+        raise invalid("--cutter is empty", ["Example: --cutter Cutter"])
+
+
+def _cutter(inv: Invocation, props: dict[str, str]) -> str | None:
+    """The boolean cutter: `--cutter` (or its alias `--object`); creating/editing a boolean needs one (or --prop object=)."""
+    f = inv.flags
+    cutter, alias = f.get("cutter"), f.get("object")
+    if cutter is not None and alias is not None and cutter != alias:
+        raise invalid("--cutter and --object name different objects; use --cutter", [f"Example: {SPEC.examples[1]}"])
+    cutter = cutter if cutter is not None else alias
+    if cutter is None and not f.get("remove") and "object" not in props:
+        raise invalid("boolean needs --cutter <object>", [f"Example: {SPEC.examples[1]}"])
+    return cutter
 
 
 def _offset(inv: Invocation, kind: str):
@@ -122,7 +136,7 @@ def _offset(inv: Invocation, kind: str):
     return _mutate.parse_vec(SPEC, "--offset", raw)
 
 
-def _settings(inv: Invocation, kind: str) -> dict:
+def _settings(inv: Invocation, kind: str, cutter: str | None = None) -> dict:
     f = inv.flags
     s: dict = {}
     if kind == "BEVEL":
@@ -149,7 +163,7 @@ def _settings(inv: Invocation, kind: str) -> dict:
             s["use_clip"] = True
         s["mirror_object"] = f.get("object")
     elif kind == "BOOLEAN":
-        s.update({"object": f.get("object"), "operation": f.get("operation"), "solver": f.get("solver")})
+        s.update({"object": cutter, "operation": f.get("operation"), "solver": f.get("solver")})
     elif kind == "SOLIDIFY":
         s.update({"thickness": f.get("thickness"), "offset": _offset(inv, kind)})
         if f.get("even"):
@@ -173,9 +187,11 @@ def _params(inv: Invocation) -> dict:
                           [f"Flags for {NAMES.get(kind, kind.lower())}: " + (", ".join(
                               _flag(k) for k, kinds in APPLIES.items() if kind in kinds) or "--prop key=value only")])
     _check_ranges(inv)
+    props = _props(f.get("prop"))
+    cutter = _cutter(inv, props) if kind == "BOOLEAN" else None
     return {
         "object": inv.positionals["object"], "kind": kind, "name": f.get("name"), "remove": bool(f.get("remove")),
-        "settings": {} if f.get("remove") else _settings(inv, kind), "props": _props(f.get("prop")),
+        "settings": {} if f.get("remove") else _settings(inv, kind, cutter), "props": props,
     }
 
 
@@ -245,7 +261,8 @@ SPEC = CommandSpec(
         Flag("--constant", "str", help="Array: constant offset x,y,z in scene units (turns the relative offset off unless --offset is given)"),
         Flag("--axis", "str", choices=AXES, help="Mirror axes (x, y, z, xy, xz, yz or xyz)"),
         Flag("--clip", "bool", help="Mirror: keep vertices on the mirror plane (clipping)"),
-        Flag("--object", "str", help="Mirror: mirror object; boolean: the cutter object (required to create a boolean)"),
+        Flag("--object", "str", help="Mirror: mirror object; boolean: alias of --cutter"),
+        Flag("--cutter", "str", help="Boolean: the cutter object (required to create a boolean)"),
         Flag("--operation", "str", choices=OPERATIONS, help="Boolean operation (Blender's default is DIFFERENCE)"),
         Flag("--solver", "str", choices=SOLVERS, help="Boolean solver (Blender's default is EXACT)"),
         Flag("--thickness", "float", help="Solidify thickness in scene units"),
@@ -255,7 +272,7 @@ SPEC = CommandSpec(
     ),
     examples=(
         "blender-axi modifier Cube scene.blend bevel --width 0.05 --segments 3 --in-place",
-        "blender-axi modifier Cube scene.blend boolean --object Cutter --operation DIFFERENCE --in-place",
+        "blender-axi modifier Cube scene.blend boolean --cutter Cutter --operation DIFFERENCE --in-place",
         "blender-axi modifier Cube scene.blend WIREFRAME --prop thickness=0.05 --in-place",
         "blender-axi modifier Cube subdivision --levels 2 --out scene2.blend",
         "blender-axi modifier Cube bevel --remove --live",
