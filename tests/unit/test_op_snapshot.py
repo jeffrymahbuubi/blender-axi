@@ -18,17 +18,17 @@ ID_STRUCT = NS(identifier="Object", base=NS(identifier="ID", base=None))
 PLAIN_STRUCT = NS(identifier="Thing", base=None)
 
 
-def modifier(name="Bevel", kind="BEVEL"):
+def modifier(name="Bevel", kind="BEVEL", offset_type="OFFSET"):
     props = [
         prop("rna_type", "POINTER", True, PLAIN_STRUCT), prop("name", "STRING"), prop("type", "ENUM", True),
         prop("show_viewport", "BOOLEAN"), prop("show_render", "BOOLEAN"), prop("is_override_data", "BOOLEAN"),
         prop("persistent_uid", "INT", True), prop("is_active", "BOOLEAN"), prop("execution_time", "FLOAT", True),
-        prop("width", "FLOAT"), prop("segments", "INT"), prop("use_clamp", "BOOLEAN"), prop("vertex_group", "STRING"),
+        prop("width", "FLOAT"), prop("width_pct", "FLOAT"), prop("offset_type", "ENUM"), prop("segments", "INT"), prop("use_clamp", "BOOLEAN"), prop("vertex_group", "STRING"),
         prop("affect", "ENUM"), prop("flags", "ENUM"), prop("offset", "FLOAT"), prop("mirror_object", "POINTER", False, ID_STRUCT),
         prop("origin", "POINTER", False, ID_STRUCT), prop("settings", "POINTER", False, PLAIN_STRUCT),
         prop("curve", "COLLECTION"),
     ]
-    return NS(name=name, type=kind, bl_rna=NS(properties=props), width=0.12345, segments=3, use_clamp=True,
+    return NS(name=name, type=kind, bl_rna=NS(properties=props), width=0.12345, width_pct=0.54321, offset_type=offset_type, segments=3, use_clamp=True,
               vertex_group="", affect="EDGES", flags={"B", "A"}, offset=(0.0, 1.23456, -0.0), mirror_object=NS(name="Mirror"),
               origin=None, settings=object(), curve=[], show_viewport=True, show_render=True, is_override_data=False,
               persistent_uid=123456, is_active=True, execution_time=0.001, rna_type=object())
@@ -96,8 +96,25 @@ def test_modifier_settings_pick_primitives_and_id_pointers(fake_bpy):
     install(fake_bpy, [obj("A", modifiers=[modifier()])])
     m = op_snapshot.run({})["objects"][0]["modifiers"][0]
     assert (m["name"], m["type"]) == ("Bevel", "BEVEL")
-    assert m["settings"] == {"width": 0.123, "segments": 3, "use_clamp": True, "vertex_group": "", "affect": "EDGES",
+    assert m["settings"] == {"width": 0.123, "offset_type": "OFFSET", "segments": 3, "use_clamp": True, "vertex_group": "", "affect": "EDGES",
                              "flags": ["A", "B"], "offset": [0.0, 1.235, 0.0], "mirror_object": "Mirror", "origin": None}
+
+
+def test_bevel_records_only_the_width_its_offset_type_uses(fake_bpy):
+    install(fake_bpy, [obj("A", modifiers=[modifier()]), obj("B", modifiers=[modifier(offset_type="PERCENT")])])
+    a, b = (o["modifiers"][0]["settings"] for o in op_snapshot.run({})["objects"])
+    assert "width" in a and "width_pct" not in a and a["offset_type"] == "OFFSET"
+    assert b["width_pct"] == 0.543 and "width" not in b and b["offset_type"] == "PERCENT"
+
+
+def test_non_bevel_modifier_keeps_both_width_properties(fake_bpy):
+    install(fake_bpy, [obj("A", modifiers=[modifier("Other", "ARRAY"), modifier("Other2", "ARRAY", "PERCENT")])])
+    for m in op_snapshot.run({})["objects"][0]["modifiers"]:
+        assert "width" in m["settings"] and "width_pct" in m["settings"]
+
+
+def test_conditional_keys_are_modifier_types():
+    assert set(op_snapshot.CONDITIONAL) == {"BEVEL"}
 
 
 def test_op_is_reachable_through_the_dispatcher_and_is_read_only(fake_bpy):

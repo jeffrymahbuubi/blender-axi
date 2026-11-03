@@ -31,6 +31,7 @@ class OrbitState:
         self.matrix = None  # the camera's matrix_world rows before the orbit
         self.channels: dict = {}
         self.centre = None
+        self.aim: dict | None = None  # {"from": [deg x3], "to": [deg x3]} when `aim` ran
 
     def undo(self, bpy) -> list[str]:
         """Best effort; returns descriptions of what could not be restored."""
@@ -73,21 +74,61 @@ def _copy(value):
         return value
 
 
-def plan(bpy, scene, n: int, state: OrbitState) -> list[Step]:
-    """The camera matrices for `n` evenly spaced angles over a full turn (step 1 = the current view)."""
+def record(state: OrbitState, cam) -> None:
+    """Remember the camera's transform channels once (the first call wins), so `undo` restores the original
+    even after `aim` changed the rotation."""
+    if state.camera is not None:
+        return
+    state.camera = cam
+    state.channels = {name: _copy(getattr(cam, name)) for name in _CHANNELS if hasattr(cam, name)}
+
+
+def _euler_deg(cam) -> list[float]:
+    return [round(math.degrees(v), 4) for v in cam.matrix_world.to_euler()]
+
+
+def aim(bpy, cam, centre_: tuple[float, float, float], state: OrbitState) -> dict:
+    """Turn `cam` (position unchanged, Z up) so it looks at `centre_`; the original channels are recorded first.
+    Returns `{"from": [deg x3], "to": [deg x3]}` (world rotation before and after, whatever the rotation mode)."""
+    from mathutils import Vector
+
+    record(state, cam)
+    before = _euler_deg(cam)
+    q = (Vector(centre_) - cam.matrix_world.translation).to_track_quat("-Z", "Y")
+    parent = getattr(cam, "parent", None)
+    if parent is not None:  # the channels are relative to the parent: strip its world rotation and the parent-inverse
+        local = parent.matrix_world.to_quaternion() @ cam.matrix_parent_inverse.to_quaternion()
+        q = local.inverted() @ q
+    mode = cam.rotation_mode
+    if mode == "QUATERNION":
+        cam.rotation_quaternion = q
+    elif mode == "AXIS_ANGLE":
+        angle, axis = q.to_axis_angle()
+        cam.rotation_axis_angle = (angle, *axis)
+    else:
+        cam.rotation_euler = q.to_euler(mode)
+    bpy.context.view_layer.update()
+    state.aim = {"from": before, "to": _euler_deg(cam)}
+    return state.aim
+
+
+def plan(bpy, scene, n: int, state: OrbitState, coords: list[float] | None = None) -> list[Step]:
+    """The camera matrices for `n` evenly spaced angles over a full turn (step 1 = the current view).
+    `coords` (the subject's bound-box corners) replaces the all-visible-geometry default."""
     cam = scene.camera
     if cam is None:
         raise OpError("NOT_FOUND", "scene has no active camera")
     bpy.context.view_layer.update()  # a fitted or new camera needs its matrix_world refreshed first
-    coords = camera_fit.collect_coords(bpy.context.evaluated_depsgraph_get(), scene)
+    what = "subject" if coords is not None else "scene"
+    if coords is None:
+        coords = camera_fit.collect_coords(bpy.context.evaluated_depsgraph_get(), scene)
     if not coords:
-        raise OpError("OP_FAILED", "nothing to orbit: the scene has no visible geometry")
+        raise OpError("OP_FAILED", f"nothing to orbit: the {what} has no visible geometry")
     c = centre(coords)
     m0 = [list(row) for row in cam.matrix_world]
-    state.camera = cam
+    record(state, cam)
     state.matrix = [list(row) for row in m0]
     state.centre = c
-    state.channels = {name: _copy(getattr(cam, name)) for name in _CHANNELS if hasattr(cam, name)}
     return [Step(i + 1, orbit_rows(m0, c, 2 * math.pi * i / n)) for i in range(n)]
 
 

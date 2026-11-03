@@ -12,6 +12,15 @@ PRIMITIVES = ("BOOLEAN", "INT", "FLOAT", "STRING", "ENUM")
 SKIP_SETTINGS = frozenset({"rna_type", "name", "type", "is_override_data", "is_active", "persistent_uid"})
 
 
+def _bevel_skip(mod) -> frozenset:
+    """A bevel's `width`/`width_pct` are one value; only the one `offset_type` uses is recorded."""
+    return frozenset({"width"}) if getattr(mod, "offset_type", None) == "PERCENT" else frozenset({"width_pct"})
+
+
+# modifier type -> fn(mod) -> property ids to leave out of `settings`
+CONDITIONAL = {"BEVEL": _bevel_skip}
+
+
 def _vec(v) -> list:
     return [round(float(x), 3) + 0.0 for x in v]
 
@@ -52,9 +61,10 @@ def _is_id_pointer(prop) -> bool:
 
 def _settings(mod) -> dict:
     out: dict = {}
+    skip = SKIP_SETTINGS | CONDITIONAL.get(mod.type, lambda m: frozenset())(mod)
     for prop in mod.bl_rna.properties:
         pid = prop.identifier
-        if pid in SKIP_SETTINGS or pid.startswith("show_"):
+        if pid in skip or pid.startswith("show_"):
             continue
         kind = prop.type
         try:

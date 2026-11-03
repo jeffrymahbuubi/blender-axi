@@ -82,10 +82,27 @@ def test_headless_diff_reports_every_kind_of_change(pair):
     assert row["name"] == "A"
     for part in ("location 0,0,0 -> 1,0,0", "materials Red -> Blue", "Bevel.width 0.05 -> 0.1"):
         assert part in row["changes"], row
+    assert "width_pct" not in row["changes"], row  # 0.7.0: a bevel's width is reported once
     assert {"setting": "resolution", "from": "1920x1080@100%", "to": "320x240@100%"} in d["scene"]
     assert d["status"] == "different" and d["duration_ms"] >= 0
     assert any("object A" in h and "v2.blend" in h for h in d["help"])
     assert [p.stat().st_mtime_ns for p in pair] == stamps  # read-only
+
+
+def test_percent_bevel_reports_width_pct_once(blender_info):
+    """0.7.0 U3: with offset_type PERCENT the one reported width is `width_pct` (ASSUMED A2: `--prop` applies to `bevel`)."""
+    work = paths.tmp_root() / "diff"
+    work.mkdir(parents=True, exist_ok=True)
+    p1, p2 = work / "p1.blend", work / "p2.blend"
+    assert axi("new", p1)[0] == 0
+    build(p1, ["add cube --name A", "modifier A bevel --prop offset_type=PERCENT --prop width_pct=5"])
+    shutil.copy2(p1, p2)
+    build(p2, ["modifier A bevel --prop width_pct=10"])
+    code, d = axi("diff", p1, p2)
+    assert code == 0, d
+    (row,) = d["changed"]
+    assert "Bevel.width_pct 5 -> 10" in row["changes"], row
+    assert "Bevel.width " not in row["changes"] + " ", row
 
 
 def test_identical_and_same_file_twice(pair):

@@ -7,8 +7,11 @@ may use a temporary camera when the scene has none), auto_light (bool: light an 
 and, when the file has no world, a grey world fill; see `auto_light`). `fit` frames all visible geometry (see
 `camera_fit`) and the camera is put back afterwards; the result always carries `lighting` (see `lighting`).
 turntable (int | None: render that many stills of the current frame with the camera orbited around the visible
-geometry, see `turntable`), video ({out, fps, frames_dir} | None: with `turntable`, write the stills into
-`frames_dir` and encode them into the mp4 `out`, see `video`).
+geometry, see `turntable`), video ({out, fps | None, frames_dir} | None: with `turntable` or `frames`, write the stills
+into `frames_dir` and encode them into the mp4 `out` at `fps`, default the scene fps, see `video`), sheet ({out, cols,
+frames_dir} | None: the same stills composed into one grid image `out`, see `sheet`). subject (list[str] | None: the objects to orbit and
+fit; default with a turntable = all visible geometry minus a ground plane, see `subject`). A turntable on an existing
+camera first turns it toward the subject's centre (`aim`); the result carries `subject` and `aim` when they ran.
 
 Pure-Python helpers (`output_paths`, `ENGINE_IDS`, `EXT_FORMATS`) have no `bpy` dependency; the CLI
 imports them so the write-refusal pre-check and the op agree on every path.
@@ -17,7 +20,8 @@ imports them so the write-refusal pre-check and the op agree on every path.
 import os
 import re
 
-from . import auto_light, camera_fit, lighting, turntable, video
+from . import auto_light, camera_fit, common, lighting, sheet, turntable, video
+from . import subject as subject_mod
 from .ops import OpError
 
 ENGINE_IDS = {"WORKBENCH": "BLENDER_WORKBENCH", "EEVEE": "BLENDER_EEVEE", "CYCLES": "CYCLES"}
@@ -155,6 +159,28 @@ def _restore(scene, snap: dict) -> list[str]:
     return failures
 
 
+def _choose_subject(bpy, scene, params: dict, turning: bool, orbit_state):
+    """The subject of a `--subject` / `--turntable` render and, with a turntable on an existing camera, the re-aim.
+    Returns `(subject info | None, corner coords | None, aim | None)`; all None when neither flag is in play."""
+    names = params.get("subject")
+    if names is None and not turning:
+        return None, None, None
+    for name in names or []:
+        common.find_object(bpy, name, "subject")  # NOT_FOUND before anything is changed
+    bpy.context.view_layer.update()
+    entries = camera_fit.collect_entries(bpy.context.evaluated_depsgraph_get(), scene)
+    pick = subject_mod.choose(entries, names)
+    if names and not pick["entries"]:
+        raise OpError("OP_FAILED", "subject has no visible geometry: " + ", ".join(names))
+    coords = subject_mod.coords_of(pick["entries"]) or None
+    subject = {"mode": pick["mode"], "objects": [n for n, _ in pick["entries"]], "excluded": pick["excluded"],
+               "centre": [round(v, 4) for v in turntable.centre(coords)] if coords else None}
+    aim = None
+    if turning and scene.camera is not None and coords:
+        aim = turntable.aim(bpy, scene.camera, subject["centre"], orbit_state)  # before --fit: the fit keeps the rotation
+    return subject, coords, aim
+
+
 def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState", light_state: "auto_light.AutoLightState",
             orbit_state: "turntable.OrbitState") -> dict:
     render = scene.render
@@ -175,10 +201,13 @@ def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState", light_st
         if obj is None or obj.type != "CAMERA":
             raise OpError("NOT_FOUND", f"camera not found: {camera}")
         scene.camera = obj
+    n_turn = params.get("turntable")
+    subject, coords, aim = _choose_subject(bpy, scene, params, bool(n_turn), orbit_state)
     fit = None
     if params.get("fit"):
+        extra = {"coords": coords} if coords is not None else {}  # no subject: today's call, byte for byte
         fit = camera_fit.fit_scene(bpy, scene, float(params.get("fit_margin") or 1.1),
-                                   bool(params.get("temp_camera_ok")), fit_state)
+                                   bool(params.get("temp_camera_ok")), fit_state, **extra)
     elif scene.camera is None:
         raise OpError("NOT_FOUND", "scene has no active camera")
 
@@ -187,27 +216,28 @@ def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState", light_st
     if params.get("auto_light"):
         light = auto_light.apply(bpy, scene, light_state) if lit["unlit"] else {"applied": False, "sun": None, "fill": None}
 
-    fmt = params.get("format") or EXT_FORMATS.get(os.path.splitext(params["out"])[1].lower(), "PNG")
+    vid, grid = params.get("video"), params.get("sheet")
+    pack = vid or grid  # the stills go to a run dir and are packed into one mp4 / one sheet image
+    fmt = "PNG" if pack else (params.get("format") or EXT_FORMATS.get(os.path.splitext(params["out"])[1].lower(), "PNG"))
     render.image_settings.file_format = fmt
     render.use_file_extension = False  # write exactly the path we computed
 
-    n_turn = params.get("turntable")
-    vid = params.get("video") if n_turn else None
     if n_turn:
         frames = list(range(1, int(n_turn) + 1))  # step numbers, not scene frames: the scene stays on its current frame
-        target = vid["out"] if vid else None
-        files = ([os.path.join(vid["frames_dir"], f"turn_{i:04d}.png") for i in frames] if vid
+        files = ([os.path.join(pack["frames_dir"], f"turn_{i:04d}.png") for i in frames] if pack
                  else output_paths(params["out"], frames, multi=True))
     else:
         frames = params.get("frames") or [scene.frame_current]
-        target = None
-        files = output_paths(params["out"], frames)
+        files = ([os.path.join(pack["frames_dir"], f"frame_{f:04d}.png") for f in frames] if pack
+                 else output_paths(params["out"], frames))
+    target = pack["out"] if pack else None
     if not params.get("force"):
-        existing = [f for f in ([target] if vid else files) if os.path.exists(f)]
+        existing = [f for f in ([target] if pack else files) if os.path.exists(f)]
         if existing:
             raise OpError("WRITE_REFUSED", f"output exists: {existing[0]}")
-    steps = turntable.plan(bpy, scene, int(n_turn), orbit_state) if n_turn else None  # before anything is written
-    for f in files + ([target] if vid else []):
+    steps = (turntable.plan(bpy, scene, int(n_turn), orbit_state, coords=coords)
+             if n_turn else None)  # before anything is written
+    for f in files + ([target] if pack else []):
         os.makedirs(os.path.dirname(os.path.abspath(f)), exist_ok=True)
 
     for i, (frame, path) in enumerate(zip(frames, files)):
@@ -236,14 +266,22 @@ def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState", light_st
         result["fit"] = fit
     if light is not None:
         result["auto_light"] = light
+    if subject is not None:
+        result["subject"] = subject
+    if aim is not None:
+        result["aim"] = aim
     if n_turn:
         result["turntable"] = {"steps": int(n_turn), "centre": [round(v, 4) for v in orbit_state.centre],
                                "camera": scene.camera.name}
-        if vid:
-            movie = video.encode(bpy, files, vid["out"], int(vid["fps"]),
-                                 (int(render.resolution_x * scale), int(render.resolution_y * scale)))
-            result["files"] = [vid["out"]]
-            result["video"] = {"codec": movie["codec"], "fps": int(vid["fps"]), "size_bytes": movie["size_bytes"]}
+    if vid:
+        fps = int(vid["fps"]) if vid.get("fps") else max(1, round(render.fps / (render.fps_base or 1)))  # None: the scene's
+        movie = video.encode(bpy, files, vid["out"], fps, (int(render.resolution_x * scale), int(render.resolution_y * scale)))
+        result["files"] = [vid["out"]]
+        result["video"] = {"codec": movie["codec"], "fps": fps, "size_bytes": movie["size_bytes"]}
+    elif grid:
+        made = sheet.compose(bpy, files, grid["out"], int(grid["cols"]))
+        result["files"] = [grid["out"]]
+        result["sheet"] = {k: made[k] for k in ("cols", "rows", "width", "height", "size_bytes", "tiles")}
     return result
 
 

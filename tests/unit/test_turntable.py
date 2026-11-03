@@ -137,3 +137,154 @@ def test_undo_restores_the_channels_and_is_best_effort(monkeypatch):
 
 def test_undo_before_plan_is_a_noop():
     assert turntable.OrbitState().undo(NS()) == []
+
+
+# --- subject coords, aim and record (0.7.0 plan U1) -------------------------------------------------------
+
+class Q:
+    """A quaternion stand-in that records how it was made."""
+
+    def __init__(self, name, euler=(1.2, 0.0, 0.5)):
+        self.name, self.euler = name, euler
+
+    def __matmul__(self, other):
+        return Q(f"({self.name}@{other.name})", self.euler)
+
+    def inverted(self):
+        return Q(f"inv({self.name})", self.euler)
+
+    def to_euler(self, mode):
+        self.mode = mode
+        return self.euler
+
+    def to_axis_angle(self):
+        return 0.75, (0.0, 0.0, 1.0)
+
+
+class Vec:
+    def __init__(self, v):
+        self.v = tuple(float(x) for x in v)
+
+    def __sub__(self, other):
+        return Vec(a - b for a, b in zip(self.v, other.v))
+
+    def to_track_quat(self, track, up):
+        self.track = (track, up)
+        return Q(f"track{tuple(round(x, 3) for x in self.v)}")
+
+
+class WorldMatrix(list):
+    def __init__(self, rows, cam_getter, loc):
+        super().__init__(rows)
+        self.translation = Vec(loc)
+        self._cam = cam_getter
+
+    def to_euler(self):
+        return self._cam().rotation_euler
+
+
+@pytest.fixture
+def mathutils_stub(monkeypatch):
+    monkeypatch.setitem(sys.modules, "mathutils", types.SimpleNamespace(Vector=Vec, Matrix=lambda rows: rows))
+
+
+def aim_rig(monkeypatch, mode="XYZ", parent=None):
+    bpy, scene, cam, updates = make_bpy(monkeypatch, [-4, 0, 0, 4, 0, 1])
+    cam.matrix_world = WorldMatrix(matrix((0, -10, 5)), lambda: cam, (0.0, -10.0, 5.0))
+    cam.rotation_mode, cam.rotation_axis_angle, cam.parent = mode, (0.0, 0.0, 1.0, 0.0), parent
+    return bpy, scene, cam, updates
+
+
+def test_aim_sets_the_euler_channels_and_reports_degrees(monkeypatch, mathutils_stub):
+    bpy, scene, cam, updates = aim_rig(monkeypatch)
+    state = turntable.OrbitState()
+    out = turntable.aim(bpy, cam, (0.0, 0.0, 0.5), state)
+    assert cam.rotation_euler == (1.2, 0.0, 0.5) and updates  # the world matrix was refreshed
+    assert out == {"from": [round(math.degrees(1.0), 4), 0.0, 0.0], "to": [round(math.degrees(1.2), 4), 0.0, round(math.degrees(0.5), 4)]}
+    assert state.aim == out and state.camera is cam
+
+
+def test_aim_looks_from_the_camera_position_toward_the_centre(monkeypatch, mathutils_stub):
+    bpy, _, cam, _ = aim_rig(monkeypatch)
+    seen = []
+    monkeypatch.setattr(Vec, "to_track_quat", lambda self, t, u: seen.append((self.v, t, u)) or Q("q"))
+    turntable.aim(bpy, cam, (0.0, 0.0, 0.5), turntable.OrbitState())
+    assert seen == [((0.0, 10.0, -4.5), "-Z", "Y")]  # the camera looks down -Z with Y up (Z stays up in the world)
+
+
+def test_aim_uses_the_rotation_mode(monkeypatch, mathutils_stub):
+    bpy, _, cam, _ = aim_rig(monkeypatch, mode="ZXY")
+    q = Q("q")
+    monkeypatch.setattr(Vec, "to_track_quat", lambda self, t, u: q)
+    turntable.aim(bpy, cam, (0, 0, 0), turntable.OrbitState())
+    assert q.mode == "ZXY" and cam.rotation_euler == q.euler
+
+    bpy, _, cam, _ = aim_rig(monkeypatch, mode="QUATERNION")
+    turntable.aim(bpy, cam, (0, 0, 0), turntable.OrbitState())
+    assert cam.rotation_quaternion is q and cam.rotation_euler == (1.0, 0.0, 0.0)  # the euler channel is untouched
+
+    bpy, _, cam, _ = aim_rig(monkeypatch, mode="AXIS_ANGLE")
+    turntable.aim(bpy, cam, (0, 0, 0), turntable.OrbitState())
+    assert cam.rotation_axis_angle == (0.75, 0.0, 0.0, 1.0)
+
+
+def test_aim_of_a_parented_camera_removes_the_parent_rotation(monkeypatch, mathutils_stub):
+    parent = NS(matrix_world=NS(to_quaternion=lambda: Q("P")))
+    bpy, _, cam, _ = aim_rig(monkeypatch, parent=parent)
+    cam.matrix_parent_inverse = NS(to_quaternion=lambda: Q("I"))
+    seen = []
+    monkeypatch.setattr(Q, "to_euler", lambda self, mode: seen.append(self.name) or (0.0, 0.0, 0.0))
+    turntable.aim(bpy, cam, (0, 0, 0), turntable.OrbitState())
+    assert seen == ["(inv((P@I))@track(0.0, 10.0, -5.0))"]
+
+
+def test_record_keeps_the_first_channels_only(monkeypatch):
+    _, _, cam, _ = make_bpy(monkeypatch, [0, 0, 0, 1, 1, 1])
+    state = turntable.OrbitState()
+    turntable.record(state, cam)
+    first = dict(state.channels)
+    cam.location = (7.0, 7.0, 7.0)
+    turntable.record(state, cam)
+    assert state.channels == first and state.channels["location"] == (0.0, -10.0, 5.0)
+
+
+def test_plan_after_aim_keeps_the_pre_aim_channels_and_undo_restores_them(monkeypatch, mathutils_stub):
+    bpy, scene, cam, _ = aim_rig(monkeypatch)
+    state = turntable.OrbitState()
+    turntable.aim(bpy, cam, (0.0, 0.0, 0.5), state)
+    assert cam.rotation_euler == (1.2, 0.0, 0.5)
+    turntable.plan(bpy, scene, 3, state)
+    assert state.channels["rotation_euler"] == (1.0, 0.0, 0.0)  # plan did not overwrite what aim recorded
+    cam.location = (9.0, 9.0, 9.0)  # as if the fit and the orbit had moved it
+    assert state.undo(bpy) == []
+    assert cam.location == (0.0, -10.0, 5.0) and cam.rotation_euler == (1.0, 0.0, 0.0)
+
+
+def test_undo_after_a_failed_render_restores_location_and_rotation(monkeypatch, mathutils_stub):
+    # the op-level path: aim, a render that raises, then the finally block (see test_cmd_render_subject for the op)
+    bpy, scene, cam, _ = aim_rig(monkeypatch)
+    state = turntable.OrbitState()
+    turntable.aim(bpy, cam, (0.0, 0.0, 0.5), state)
+    cam.location = (5.0, 5.0, 5.0)
+    try:
+        raise RuntimeError("render crashed")
+    except RuntimeError:
+        pass
+    finally:
+        assert state.undo(bpy) == []
+    assert cam.location == (0.0, -10.0, 5.0) and cam.rotation_euler == (1.0, 0.0, 0.0)
+
+
+def test_plan_with_coords_uses_them_and_does_not_collect(monkeypatch):
+    bpy, scene, cam, _ = make_bpy(monkeypatch, [-100, 0, 0, 100, 0, 1])  # what collect_coords would say
+    monkeypatch.setattr(camera_fit, "collect_coords", lambda *a, **k: pytest.fail("collect_coords must not run"))
+    state = turntable.OrbitState()
+    steps = turntable.plan(bpy, scene, 2, state, coords=[0, 0, 0, 2, 2, 4])
+    assert state.centre == (1.0, 1.0, 2.0) and len(steps) == 2
+
+
+def test_plan_with_empty_coords_names_the_subject(monkeypatch):
+    bpy, scene, _, _ = make_bpy(monkeypatch, [0, 0, 0])
+    with pytest.raises(OpError, match="nothing to orbit: the subject has no visible geometry") as err:
+        turntable.plan(bpy, scene, 2, turntable.OrbitState(), coords=[])
+    assert err.value.code == "OP_FAILED"

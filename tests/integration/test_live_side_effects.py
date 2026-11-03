@@ -3,6 +3,7 @@
 Starts a REAL headless MCP server on a free port (never 9876, which may be the user's GUI Blender) on a copy of
 basic.blend, puts the session into a distinctive "user" state, runs the ops through `cli.main`, and reads the state
 back over the same socket. The server process tree is killed at teardown; no other Blender is touched.
+0.7.0: the full selector x format matrix; v1.1 K5 supplies the window/selection context a headless server lacks.
 """
 
 from __future__ import annotations
@@ -55,10 +56,14 @@ result = {
 """
 
 
-# (selector flags, expected exported object count): Props = Ball + the Anchor empty -> 1 geometry object
+FORMATS = ("glb", "gltf", "fbx", "obj", "stl", "ply", "usd", "usda", "abc")
+# (selector flags, expected exported object count, formats): Props = Ball + the Anchor empty -> 1 geometry object
 SELECTIVE = (
-    (["--collection", "Props"], 1, ("glb", "fbx", "obj", "stl")),
-    (["--objects", "Cube,Ball"], 2, ("fbx", "obj")),
+    (["--collection", "Props"], 1, FORMATS),
+    (["--objects", "Cube,Ball"], 2, FORMATS),
+    (["--object", "Ball"], 1, ("glb", "usd", "abc")),
+    (["--exclude", "Cube"], 1, ("glb", "fbx", "ply")),
+    (["--objects", "Cube", "--include-hidden"], 1, ("glb",)),
 )
 
 
@@ -106,13 +111,19 @@ def test_render_and_export_live_leave_the_session_untouched(session, capsys):
 
         # v1.1 K5: op_export supplies the window and the selection context a windowless headless server lacks, so
         # selective exports and glTF work through the real CLI there; the select / export / restore path is exercised.
-        for flags, count, formats in SELECTIVE:
+        for idx, (flags, count, formats) in enumerate(SELECTIVE):
             for fmt in formats:
-                out = work / f"sel{round_}_{flags[0].lstrip('-')}.{fmt}"
-                code, data = _axi(capsys, "export", *live_args, *flags, "--out", out, "--force")
+                out = work / f"sel{round_}_{idx}.{fmt}"
+                code, data = _axi(capsys, "export", *live_args, *flags, "--out", out, "--force")  # gltf needs --force (.bin)
                 assert code == 0, (flags, fmt, data)
                 assert data["objects"] == count and data["format"] == fmt and out.stat().st_size > 0, data
                 assert _exec(port, READ_STATE) == before  # the user's selection / active object are put back
+
+        dry = work / f"dry{round_}.glb"
+        code, data = _axi(capsys, "export", *live_args, "--dry-run", "--collection", "Props", "--out", dry)
+        assert code == 0, data
+        assert data["would_export"] == "1 (Ball)" and not dry.exists(), data
+        assert _exec(port, READ_STATE) == before
 
         for fmt in ("glb", "fbx", "obj", "stl"):  # whole scene through the real CLI (A2: glTF needs no selection)
             out = work / f"all{round_}.{fmt}"

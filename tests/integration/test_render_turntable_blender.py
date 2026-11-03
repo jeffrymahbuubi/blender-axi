@@ -26,6 +26,7 @@ SIDE = 48
 STEPS_WIDE = ["add cube --name L --size 3 --location -4,0,0", "add cube --name R --size 3 --location 4,0,0",
               "material L --name Red --color 1,0,0",
               "add camera --name Cam --location 0,-10,5 --rotation 65,0,0", "add light --type SUN"]
+STEPS_FLOOR = [*STEPS_WIDE, "add plane --name Floor --size 40"]
 STEPS_UNLIT = ["add cube --name L --size 3 --location -4,0,0", "add cube --name R --size 3 --location 4,0,0",
                "add camera --name Cam --location 0,-10,5 --rotation 65,0,0"]
 EXEC_STATE = ("result = {'scenes': len(bpy.data.scenes), 'worlds': len(bpy.data.worlds), "
@@ -105,6 +106,11 @@ def wide(work):
 
 
 @pytest.fixture(scope="module")
+def floor(work):
+    return build(work, "floor", STEPS_FLOOR)
+
+
+@pytest.fixture(scope="module")
 def unlit(work):
     return build(work, "unlit", STEPS_UNLIT)
 
@@ -133,7 +139,10 @@ def test_png_turntable_orbits_and_restores_everything(capsys, work, wide):
     assert data["rendered"] == "4 frames" and data["output"].endswith("t_####.png")
     assert data["turntable"].startswith("4 steps around ") and data["turntable"].endswith("(Cam)")
     assert data["fit"].startswith("Cam moved 0,-10,5 -> ") and "video" not in data
+    assert "subject" not in data  # no ground in this scene: nothing was excluded, so the line is omitted
+    assert data["aim"].startswith("Cam turned 65,0,0 -> ") and data["aim"].endswith(" toward 0,0,0")
     assert any("--turntable 12 --fit --out <dir/turn_####.png>" in h for h in data["help"])
+    assert any(h.startswith("Run `blender-axi set Cam ") and " --rotation " in h for h in data["help"])  # keep hint
     frames = [work / f"t_{i:04d}.png" for i in (1, 2, 3, 4)]
     assert all(f.is_file() for f in frames)
     assert all(geometry_pixels(f) > 20 for f in frames)  # A2: every step still shows the cubes
@@ -158,6 +167,65 @@ def test_mp4_turntable_writes_one_video_and_cleans_up(capsys, work, wide):
     # a second run without --force is refused before Blender starts
     code, data = axi(capsys, "render", wide, "--turntable", "4", "--out", out)
     assert code == 1 and data["code"] == "WRITE_REFUSED"
+
+
+def red_pixels(path: Path) -> int:
+    """Pixels of the red cube L (`material L --name Red --color 1,0,0`): red clearly above green and blue."""
+    return sum(1 for row in read_png(path) for r, g, b, *_ in row if r > g + 40 and r > b + 40)
+
+
+def test_turntable_leaves_the_ground_out_and_aims_at_the_subject(capsys, work, floor):
+    """ASSUMED A1: the subject fills more of the frame when the floor is not part of the fit. Measured as the pixels of
+    the red cube over the 4 frames, auto subject vs `--subject L,R,Floor` (everything, the 0.6.0 framing). Outcome: 1839 vs 83 red pixels (22x) at 96x96, so >= 2x holds."""
+    before = cam(capsys, floor)
+    big = ["--resolution", "96x96"]
+    code, auto = axi(capsys, "render", floor, "--engine", "WORKBENCH", *big, "--out", work / "fa_####.png", "--force",
+                     "--turntable", "4", "--fit")
+    assert code == 0, auto
+    assert auto["subject"] == "2 objects (ground excluded: Floor)", auto
+    assert auto["aim"].startswith("Cam turned 65,0,0 -> ") and auto["aim"].endswith(" toward 0,0,0")
+    code, everything = axi(capsys, "render", floor, "--engine", "WORKBENCH", *big, "--out", work / "fe_####.png", "--force",
+                           "--turntable", "4", "--fit", "--subject", "L,R,Floor")
+    assert code == 0, everything
+    assert everything["subject"] == "3 named (L, R, Floor)" and everything["aim"].endswith(" toward 0,0,0")
+    auto_frames = [work / f"fa_{i:04d}.png" for i in (1, 2, 3, 4)]
+    all_frames = [work / f"fe_{i:04d}.png" for i in (1, 2, 3, 4)]
+    assert all(geometry_pixels(f) > 20 for f in auto_frames)
+    auto_red, all_red = sum(map(red_pixels, auto_frames)), sum(map(red_pixels, all_frames))
+    assert auto_red > 1.2 * all_red and auto_red >= 2 * all_red, (auto_red, all_red)
+    assert cam(capsys, floor) == before  # location AND rotation are back (the aim is not saved)
+
+
+def test_turntable_subject_named_objects(capsys, work, floor):
+    code, data = axi(capsys, *render_args(floor, work / "sl_####.png", "--turntable", "3", "--fit", "--subject", "L"))
+    assert code == 0, data
+    assert data["subject"] == "1 named (L)" and data["aim"].endswith(" toward -4,0,0")
+    assert all(geometry_pixels(work / f"sl_{i:04d}.png") > 20 for i in (1, 2, 3))
+
+
+def test_fit_with_a_subject_frames_only_those_objects(capsys, work, floor):
+    code, data = axi(capsys, *render_args(floor, work / "fl.png", "--fit", "--subject", "L"))
+    assert code == 0, data
+    assert data["subject"] == "1 named (L)" and "aim" not in data and "turntable" not in data
+    assert geometry_pixels(work / "fl.png") > 20
+
+
+def test_unknown_subject_is_not_found_with_the_objects_hint(capsys, work, floor):
+    code, data = axi(capsys, *render_args(floor, work / "g_####.png", "--turntable", "3", "--subject", "Ghost"))
+    assert code == 1 and data["code"] == "NOT_FOUND" and "subject 'Ghost' not found" in data["error"], data
+    assert any("blender-axi objects" in h for h in data["help"])
+    assert not list(work.glob("g_*"))
+
+
+def test_subject_without_geometry_fails(capsys, work, floor):
+    code, data = axi(capsys, *render_args(floor, work / "c_####.png", "--turntable", "3", "--subject", "Cam"))
+    assert code == 1 and data["code"] == "OP_FAILED" and "subject has no visible geometry: Cam" in data["error"], data
+    assert not list(work.glob("c_*"))
+
+
+def test_subject_needs_turntable_or_fit(capsys, work, floor):
+    code, data = axi(capsys, "render", floor, "--subject", "L", "--out", work / "z.png")
+    assert code == 2 and data["error"] == "--subject needs --turntable or --fit"
 
 
 def test_turntable_with_auto_light_leaves_nothing_behind(capsys, work, unlit):
@@ -186,7 +254,7 @@ def test_turntable_without_a_camera_uses_the_temporary_one(capsys, work, fixture
 
 def test_validation_errors_exit_2(capsys, work, wide):
     for argv, text in ((["--turntable", "1"], "at least 2 steps"), (["--turntable", "3", "--frame", "2"], "drop --frame"),
-                       (["--out", work / "v.mp4"], "needs --turntable")):
+                       (["--out", work / "v.mp4"], "needs --frames <a..b> or --turntable N")):
         code, data = axi(capsys, "render", wide, *argv)
         assert code == 2 and data["code"] == "VALIDATION_ERROR" and text in data["error"], data
 
@@ -211,7 +279,8 @@ def test_live_mp4_turntable_restores_the_session(capsys, work, live_wide):
     assert data["rendered"] == "3 frames -> 1 video" and data["video"].startswith("H264 12 fps, ")
     assert out.read_bytes()[4:8] == b"ftyp"  # A9: the live Blender wrote the stills into the CLI-made run dir
     assert any("--live" in h and "finer turn" in h for h in data["help"])
-    assert cam(capsys, None, *live_wide) == before
+    assert data["aim"].startswith("Cam turned ")  # the live camera was re-aimed ...
+    assert cam(capsys, None, *live_wide) == before  # ... and location AND rotation (rotation_deg) are back
     code, state_after = axi(capsys, "exec", *live_wide, "--allow-exec", "--code", EXEC_STATE)
     assert code == 0 and state_after["result"] == state_before["result"]
     assert leftover_run_dirs() == runs_before

@@ -8,10 +8,12 @@ from ..blender_side import lighting
 from ..blender_side.camera_fit import TEMP_ROTATION_DEG
 from .. import paths
 from ..blender_side.op_render import ENGINE_IDS, EXT_FORMATS, FORMAT_EXT, output_paths
+from ..blender_side.sheet import grid
 from ..blender_side.video import VIDEO_EXTS
 from ..errors import AxiError
 from ..spec import CommandSpec, Flag, Invocation, Positional, Result
-from ._common import Hints, display_path, fmt_vec, invalid, live_suffix, quote_name, refused, resolve_blend_inferred
+from ._common import (MAX_NAMES, Hints, display_path, fmt_vec, invalid, live_suffix, names_summary, quote_name, refused,
+                      resolve_blend_inferred, translate_not_found)
 
 _RESOLUTION = re.compile(r"^(\d+)[xX](\d+)$")
 _RANGE = re.compile(r"^(\d+)\.\.(\d+)$")
@@ -50,19 +52,29 @@ def _parse_frames(inv: Invocation) -> list[int] | None:
     return None
 
 
-def _resolve_out(inv: Invocation, blend: Path | None, turntable: bool = False) -> tuple[str, str | None]:
-    """Absolute output template (may contain `#`) and the explicit --format (or None to infer)."""
+def _resolve_out(inv: Invocation, blend: Path | None, multi: bool = False, sheet: bool = False,
+                 turntable: bool = False) -> tuple[str, str | None]:
+    """Absolute output template (may contain `#`) and the explicit --format (or None to infer). `multi` = a turntable
+    or a `--frames` range (the only renders that can pack into one mp4 or one sheet image)."""
     fmt = inv.flags.get("format")
     raw = inv.flags.get("out")
+    if sheet and not multi:
+        raise invalid("--sheet needs --frames <a..b> or --turntable N",
+                      ["Example: blender-axi render <file> --turntable 12 --fit --sheet --out sheet.png",
+                       "Example: blender-axi render <file> --frames 1..12 --sheet --out sheet.png"])
     if raw is None:
         stem = blend.stem if blend is not None else "render"
-        raw = (f"{stem}_turn_####" if turntable else f"{stem}_f####") + FORMAT_EXT.get(fmt or "PNG", ".png")
+        name = (f"{stem}_turn_sheet" if turntable else f"{stem}_sheet") if sheet else (
+            f"{stem}_turn_####" if turntable else f"{stem}_f####")
+        raw = name + FORMAT_EXT.get(fmt or "PNG", ".png")
     ext = os.path.splitext(raw)[1].lower()
     if ext in VIDEO_EXTS:
-        if not turntable:
-            raise invalid(f"--out name{ext} needs --turntable (video of a frame range: not yet)",
-                           ["Example: blender-axi render <file> --turntable 12 --fit --out turn.mp4",
-                            "A frame range renders image files: --frames <a..b> --out name_####.png"])
+        if sheet:
+            raise invalid("--sheet writes one image grid; use --out name.png", ["Example: --sheet --out sheet.png"])
+        if not multi:
+            raise invalid(f"--out name{ext} needs --frames <a..b> or --turntable N",
+                           ["Example: blender-axi render <file> --frames 1..24 --out clip.mp4",
+                            "Example: blender-axi render <file> --turntable 12 --fit --out turn.mp4"])
         if fmt is not None:
             raise invalid("--format does not apply to mp4 output", ["Drop --format; the .mp4 extension selects H.264 video"])
         return os.path.abspath(os.path.expanduser(raw)), None
@@ -94,7 +106,26 @@ def _fit_text(fit: dict) -> str:
     return text
 
 
-def _keep_hint(inv: Invocation, blend: Path | None, fit: dict) -> str | None:
+def _subject_text(subject: dict) -> str | None:
+    """`2 named (Mug, MugHandle)` | `12 objects (ground excluded: Floor)`; None when nothing was chosen or excluded."""
+    if subject["mode"] == "named":
+        return names_summary(subject["objects"]).replace(" (", " named (", 1)
+    if not subject["excluded"]:
+        return None
+    gone = subject["excluded"]
+    shown = ", ".join(gone[:MAX_NAMES]) + (f", +{len(gone) - MAX_NAMES} more" if len(gone) > MAX_NAMES else "")
+    return f"{len(subject['objects'])} objects (ground excluded: {shown})"
+
+
+def _aim_text(aim: dict, camera: str, subject: dict | None) -> str:
+    """`Cam turned 63.6,0,46.7 -> 65.1,0,46.7 toward 0,0,0.9`."""
+    text = f"{camera} turned {fmt_vec(aim['from'])} -> {fmt_vec(aim['to'])}"
+    if subject and subject.get("centre"):
+        text += f" toward {fmt_vec(subject['centre'])}"
+    return text
+
+
+def _keep_hint(inv: Invocation, blend: Path | None, fit: dict, aim: dict | None = None) -> str | None:
     """The one call that makes the fitted framing permanent (the render itself never writes the file)."""
     h = Hints(inv)
     loc = fmt_vec(fit["location"])
@@ -104,7 +135,8 @@ def _keep_hint(inv: Invocation, blend: Path | None, fit: dict) -> str | None:
                 f"{'' if inv.globals.live else ' --in-place'}` to keep it")
     if fit.get("ortho_scale") is not None:
         return None  # `set` cannot change ortho_scale, so a location alone would not reproduce the framing
-    return (f"Run `{h.cmd('set ' + quote_name(fit['camera']) + ' ' + f + ' --location ' + loc)}"
+    rot = f" --rotation {fmt_vec(aim['to'])}" if aim else ""  # the turntable turned the camera too
+    return (f"Run `{h.cmd('set ' + quote_name(fit['camera']) + ' ' + f + ' --location ' + loc + rot)}"
             f"{'' if inv.globals.live else ' --in-place'}` to keep this framing")
 
 
@@ -151,6 +183,13 @@ def run(inv: Invocation) -> Result:
         raise invalid(f"--samples must be >= 1, got {flags['samples']}", ["blender-axi render --help"])
 
     fit = bool(flags.get("fit"))
+    subject = flags.get("subject") or None
+    if flags.get("subject") is not None and not subject:
+        raise invalid("--subject needs at least one object name", ["Example: blender-axi render <file> --turntable 12 --fit --subject Mug"])
+    if subject and turn is None and not fit:
+        raise invalid("--subject needs --turntable or --fit",
+                      ["Example: blender-axi render <file> --turntable 12 --fit --subject Mug,MugHandle",
+                       "Example: blender-axi render <file> --fit --subject Mug --out mug.png"])
     margin = flags.get("fit_margin")
     if margin is None:
         margin = _FIT_MARGIN
@@ -160,18 +199,23 @@ def run(inv: Invocation) -> Result:
         raise invalid("--fit-margin needs --fit", ["Example: blender-axi render <file> --fit --fit-margin 1.3"])
 
     blend, inferred = resolve_blend_inferred(inv, "render")
-    out, fmt = _resolve_out(inv, blend, turn is not None)
+    sheet = bool(flags.get("sheet"))
+    ranged = flags.get("frames") is not None  # a `--frames` range (not a single `--frame`)
+    out, fmt = _resolve_out(inv, blend, turn is not None or ranged, sheet, turn is not None)
     mp4 = os.path.splitext(out)[1].lower() in VIDEO_EXTS
-    fps = flags.get("fps") if flags.get("fps") is not None else _DEFAULT_FPS
-    if fps != _DEFAULT_FPS and not mp4:
+    fps = flags.get("fps")
+    if fps is not None and not mp4:
         raise invalid("--fps applies to mp4 output", ["Example: blender-axi render <file> --turntable 12 --out turn.mp4 --fps 24"])
+    pack = mp4 or sheet  # one output file for the whole turn / range
 
-    if turn is not None:
-        known = [0] if mp4 else list(range(1, turn + 1))
+    if pack:
+        known = [0]
+    elif turn is not None:
+        known = list(range(1, turn + 1))
     else:
         known = frames if frames is not None else ([0] if "#" not in out else None)
     if known is not None and not flags.get("force"):
-        existing = ([out] if os.path.exists(out) else []) if mp4 else [p for p in output_paths(out, known) if os.path.exists(p)]
+        existing = ([out] if os.path.exists(out) else []) if pack else [p for p in output_paths(out, known) if os.path.exists(p)]
         if existing:
             raise refused(inv, SPEC, existing[0])
 
@@ -181,18 +225,23 @@ def run(inv: Invocation) -> Result:
         "format": fmt, "force": bool(flags.get("force")),
         "fit": fit, "fit_margin": float(margin), "temp_camera_ok": not inv.globals.live,
         "auto_light": bool(flags.get("auto_light")),
-        "turntable": turn, "video": None,
+        "subject": subject, "turntable": turn, "video": None, "sheet": None,
     }
     run_dir = None
-    if mp4:  # where the stills of the video go; made here so a live Blender (same machine) can write into it
-        run_dir = paths.run_dir("turntable")
-        params["video"] = {"out": out, "fps": int(fps), "frames_dir": str(run_dir)}
+    if pack:  # where the stills go; made here so a live Blender (same machine) can write into it
+        run_dir = paths.run_dir("turntable" if turn is not None else "frames")
+        if mp4:  # fps None = the scene's own (ranges); a turntable has no scene rate and keeps 12
+            params["video"] = {"out": out, "frames_dir": str(run_dir),
+                               "fps": int(fps) if fps is not None else (_DEFAULT_FPS if turn is not None else None)}
+        else:
+            n = turn if turn is not None else len(frames)
+            params["sheet"] = {"out": out, "cols": grid(n)[0], "frames_dir": str(run_dir)}
     try:
         outcome = _transport_render(inv, params, blend, fit)
     finally:
         if run_dir is not None:
             paths.cleanup(run_dir, inv.globals.keep_tmp)
-    return _result(inv, blend, inferred, out, outcome, turn, mp4)
+    return _result(inv, blend, inferred, out, outcome, turn, "video" if mp4 else "sheet" if sheet else None)
 
 
 def _transport_render(inv: Invocation, params: dict, blend: Path | None, fit: bool):
@@ -204,6 +253,8 @@ def _transport_render(inv: Invocation, params: dict, blend: Path | None, fit: bo
         if err.code == "NOT_FOUND" and fit and "no active camera" in err.message:
             raise AxiError("NOT_FOUND", err.message, help=[
                 f"Run `{Hints(inv).cmd('add camera <file>')}` then rerun with --fit"]) from err
+        if err.code == "NOT_FOUND" and err.message.startswith("subject "):
+            raise translate_not_found(err, [f"Run `{Hints(inv).cmd('objects <file>')}` to list objects"]) from None
         if err.code == "NOT_FOUND" and "camera" in err.message:
             raise AxiError("NOT_FOUND", err.message, help=[
                 "List cameras with `blender-axi objects <file> --type CAMERA`", "Pick one with --camera <name>"]) from err
@@ -219,15 +270,27 @@ def _video_text(video: dict) -> str:
     return f"{video['codec']} {video['fps']} fps, " + (f"{size} B" if size < 1024 else f"{round(size / 1024)} KB")
 
 
-def _result(inv: Invocation, blend: Path | None, inferred: bool, out: str, outcome, turn: int | None, mp4: bool) -> Result:
+def _sheet_text(sheet: dict) -> str:
+    size = sheet["size_bytes"]
+    return (f"{sheet['cols']}x{sheet['rows']} tiles, {sheet['width']}x{sheet['height']}, "
+            + (f"{size} B" if size < 1024 else f"{round(size / 1024)} KB"))
+
+
+def _result(inv: Invocation, blend: Path | None, inferred: bool, out: str, outcome, turn: int | None,
+            pack: str | None = None) -> Result:
+    """`pack` = "video" | "sheet" when the turn / range was packed into one file, else None."""
     res = outcome.result
     n = len(res["files"])
     data: dict = {}
     if inferred and blend is not None:
         data["file"] = blend.name
-    if turn is not None:
-        data["rendered"] = f"{res['turntable']['steps']} frames" + (" -> 1 video" if mp4 else "")
-        data["output"] = display_path(out) if mp4 else display_path(_pattern(out, True))
+    if pack:
+        count = res["turntable"]["steps"] if turn is not None else len(res["frames"])
+        data["rendered"] = f"{count} frames -> 1 " + ("video" if pack == "video" else "sheet")
+        data["output"] = display_path(out)
+    elif turn is not None:
+        data["rendered"] = f"{res['turntable']['steps']} frames"
+        data["output"] = display_path(_pattern(out, True))
     else:
         data["rendered"] = f"{n} frame" + ("" if n == 1 else "s")
         data["output"] = display_path(res["files"][0]) if n == 1 else display_path(_pattern(out, True))
@@ -238,10 +301,18 @@ def _result(inv: Invocation, blend: Path | None, inferred: bool, out: str, outco
         data["fit"] = _fit_text(res["fit"])
     if res.get("auto_light"):
         data["auto_light"] = _auto_light_text(res["auto_light"])
+    if res.get("subject"):
+        text = _subject_text(res["subject"])
+        if text:
+            data["subject"] = text
+    if res.get("aim"):
+        data["aim"] = _aim_text(res["aim"], (res.get("turntable") or {}).get("camera", "Camera"), res.get("subject"))
     if res.get("turntable"):
         data["turntable"] = _turntable_text(res["turntable"])
     if res.get("video"):
         data["video"] = _video_text(res["video"])
+    if res.get("sheet"):
+        data["sheet"] = _sheet_text(res["sheet"])
     data["duration_ms"] = outcome.duration_ms
     warnings = list(outcome.warnings)
     if res.get("samples_ignored"):
@@ -254,14 +325,15 @@ def _result(inv: Invocation, blend: Path | None, inferred: bool, out: str, outco
         data["warning"] = "; ".join(warnings)
     live = live_suffix(inv)
     if turn is not None:
-        target = "<turn.mp4>" if mp4 else "<dir/turn_####.png>"
-        first = f"Run `blender-axi render <file> --turntable 12 --fit --out {target}{live}` for a finer turn"
+        flag, target = {"video": ("", "<turn.mp4>"), "sheet": (" --sheet", "<sheet.png>")}.get(pack, ("", "<dir/turn_####.png>"))
+        first = f"Run `blender-axi render <file> --turntable 12 --fit{flag} --out {target}{live}` for a finer turn"
     else:
-        first = f"Run `blender-axi render <file> --frames <a..b> --out <dir/name_####.png>{live}` to render a range"
+        flag, target = {"video": ("", "<clip.mp4>"), "sheet": (" --sheet", "<sheet.png>")}.get(pack, ("", "<dir/name_####.png>"))
+        first = f"Run `blender-axi render <file> --frames <a..b>{flag} --out {target}{live}` to render a range"
     help_ = [first, f"Run `blender-axi export <file> --out <path.glb>{live}` to export geometry"]
     pos = 0  # new hints go after the keep-framing hint, ahead of the range and export hints
     if res.get("fit"):
-        keep = _keep_hint(inv, blend, res["fit"])
+        keep = _keep_hint(inv, blend, res["fit"], res.get("aim"))
         if keep:
             help_.insert(0, keep)
             pos = 1
@@ -290,7 +362,11 @@ SPEC = CommandSpec(
              "nothing is saved"),
         Flag("--turntable", "int", help="Render N stills of the current frame with the camera orbited 360 degrees around "
              "the visible geometry (name_####.png, or one mp4 with --out name.mp4); the file is not changed"),
-        Flag("--fps", "int", default=_DEFAULT_FPS, help="Frames per second of the mp4 (--turntable with --out name.mp4)"),
+        Flag("--subject", "list", help="Objects to orbit and fit around, comma-separated (default: all visible "
+             "geometry minus a ground plane)"),
+        Flag("--sheet", "bool", help="Write one contact-sheet image (grid of all frames) instead of N files "
+             "(--turntable or --frames; --out name.png)"),
+        Flag("--fps", "int", help="Frames per second of the mp4 (default: 12 for --turntable, the scene fps for --frames)"),
         Flag("--format", "str", choices=_FORMATS, help="Image format (default: from the --out extension)"),
         Flag("--force", "bool", help="Overwrite existing output files"),
     ),
@@ -300,6 +376,8 @@ SPEC = CommandSpec(
         "blender-axi render scene.blend --fit --out framed.png",
         "blender-axi render scene.blend --fit --auto-light --out preview.png",
         "blender-axi render scene.blend --turntable 12 --fit --out turn.mp4 --fps 24",
+        "blender-axi render scene.blend --frames 1..24 --out clip.mp4",
+        "blender-axi render scene.blend --turntable 12 --fit --sheet --out sheet.png",
     ),
     run=run,
 )

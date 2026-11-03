@@ -92,7 +92,7 @@ Blender 5.2 LTS is verified. blender-axi finds it via `--blender <path>`, `BLEND
 | `audit [<file>] [--checks a,b] [--object name]... [--collection name] [--strict]` | Check a .blend for asset problems (scale, materials, n-gons, non-manifold edges, unused data, hidden objects, missing files, empty collections, no camera or light); read-only (see [Audit and diff](#audit-and-diff)) |
 | `diff <a> [<b>] [--object n] [--collection c]` | Compare two .blend files (or `<a>` with the open session via `--live`): objects added, removed or changed (transform, visibility, materials, modifiers, custom props) and scene settings |
 | `exec [<file>] --code <python> \| --script <path> --allow-exec [--live]` | Run Python inside Blender; `bpy` is predefined, assign a dict to `result` |
-| `render [<file>] [--frame n \| --frames a..b] [--out path] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--samples n] [--camera name] [--fit [--fit-margin n]] [--auto-light] [--turntable n [--fps n]] [--format PNG\|JPEG\|…] [--force]` | Render stills, a frame range (default `./<stem>_f####.png`) or a turntable; `--fit` frames all visible geometry, `--auto-light` lights an unlit scene temporarily, `--out name.mp4` with `--turntable` writes one H.264 video; the file is never changed (see [Render](#render)) |
+| `render [<file>] [--frame n \| --frames a..b] [--out path] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--samples n] [--camera name] [--fit [--fit-margin n]] [--auto-light] [--turntable n [--subject a,b]] [--sheet] [--fps n] [--format PNG\|JPEG\|…] [--force]` | Render stills, a frame range (default `./<stem>_f####.png`) or a turntable that aims at its subject (a ground plane is left out); `--fit` frames all visible geometry, `--auto-light` lights an unlit scene temporarily, `--out name.mp4` with `--turntable` or `--frames` writes one H.264 video, `--sheet` one contact-sheet image; the file is never changed (see [Render](#render)) |
 | `export [<file>] --out path [--format glb\|gltf\|fbx\|obj\|stl\|ply\|usd\|usdc\|usda\|abc] [--collection name \| --objects a,b \| --object name…] [--exclude a,b] [--include-hidden] [--no-apply-modifiers] [--dry-run] [--force]` | Export the scene, a collection or objects to a 3D file; modifiers applied and hidden objects skipped by default (see [Export](#export)) |
 | `live` | Check a running Blender (MCP add-on server) and show the open file |
 
@@ -206,14 +206,25 @@ and with `--live` (also together with `--fit`); in a GUI session `unsaved_change
 every temporary datablock is removed again.
 
 `--turntable N` renders N stills of the current frame (the scene animation is frozen) with the camera orbited 360
-degrees about the Z axis through the centre of the visible geometry; `--fit` runs first, and `--auto-light` combines
-with it. The stills are `name_####.png` (`#` is the step number). `--out name.mp4` instead encodes the same stills into
-one H.264 mp4 through a temporary video-sequencer scene (`--fps`, default 12; mp4 only for `--turntable`, not for
-`--frames` ranges). The camera and everything else are put back afterwards, headless and `--live` (a camera is
-required in `--live`, as with `--fit`).
+degrees about the Z axis through the centre of the subject. The subject is all visible geometry minus a ground plane
+(an object flatter than 2% of its widest side that is at least 1.5x wider than everything else; never everything), or
+the objects named with `--subject a,b`. The camera is first turned to look at the subject's centre and stays where you
+put it, so its height sets the elevation; `--fit` then frames the subject, not the ground (`subject:` and `aim:` show
+what happened; the keep hint carries `--rotation`). `--fit` alone still frames everything; add `--subject a,b` to frame
+those objects only. `--auto-light` combines with all of it. The stills are `name_####.png` (`#` is the step number). `--out name.mp4` instead encodes the same stills into
+one H.264 mp4 through a temporary video-sequencer scene (`--fps`, default 12). The camera and everything else are put
+back afterwards, headless and `--live` (a camera is required in `--live`, as with `--fit`).
+
+`--out name.mp4` also works with `--frames a..b`; the video plays at the scene fps unless `--fps` is given (`--fps`
+without an mp4 is an error). `--sheet` (with `--turntable N` or `--frames a..b`) writes one contact-sheet image instead
+of N files: `ceil(sqrt(N))` columns, tiles in reading order, empty tiles transparent, `--out name.png` (default
+`<stem>_sheet.png`, or `<stem>_turn_sheet.png` for a turntable; png is the tested format). The stills of an mp4 or a
+sheet go to a temporary run dir that is cleaned afterwards (`--keep-tmp` keeps them).
 
 ```
 blender-axi render scene.blend --turntable 12 --fit --auto-light --out turn.mp4 --fps 24
+blender-axi render scene.blend --turntable 12 --fit --sheet --out turn.png
+blender-axi render scene.blend --frames 1..48 --out clip.mp4
 ```
 
 ### Audit and diff
@@ -242,7 +253,16 @@ collections, location, rotation, scale, dimensions, visibility, materials, modif
 properties), then the scene settings (engine, resolution, frames, fps, camera, world). Objects are matched by name
 only, so a rename shows as one removed and one added. Headless it starts Blender twice (about 2-3 s each) and compares
 in plain Python; nothing is written. `diff <file> --live` compares the file with the open session. Tables are cut at
-20 rows; `--full` shows all. `--object` (repeatable) and `--collection` restrict the comparison.
+20 rows; `--full` shows all. `--object` (repeatable) and `--collection` restrict the comparison. A bevel's width is
+reported once: `width`, or `width_pct` when the offset type is percent.
+
+**Changed in 0.7.0**
+- `render --turntable` looks at its subject: it leaves out a ground plane, turns the camera toward the subject's centre
+  and fits the subject (`--subject a,b` overrides; `--fit --subject a,b` frames just those objects).
+- `render --sheet` writes one contact-sheet image for `--turntable N` or `--frames a..b`; `--out name.mp4` now also
+  works with `--frames a..b` (default fps = the scene's); `--fps` without an mp4 is rejected.
+- `diff` reports a bevel's width once instead of as both `width` and `width_pct`.
+- Selective `export --live` (`--collection`, `--objects`, …) is verified against a headless MCP server for all 9 formats.
 
 **Changed in 0.6.0**
 - `scene` prints two hints (`objects` plus one of `add camera` / `add light` / `render`) and warns on an unlit scene.

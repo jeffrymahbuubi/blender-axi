@@ -53,18 +53,33 @@ class FitState:
         return failures
 
 
-def collect_coords(depsgraph, scene) -> list[float]:
-    """World-space bound-box corners (flat x, y, z, ...) of every visible geometry object, modifiers applied."""
+def _object_coords(obj, depsgraph) -> list[float] | None:
+    """World-space bound-box corners (flat) of one visible geometry object, modifiers applied; None to skip it."""
+    if obj.type not in GEOMETRY_TYPES or not obj.visible_get():
+        return None
+    ev = obj.evaluated_get(depsgraph)
+    mw = ev.matrix_world
+    return [sum(mw[i][j] * corner[j] for j in range(3)) + mw[i][3] for corner in ev.bound_box for i in range(3)]
+
+
+def collect_coords(depsgraph, scene, objects=None) -> list[float]:
+    """World-space bound-box corners (flat x, y, z, ...) of every visible geometry object (or of `objects`)."""
     flat: list[float] = []
-    for obj in scene.objects:
-        if obj.type not in GEOMETRY_TYPES or not obj.visible_get():
-            continue
-        ev = obj.evaluated_get(depsgraph)
-        mw = ev.matrix_world
-        for corner in ev.bound_box:
-            for i in range(3):
-                flat.append(sum(mw[i][j] * corner[j] for j in range(3)) + mw[i][3])
+    for obj in (scene.objects if objects is None else objects):
+        coords = _object_coords(obj, depsgraph)
+        if coords is not None:
+            flat.extend(coords)
     return flat
+
+
+def collect_entries(depsgraph, scene) -> list[tuple[str, list[float]]]:
+    """Like `collect_coords`, kept per object as `(name, corners)` (the input of `subject.choose`)."""
+    out = []
+    for obj in scene.objects:
+        coords = _object_coords(obj, depsgraph)
+        if coords is not None:
+            out.append((obj.name, coords))
+    return out
 
 
 def _centre(flat: list[float]) -> tuple[float, float, float]:
@@ -83,10 +98,12 @@ def _make_temp_camera(bpy, scene, state: FitState):
     return obj
 
 
-def fit_scene(bpy, scene, margin: float, temp_camera_ok: bool, state: FitState) -> dict:
-    """Frame all visible geometry with `scene.camera` (or a temporary one headless). Returns the `fit` result."""
+def fit_scene(bpy, scene, margin: float, temp_camera_ok: bool, state: FitState, coords: list[float] | None = None) -> dict:
+    """Frame all visible geometry (or the given `coords`) with `scene.camera` (or a temporary one headless).
+    Returns the `fit` result."""
     depsgraph = bpy.context.evaluated_depsgraph_get()
-    coords = collect_coords(depsgraph, scene)
+    if coords is None:
+        coords = collect_coords(depsgraph, scene)
     if not coords:
         raise OpError("OP_FAILED", "nothing to fit: the scene has no visible geometry")
     cam = scene.camera
