@@ -279,7 +279,7 @@ def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState", light_st
         result["files"] = [vid["out"]]
         result["video"] = {"codec": movie["codec"], "fps": fps, "size_bytes": movie["size_bytes"]}
     elif grid:
-        made = sheet.compose(bpy, files, grid["out"], int(grid["cols"]))
+        made = sheet.compose(bpy, files, grid["out"], int(grid["cols"]), labels=[str(f) for f in frames])
         result["files"] = [grid["out"]]
         result["sheet"] = {k: made[k] for k in ("cols", "rows", "width", "height", "size_bytes", "tiles")}
     return result

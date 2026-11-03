@@ -200,7 +200,8 @@ def test_aim_sets_the_euler_channels_and_reports_degrees(monkeypatch, mathutils_
     state = turntable.OrbitState()
     out = turntable.aim(bpy, cam, (0.0, 0.0, 0.5), state)
     assert cam.rotation_euler == (1.2, 0.0, 0.5) and updates  # the world matrix was refreshed
-    assert out == {"from": [round(math.degrees(1.0), 4), 0.0, 0.0], "to": [round(math.degrees(1.2), 4), 0.0, round(math.degrees(0.5), 4)]}
+    to = [round(math.degrees(1.2), 4), 0.0, round(math.degrees(0.5), 4)]
+    assert out == {"from": [round(math.degrees(1.0), 4), 0.0, 0.0], "to": to, "local_to": to}  # unparented: local == world
     assert state.aim == out and state.camera is cam
 
 
@@ -220,12 +221,15 @@ def test_aim_uses_the_rotation_mode(monkeypatch, mathutils_stub):
     assert q.mode == "ZXY" and cam.rotation_euler == q.euler
 
     bpy, _, cam, _ = aim_rig(monkeypatch, mode="QUATERNION")
-    turntable.aim(bpy, cam, (0, 0, 0), turntable.OrbitState())
+    cam.matrix_basis = NS(to_euler=lambda: (0.0, 0.0, math.pi / 2))
+    out = turntable.aim(bpy, cam, (0, 0, 0), turntable.OrbitState())
     assert cam.rotation_quaternion is q and cam.rotation_euler == (1.0, 0.0, 0.0)  # the euler channel is untouched
+    assert out["local_to"] == [0.0, 0.0, 90.0]  # from matrix_basis.to_euler(), not rotation_euler (A2)
 
     bpy, _, cam, _ = aim_rig(monkeypatch, mode="AXIS_ANGLE")
-    turntable.aim(bpy, cam, (0, 0, 0), turntable.OrbitState())
-    assert cam.rotation_axis_angle == (0.75, 0.0, 0.0, 1.0)
+    cam.matrix_basis = NS(to_euler=lambda: (math.pi / 2, 0.0, 0.0))
+    out = turntable.aim(bpy, cam, (0, 0, 0), turntable.OrbitState())
+    assert cam.rotation_axis_angle == (0.75, 0.0, 0.0, 1.0) and out["local_to"] == [90.0, 0.0, 0.0]
 
 
 def test_aim_of_a_parented_camera_removes_the_parent_rotation(monkeypatch, mathutils_stub):
@@ -234,8 +238,21 @@ def test_aim_of_a_parented_camera_removes_the_parent_rotation(monkeypatch, mathu
     cam.matrix_parent_inverse = NS(to_quaternion=lambda: Q("I"))
     seen = []
     monkeypatch.setattr(Q, "to_euler", lambda self, mode: seen.append(self.name) or (0.0, 0.0, 0.0))
-    turntable.aim(bpy, cam, (0, 0, 0), turntable.OrbitState())
+    out = turntable.aim(bpy, cam, (0, 0, 0), turntable.OrbitState())
     assert seen == ["(inv((P@I))@track(0.0, 10.0, -5.0))"]
+    assert out["local_to"] == [0.0, 0.0, 0.0] and out["to"] == [0.0, 0.0, 0.0]  # local channel = the local euler just set
+
+
+def test_aim_local_to_is_the_channel_while_to_is_the_world_rotation(monkeypatch, mathutils_stub):
+    parent = NS(matrix_world=NS(to_quaternion=lambda: Q("P")))
+    bpy, _, cam, _ = aim_rig(monkeypatch, parent=parent)
+    cam.matrix_parent_inverse = NS(to_quaternion=lambda: Q("I"))
+    world = (math.radians(63.435), 0.0, math.radians(30.0))
+    cam.matrix_world = WorldMatrix(matrix((0, -10, 5)), lambda: NS(rotation_euler=world), (0.0, -10.0, 5.0))
+    state = turntable.OrbitState()
+    out = turntable.aim(bpy, cam, (0, 0, 0), state)  # the stub Q.to_euler sets the local channel to (1.2, 0, 0.5)
+    assert out["to"] == [63.435, 0.0, 30.0] and out["local_to"] == [round(math.degrees(1.2), 4), 0.0, round(math.degrees(0.5), 4)]
+    assert state.aim == out
 
 
 def test_record_keeps_the_first_channels_only(monkeypatch):

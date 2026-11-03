@@ -94,6 +94,26 @@ def test_objects_fields_formatting_and_case():
     toon.encode(res.data)
 
 
+def test_objects_used_by_field_sent_and_formatted():
+    rows = [row("Hole", used_by=["Ring (Boolean)"]), row("Ring", used_by=[]),
+            row("Wall", used_by=["A (Mirror)", "B (Array)"])]
+    t = FakeTransport({"filepath": "x", "total": 3, "matched": 3, "rows": rows})
+    res = invoke(cmd.OBJECTS_SPEC, ["--fields", "used_by"], t)
+    assert t.calls[0][1]["fields"] == ["used_by"]
+    assert [o["used_by"] for o in res.data["objects"]] == ["Ring (Boolean)", "none", "A (Mirror), B (Array)"]
+    assert "objects[3]{name,type,collection,visible,used_by}:" in toon.encode(res.data)
+
+
+def test_objects_fields_help_lists_used_by_last():
+    flag = next(f for f in cmd.OBJECTS_SPEC.flags if f.name == "--fields")
+    assert flag.help.endswith(", data, used_by")
+
+
+def test_objects_default_rows_never_carry_used_by():
+    res = invoke(cmd.OBJECTS_SPEC, [], FakeTransport(LISTING))
+    assert all("used_by" not in item for item in res.data["objects"])
+
+
 def test_objects_multi_collection_label():
     r = {"filepath": "x", "total": 1, "matched": 1, "rows": [row("A", colls=("X", "Y"))]}
     assert invoke(cmd.OBJECTS_SPEC, [], FakeTransport(r)).data["objects"][0]["collection"] == "X|Y"
@@ -185,19 +205,20 @@ DETAIL = {
     "name": "Ball", "type": "MESH", "collections": ["Props"], "parent": None, "children": [],
     "location": [3.0, 0.0, 0.0], "rotation_deg": [0.0, 0.0, 90.0], "scale": [1.0, 1.0, 1.0],
     "dimensions": [2.0, 2.0, 2.0], "visible": True, "data": "Sphere", "verts": 482, "faces": 512,
-    "materials": [], "modifiers": [], "custom_props": {},
+    "materials": [], "modifiers": [], "custom_props": {}, "used_by": [],
 }
 
 
 def test_object_detail_shape():
     t = FakeTransport(DETAIL)
     res = invoke(cmd.OBJECT_SPEC, ["Ball"], t)
-    assert list(res.data) == ["name", "type", "collection", "parent", "children", "location", "rotation_deg",
-                              "scale", "dimensions", "visible", "verts", "faces", "materials", "modifiers",
-                              "custom_props"]
+    assert list(res.data) == ["name", "type", "collection", "parent", "children", "used_by", "location",
+                              "rotation_deg", "scale", "dimensions", "visible", "verts", "faces", "materials",
+                              "modifiers", "custom_props"]
     d = res.data
     assert d["location"] == "3,0,0" and d["rotation_deg"] == "0,0,90" and d["parent"] == "none"
     assert d["children"] == "none" and d["materials"] == "none" and d["modifiers"] == "none"
+    assert d["used_by"] == "none"
     assert d["custom_props"] == "none" and res.help == []
     assert t.calls[0][:2] == ("object_detail", {"name": "Ball"})
 
@@ -210,6 +231,13 @@ def test_object_detail_lists_and_non_mesh():
     assert d["parent"] == "Root" and d["children"] == ["A", "B"] and d["materials"] == ["M1"]
     text = toon.encode(d)
     assert "modifiers[2]{name,type}:" in text and "children[2]: A,B" in text
+
+
+def test_object_detail_used_by_joined_and_missing_key_is_none():
+    r = dict(DETAIL, used_by=["Ring (Boolean)", "Wall (Mirror)"])
+    assert invoke(cmd.OBJECT_SPEC, ["Ball"], FakeTransport(r)).data["used_by"] == "Ring (Boolean), Wall (Mirror)"
+    old = {k: v for k, v in DETAIL.items() if k != "used_by"}
+    assert invoke(cmd.OBJECT_SPEC, ["Ball"], FakeTransport(old)).data["used_by"] == "none"
 
 
 def test_object_custom_props_truncation_and_full():
@@ -327,6 +355,31 @@ def test_op_list_fields(scene_bpy):
     assert empty["verts"] is None and empty["parent"] == "Ball" and empty["data"] is None
     cube = op_objects_list.run({"fields": ["materials", "modifiers"], "name_contains": "cube"})["rows"][0]
     assert cube["materials"] == 1 and cube["modifiers"] == 1
+
+
+def with_boolean(bpy):
+    """Give Ball a Boolean modifier whose cutter is Anchor (Cube's bevel has no RNA, so it references nothing)."""
+    ball = next(o for o in bpy.data.objects if o.name == "Ball")
+    anchor = next(o for o in bpy.data.objects if o.name == "Anchor")
+    struct = types.SimpleNamespace(identifier="Object", base=types.SimpleNamespace(identifier="ID", base=None))
+    props = [types.SimpleNamespace(identifier="object", type="POINTER", fixed_type=struct),
+             types.SimpleNamespace(identifier="solver", type="ENUM", fixed_type=None)]
+    ball.modifiers.append(types.SimpleNamespace(name="Boolean", type="BOOLEAN", object=anchor,
+                                                bl_rna=types.SimpleNamespace(properties=props)))
+
+
+def test_op_list_used_by_field(scene_bpy):
+    with_boolean(scene_bpy)
+    rows = {x["name"]: x for x in op_objects_list.run({"fields": ["used_by"]})["rows"]}
+    assert rows["Anchor"]["used_by"] == ["Ball (Boolean)"]
+    assert rows["Ball"]["used_by"] == [] and rows["Cube"]["used_by"] == [] and rows["Camera"]["used_by"] == []
+    assert "used_by" not in op_objects_list.run({})["rows"][0]
+
+
+def test_op_detail_used_by(scene_bpy):
+    with_boolean(scene_bpy)
+    assert op_object_detail.run({"name": "Anchor"})["used_by"] == ["Ball (Boolean)"]
+    assert op_object_detail.run({"name": "Cube"})["used_by"] == []
 
 
 def test_op_list_unknown_collection(scene_bpy):

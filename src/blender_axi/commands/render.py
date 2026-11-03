@@ -12,7 +12,7 @@ from ..blender_side.sheet import grid
 from ..blender_side.video import VIDEO_EXTS
 from ..errors import AxiError
 from ..spec import CommandSpec, Flag, Invocation, Positional, Result
-from ._common import (MAX_NAMES, Hints, display_path, fmt_vec, invalid, live_suffix, names_summary, quote_name, refused,
+from ._common import (MAX_NAMES, Hints, display_path, fmt_vec, invalid, names_summary, quote_name, refused,
                       resolve_blend_inferred, translate_not_found)
 
 _RESOLUTION = re.compile(r"^(\d+)[xX](\d+)$")
@@ -135,7 +135,7 @@ def _keep_hint(inv: Invocation, blend: Path | None, fit: dict, aim: dict | None 
                 f"{'' if inv.globals.live else ' --in-place'}` to keep it")
     if fit.get("ortho_scale") is not None:
         return None  # `set` cannot change ortho_scale, so a location alone would not reproduce the framing
-    rot = f" --rotation {fmt_vec(aim['to'])}" if aim else ""  # the turntable turned the camera too
+    rot = f" --rotation {fmt_vec(aim.get('local_to', aim['to']))}" if aim else ""  # the turntable turned the camera too
     return (f"Run `{h.cmd('set ' + quote_name(fit['camera']) + ' ' + f + ' --location ' + loc + rot)}"
             f"{'' if inv.globals.live else ' --in-place'}` to keep this framing")
 
@@ -323,14 +323,14 @@ def _result(inv: Invocation, blend: Path | None, inferred: bool, out: str, outco
         warnings.append(lighting.warning(lit, res["engine"]))
     if warnings:
         data["warning"] = "; ".join(warnings)
-    live = live_suffix(inv)
+    h = Hints(inv)
     if turn is not None:
         flag, target = {"video": ("", "<turn.mp4>"), "sheet": (" --sheet", "<sheet.png>")}.get(pack, ("", "<dir/turn_####.png>"))
-        first = f"Run `blender-axi render <file> --turntable 12 --fit{flag} --out {target}{live}` for a finer turn"
+        first = f"Run `{h.cmd('render <file> --turntable 12 --fit' + flag + ' --out ' + target)}` for a finer turn"
     else:
         flag, target = {"video": ("", "<clip.mp4>"), "sheet": (" --sheet", "<sheet.png>")}.get(pack, ("", "<dir/name_####.png>"))
-        first = f"Run `blender-axi render <file> --frames <a..b>{flag} --out {target}{live}` to render a range"
-    help_ = [first, f"Run `blender-axi export <file> --out <path.glb>{live}` to export geometry"]
+        first = f"Run `{h.cmd('render <file> --frames <a..b>' + flag + ' --out ' + target)}` to render a range"
+    help_ = [first, f"Run `{h.cmd('export <file> --out <path.glb>')}` to export geometry"]
     pos = 0  # new hints go after the keep-framing hint, ahead of the range and export hints
     if res.get("fit"):
         keep = _keep_hint(inv, blend, res["fit"], res.get("aim"))
@@ -364,8 +364,8 @@ SPEC = CommandSpec(
              "the visible geometry (name_####.png, or one mp4 with --out name.mp4); the file is not changed"),
         Flag("--subject", "list", help="Objects to orbit and fit around, comma-separated (default: all visible "
              "geometry minus a ground plane)"),
-        Flag("--sheet", "bool", help="Write one contact-sheet image (grid of all frames) instead of N files "
-             "(--turntable or --frames; --out name.png)"),
+        Flag("--sheet", "bool", help="Write one contact-sheet image (grid of all frames, each tile numbered) instead of N files "
+             "(--turntable or --frames; --out name.png, .jpg, .webp, .exr, .tif, .bmp or .tga)"),
         Flag("--fps", "int", help="Frames per second of the mp4 (default: 12 for --turntable, the scene fps for --frames)"),
         Flag("--format", "str", choices=_FORMATS, help="Image format (default: from the --out extension)"),
         Flag("--force", "bool", help="Overwrite existing output files"),

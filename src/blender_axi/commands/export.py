@@ -5,7 +5,7 @@ import os
 from ..blender_side.op_export import FORMAT_EXTS
 from ..errors import AxiError
 from ..spec import CommandSpec, Flag, Invocation, Positional, Result
-from ._common import (carry_suffix, display_path, invalid, live_suffix, names_summary, quote_name, refused,
+from ._common import (Hints, carry_suffix, display_path, invalid, names_summary, quote_name, refused,
                       resolve_blend_inferred)
 
 _FORMATS = tuple(FORMAT_EXTS)
@@ -156,7 +156,7 @@ def run(inv: Invocation) -> Result:
     warnings = ([res["modifiers_note"]] if res.get("modifiers_note") else []) + list(outcome.warnings)
     if warnings:
         data["warning"] = "; ".join(warnings)
-    help_ = [f"Run `blender-axi render <file> --out <path.png>{live_suffix(inv)}` to render a preview"]
+    help_ = [f"Run `{Hints(inv).cmd('render <file> --out <path.png>')}` to render a preview"]
     if res.get("skipped_hidden"):
         help_.append("Hidden objects are skipped; add --include-hidden to export them")
     return Result(data=data, help=help_)

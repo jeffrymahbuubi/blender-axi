@@ -112,7 +112,8 @@ def test_turntable_mp4_keeps_its_default_of_12_fps(work):
 
 def test_range_mp4_live_hint_and_run_dir_kept_with_keep_tmp(work):
     res, t = invoke(["--frames", "2..4", "--out", "c.mp4"], live=True, keep_tmp=True)
-    assert res.help[0].startswith("Run `blender-axi render <file> --frames <a..b> --out <clip.mp4>")
+    assert "<file>" not in res.help[0]
+    assert res.help[0].startswith("Run `blender-axi render --frames <a..b> --out <clip.mp4>")
     assert res.help[0].endswith("--live` to render a range")
     kept = Path(t.calls[0][1]["video"]["frames_dir"])
     assert kept.is_dir()
@@ -315,7 +316,7 @@ def test_op_range_stills_are_png_even_for_a_jpeg_sheet(fake_bpy, monkeypatch):
     scene = make_scene(fake_bpy, monkeypatch)
     out, frames_dir = op_dir() / "pack.jpg", op_dir() / "jf"
     composed = []
-    monkeypatch.setattr(sheet, "compose", lambda bpy, files, target, cols: composed.append((files, target, cols)) or
+    monkeypatch.setattr(sheet, "compose", lambda bpy, files, target, cols, labels=None: composed.append((files, target, cols)) or
                         {"path": target, "cols": cols, "rows": 1, "width": 96, "height": 48, "size_bytes": 5, "tiles": len(files)})
     op_render.run({"out": str(out), "force": True, "frames": [1, 2], "sheet": {"out": str(out), "cols": 2, "frames_dir": str(frames_dir)}})
     assert {fmt for _, _, fmt in scene.seen} == {"PNG"} and composed[0][1] == str(out)
@@ -325,9 +326,9 @@ def test_op_range_sheet_composes_once_and_reports_one_file(fake_bpy, monkeypatch
     scene = make_scene(fake_bpy, monkeypatch)
     composed = []
 
-    def fake_compose(bpy, files, target, cols):
-        composed.append((list(files), target, cols))
-        return {"path": target, "cols": cols, "rows": 2, "width": 96, "height": 96, "size_bytes": 777, "tiles": len(files)}
+    def fake_compose(bpy, files, target, cols, labels=None):
+        composed.append((list(files), target, cols, labels))
+        return {"path": target, "cols": cols, "rows": 2, "width": 96, "height": 96, "size_bytes": 777, "tiles": len(files), "labels": 3}
 
     monkeypatch.setattr(sheet, "compose", fake_compose)
     monkeypatch.setattr(video, "encode", lambda *a, **k: pytest.fail("no video was asked for"))
@@ -335,21 +336,35 @@ def test_op_range_sheet_composes_once_and_reports_one_file(fake_bpy, monkeypatch
     res = op_render.run({"out": str(out), "force": True, "frames": [1, 2, 3], "turntable": None,
                          "sheet": {"out": str(out), "cols": 2, "frames_dir": str(frames_dir)}})
     stills = [str(frames_dir / f"frame_{i:04d}.png") for i in (1, 2, 3)]
-    assert composed == [(stills, str(out), 2)] and scene.frame_calls[:3] == [1, 2, 3]
+    assert composed == [(stills, str(out), 2, ["1", "2", "3"])] and scene.frame_calls[:3] == [1, 2, 3]  # labels = the scene frame numbers
     assert res["files"] == [str(out)]
-    assert res["sheet"] == {"cols": 2, "rows": 2, "width": 96, "height": 96, "size_bytes": 777, "tiles": 3}
+    assert res["sheet"] == {"cols": 2, "rows": 2, "width": 96, "height": 96, "size_bytes": 777, "tiles": 3}  # `labels` is not surfaced
     assert "video" not in res
+
+
+def test_op_range_sheet_labels_are_the_scene_frame_numbers_not_positions(fake_bpy, monkeypatch):
+    make_scene(fake_bpy, monkeypatch)
+    seen = []
+
+    def spy(bpy, files, target, cols, labels=None):
+        seen.append(labels)
+        return {"path": target, "cols": cols, "rows": 2, "width": 96, "height": 96, "size_bytes": 1, "tiles": len(files)}
+
+    monkeypatch.setattr(sheet, "compose", spy)
+    out = op_dir() / "lab.png"
+    op_render.run({"out": str(out), "force": True, "frames": [3, 4, 5], "sheet": {"out": str(out), "cols": 2, "frames_dir": str(op_dir() / "lf")}})
+    assert seen == [["3", "4", "5"]]
 
 
 def test_op_turntable_sheet_uses_turn_stills_and_keeps_the_frame(fake_bpy, monkeypatch):
     scene = make_scene(fake_bpy, monkeypatch)
     composed = []
-    monkeypatch.setattr(sheet, "compose", lambda bpy, files, target, cols: composed.append(list(files)) or
+    monkeypatch.setattr(sheet, "compose", lambda bpy, files, target, cols, labels=None: composed.append((list(files), labels)) or
                         {"path": target, "cols": cols, "rows": 2, "width": 96, "height": 96, "size_bytes": 9, "tiles": len(files)})
     frames_dir, out = op_dir() / "tframes", op_dir() / "tsheet.png"
     res = op_render.run({"out": str(out), "force": True, "turntable": 4,
                          "sheet": {"out": str(out), "cols": 2, "frames_dir": str(frames_dir)}})
-    assert composed == [[str(frames_dir / f"turn_{i:04d}.png") for i in (1, 2, 3, 4)]]
+    assert composed == [([str(frames_dir / f"turn_{i:04d}.png") for i in (1, 2, 3, 4)], ["1", "2", "3", "4"])]  # labels = step numbers
     assert scene.frame_calls == [] and res["files"] == [str(out)] and res["turntable"]["steps"] == 4 and "sheet" in res
 
 
@@ -365,7 +380,7 @@ def test_op_sheet_refuses_an_existing_out_without_force_before_rendering(fake_bp
 def test_op_compose_failure_still_restores_the_scene(fake_bpy, monkeypatch):
     scene = make_scene(fake_bpy, monkeypatch)
 
-    def boom(bpy, files, target, cols):
+    def boom(bpy, files, target, cols, labels=None):
         raise OpError("OP_FAILED", "contact sheet failed: nope")
 
     monkeypatch.setattr(sheet, "compose", boom)

@@ -13,7 +13,7 @@ OBJECT_TYPES = (
     "MESH", "CURVE", "SURFACE", "META", "FONT", "CURVES", "POINTCLOUD", "VOLUME", "GREASEPENCIL", "GPENCIL",
     "ARMATURE", "LATTICE", "EMPTY", "LIGHT", "LIGHT_PROBE", "CAMERA", "SPEAKER",
 )
-FIELDS = ("location", "dimensions", "parent", "verts", "faces", "materials", "modifiers", "data")
+FIELDS = ("location", "dimensions", "parent", "verts", "faces", "materials", "modifiers", "data", "used_by")
 
 
 def _coll_label(names: list[str]) -> str:
@@ -53,6 +53,8 @@ def _validated(inv: Invocation) -> tuple[int, list[str]]:
 def _format_field(name: str, value):
     if name in ("location", "dimensions"):
         return fmt_vec(value)
+    if name == "used_by":
+        return ", ".join(value or []) or "none"
     return value
 
 
@@ -145,6 +147,7 @@ def run_object(inv: Invocation) -> Result:
         "collection": _coll_label(r["collections"]),
         "parent": r["parent"] or "none",
         "children": r["children"] if r["children"] else "none",
+        "used_by": ", ".join(r.get("used_by") or []) or "none",
         "location": fmt_vec(r["location"]),
         "rotation_deg": fmt_vec(r["rotation_deg"]),
         "scale": fmt_vec(r["scale"]),

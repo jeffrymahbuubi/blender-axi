@@ -3,6 +3,7 @@
 import difflib
 import math
 
+from . import usage
 from .common import count
 from .ops import OpError
 
@@ -53,6 +54,7 @@ def run(params: dict) -> dict:
         "collections": [c.name for c in obj.users_collection],
         "parent": obj.parent.name if obj.parent else None,
         "children": sorted(c.name for c in obj.children),
+        "used_by": usage.used_by(bpy, obj),
         "location": _vec(obj.location),
         "rotation_deg": [round(math.degrees(a), 3) + 0.0 for a in euler],
         "scale": _vec(obj.scale),

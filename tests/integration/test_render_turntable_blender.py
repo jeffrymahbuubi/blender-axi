@@ -2,6 +2,13 @@
 PNGs, an mp4 encoded through the temporary VSE scene. Headless tests run through `cli.main`; the live test starts a REAL
 headless MCP server on a free port (never 9876) on a COPY of the scene. Everything lands under .tmp/tests/turntable/.
 
+0.8.0 plan U1 (parented camera): see the `rig` tests at the end. ASSUMED A1 outcome: DISPROVED as written. The local fit is
+NOT `0,-17.12,8.29`: `camera_fit_coords` frames the two cubes (which sit at +-4 on the world X axis, not rotated with the
+rig) along the camera's rotated view, so the distance differs from the unparented camera at 0,-10,5. What holds: the rig
+camera's world fit equals the fit of an unparented camera at the same world transform (5,-8.66,5 / 65,0,30), i.e.
+local == Rz(-30) . world. Measured at 48x48: rig `0.467,-16.206,6.915`, rig_free `8.508,-13.801,6.916`, aim
+`65,0,30 -> 63.435,0,30`, keep rotation `63.435,0,0`.
+
 ASSUMED A2 outcome: an orbit keeps the camera-to-centre distance, so the `--fit` framing survives every step (asserted:
 every one of the 4 frames shows geometry that differs from the background). ASSUMED A9 outcome: the live Blender writes
 the stills into the CLI-made run dir (the live test writes the mp4 from them).
@@ -10,6 +17,8 @@ the stills into the CLI-made run dir (the live test writes the mp4 from them).
 from __future__ import annotations
 
 import json
+import math
+import re
 import shutil
 import struct
 import zlib
@@ -284,3 +293,106 @@ def test_live_mp4_turntable_restores_the_session(capsys, work, live_wide):
     code, state_after = axi(capsys, "exec", *live_wide, "--allow-exec", "--code", EXEC_STATE)
     assert code == 0 and state_after["result"] == state_before["result"]
     assert leftover_run_dirs() == runs_before
+
+
+# --- parented camera (0.8.0 plan U1, K1-K3) ----------------------------------------------------------------
+
+STEPS_FREE = [s if "add camera" not in s else "add camera --name Cam --location 5,-8.66,5 --rotation 65,0,30"
+              for s in STEPS_WIDE]  # the rig camera's world transform: Rz(30) . (0,-10,5) / 65,0,30
+
+
+def build_rig(work: Path, name: str, rotate_after: bool) -> Path:
+    """STEPS_WIDE + an empty `Rig` + `Cam` parented to it. `rotate_after`: Rig turns 30 deg about Z after the parenting
+    (the parent rotation acts); otherwise it is turned first, so the parent inverse cancels it (the camera stays put)."""
+    path = build(work, name, STEPS_WIDE)
+
+    def run(*argv):
+        assert cli.main(["--json", *map(str, argv), "--in-place"]) == 0, argv
+
+    run("add", "empty", path, "--name", "Rig")
+    if not rotate_after:
+        run("set", "Rig", path, "--rotation", "0,0,30")
+    run("set", "Cam", path, "--parent", "Rig")
+    if rotate_after:
+        run("set", "Rig", path, "--rotation", "0,0,30")
+    return path
+
+
+@pytest.fixture(scope="module")
+def rig(work):
+    return build_rig(work, "rig", rotate_after=True)
+
+
+@pytest.fixture(scope="module")
+def rig_free(work):
+    return build(work, "rig_free", STEPS_FREE)
+
+
+@pytest.fixture(scope="module")
+def rig_inverse(work):
+    return build_rig(work, "rig_inverse", rotate_after=False)
+
+
+def vec(text: str) -> list[float]:
+    return [float(v) for v in text.split(",")]
+
+
+def moved_to(fit_text: str) -> list[float]:
+    assert " -> " in fit_text, fit_text
+    return vec(fit_text.split(" -> ", 1)[1])
+
+
+def close_pixels(a: int, b: int) -> bool:
+    return abs(a - b) <= 0.03 * max(a, b, 1)
+
+
+def test_fit_and_turntable_of_a_parented_camera_match_the_world_equivalent_camera(capsys, work, rig, rig_free):
+    before = cam(capsys, rig)
+    code, par = axi(capsys, *render_args(rig, work / "rg_####.png", "--turntable", "4", "--fit"))
+    assert code == 0, par
+    code, free = axi(capsys, *render_args(rig_free, work / "rf_####.png", "--turntable", "4", "--fit"))
+    assert code == 0, free
+    # the world-equivalent unparented camera and the parented one are aimed the same way
+    assert par["aim"] == "Cam turned 65,0,30 -> 63.435,0,30 toward 0,0,0"
+    assert free["aim"].startswith("Cam turned 65,0,30 -> 63.43") and free["aim"].endswith(" toward 0,0,0")
+    assert par["fit"].startswith("Cam moved 0,-10,5 -> ") and free["fit"].startswith("Cam moved 5,-8.66,5 -> ")
+    # fit: shows the camera's own channel: local = Rz(-30) . world
+    local, world = moved_to(par["fit"]), moved_to(free["fit"])
+    c, s_ = math.cos(math.radians(30)), math.sin(math.radians(30))
+    expected = [world[0] * c + world[1] * s_, -world[0] * s_ + world[1] * c, world[2]]
+    assert local == pytest.approx(expected, abs=0.02), (local, expected)
+    for i in (1, 2, 3, 4):
+        a, b = geometry_pixels(work / f"rg_{i:04d}.png"), geometry_pixels(work / f"rf_{i:04d}.png")
+        assert a > 20 and close_pixels(a, b), (i, a, b)  # 3 %: the fit framed the subject exactly as for a free camera
+    assert cam(capsys, rig) == before  # location AND rotation channels are back
+
+
+def test_keep_hint_of_a_parented_turntable_reproduces_the_framing(capsys, work, rig):
+    code, par = axi(capsys, *render_args(rig, work / "kh_####.png", "--turntable", "4", "--fit"))
+    assert code == 0, par
+    hint = par["help"][0]
+    m = re.search(r"--location (\S+) --rotation (\S+) --in-place` to keep this framing$", hint)
+    assert m and hint.startswith("Run `blender-axi set Cam "), hint
+    assert vec(m.group(2)) == pytest.approx([63.435, 0.0, 0.0], abs=0.01)  # the LOCAL rotation, not the world 30 deg
+    assert vec(m.group(1)) == pytest.approx(moved_to(par["fit"]), abs=0.001)
+    kept = work / "kept.blend"
+    kept.unlink(missing_ok=True)
+    code, out = axi(capsys, "set", "Cam", rig, "--location", m.group(1), "--rotation", m.group(2), "--out", kept)
+    assert code == 0, out
+    code, out = axi(capsys, *render_args(kept, work / "kept.png"))
+    assert code == 0, out
+    a, b = geometry_pixels(work / "kept.png"), geometry_pixels(work / "kh_0001.png")
+    assert a > 20 and close_pixels(a, b), (a, b)
+
+
+def test_parent_inverse_only_rig_behaves_like_the_unparented_scene(capsys, work, wide, rig_inverse):
+    code, plain = axi(capsys, *render_args(wide, work / "pi_####.png", "--turntable", "4", "--fit"))
+    assert code == 0, plain
+    code, inv = axi(capsys, *render_args(rig_inverse, work / "pi_####.png", "--turntable", "4", "--fit"))
+    assert code == 0, inv
+
+    def strip(data, blend):  # everything but the file name
+        return {k: ([h.replace(blend.name, "<file>") for h in v] if k == "help" else v)
+                for k, v in data.items() if k not in ("file", "duration_ms")}
+
+    assert strip(inv, rig_inverse) == strip(plain, wide)

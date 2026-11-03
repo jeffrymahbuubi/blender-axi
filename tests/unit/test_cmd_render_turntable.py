@@ -145,7 +145,29 @@ def test_existing_png_step_is_refused_before_the_transport(work):
 
 def test_live_hint_uses_the_live_suffix(work):
     res, _ = invoke(["--turntable", "3", "--out", "t_####.png"], live=True)
-    assert res.help[0].endswith("--live` for a finer turn") and "<file>" in res.help[0]
+    assert res.help[0].endswith("--live` for a finer turn") and "<file>" not in res.help[0]
+    assert res.help[0].startswith("Run `blender-axi render --turntable")
+
+
+def test_sheet_flag_help_mentions_numbered_tiles_and_formats():
+    from blender_axi import helptext
+
+    flag = next(f for f in helptext.render(cmd.SPEC)["flags"] if f["flag"].startswith("--sheet"))
+    assert "each tile numbered" in flag["help"] and ".webp, .exr, .tif, .bmp or .tga" in flag["help"]
+
+
+def test_live_export_hint_has_no_file_and_carries_the_port(work):
+    inv, _ = flagparser.parse(cmd.SPEC, ["--turntable", "3", "--out", "t_####.png", "--live", "--port", "5000"])
+    inv.transport = FakeTransport()
+    res = cmd.run(inv)
+    assert res.help[0] == ("Run `blender-axi render --turntable 12 --fit --out <dir/turn_####.png> --live --port 5000` "
+                           "for a finer turn")
+    assert res.help[1] == "Run `blender-axi export --out <path.glb> --live --port 5000` to export geometry"
+
+
+def test_headless_hints_keep_the_file(work):
+    res, _ = invoke(["scene.blend", "--turntable", "3", "--out", "t_####.png"])
+    assert res.help[1] == "Run `blender-axi export <file> --out <path.glb>` to export geometry"
 
 
 # --- mp4 turntable --------------------------------------------------------------------------------------

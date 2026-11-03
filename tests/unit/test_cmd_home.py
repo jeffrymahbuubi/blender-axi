@@ -120,7 +120,7 @@ def test_live_flags_carried_into_hints(fake_blender, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(home, "_live_reachable", lambda h, p: True)
     res = home.run(_inv(["--live", "--port", "9999"]))
-    assert "blender-axi --live --port 9999 scene <file>" in res.help[0]
+    assert res.help[0] == "Run `blender-axi scene --live --port 9999` for a scene summary"
     assert not any("add `--live`" in h for h in res.help)
 
 
@@ -211,9 +211,22 @@ def test_carry_user_prefs_and_non_default_host_port(fake_blender, no_live, tmp_p
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(home, "_live_reachable", lambda h, p: True)
     res = home.run(_inv(["--live", "--host", "10.0.0.5", "--port", "9999", "--user-prefs"]))
-    assert "blender-axi --live --host 10.0.0.5 --port 9999 --user-prefs scene <file>" in res.help[0]
+    assert res.help[0] == "Run `blender-axi scene --live --host 10.0.0.5 --port 9999 --user-prefs` for a scene summary"
     res = home.run(_inv(["--user-prefs"]))
-    assert "blender-axi --user-prefs scene <file>" in res.help[0]
+    assert res.help[0] == "Run `blender-axi scene <file> --user-prefs` for a scene summary"
+
+
+def test_live_hints_drop_the_file_and_show_a_non_default_port(fake_blender, no_live, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(home, "_live_reachable", lambda h, p: True)
+    res = home.run(_inv(["--live", "--port", "5000"]))
+    assert res.help[:3] == [
+        "Run `blender-axi scene --live --port 5000` for a scene summary",
+        "Run `blender-axi objects --live --port 5000` to list objects",
+        "Run `blender-axi render --out <path.png> --live --port 5000` to render a still",
+    ]
+    res = home.run(_inv(["--live"]))
+    assert res.help[0] == "Run `blender-axi scene --live` for a scene summary"
 
 
 def test_all_hints_within_bound_when_everything_applies(monkeypatch, no_live, tmp_path):

@@ -1,6 +1,7 @@
 """Unit tests for `render --fit` (plan U4): CLI flags, params, text and hints; op and camera_fit with fake bpy."""
 
 import math
+import sys
 import types
 from pathlib import Path
 
@@ -361,3 +362,88 @@ def test_without_fit_the_op_is_untouched(fake_bpy):
     _, seen, _ = make_world(fake_bpy, two_cubes(), cam)
     res = op_render.run({"out": str(WORK / "op" / "nofit.png"), "force": True})
     assert "fit" not in res and cam.fit_calls == [] and seen[0]["location"] == (0.0, -8.0, 4.0)
+
+
+# --- parented camera (0.8.0 plan U1, K1) -------------------------------------------------------------
+
+class Vec(tuple):
+    def __new__(cls, v):
+        return super().__new__(cls, (float(x) for x in v))
+
+
+class Mat:
+    """A rigid 4x4 (rotation + translation) with `@` and `inverted()`: enough for the world -> local conversion."""
+
+    def __init__(self, rows):
+        self.rows = [list(map(float, r)) for r in rows]
+
+    def __matmul__(self, other):
+        if isinstance(other, Mat):
+            return Mat([[sum(self.rows[i][k] * other.rows[k][j] for k in range(4)) for j in range(4)] for i in range(4)])
+        v = (*other, 1.0)  # a 3-vector is treated as w = 1, like mathutils
+        return Vec(sum(self.rows[i][k] * v[k] for k in range(4)) for i in range(3))
+
+    def inverted(self):
+        r = [row[:3] for row in self.rows[:3]]
+        t = [row[3] for row in self.rows[:3]]
+        rt = [[r[j][i] for j in range(3)] for i in range(3)]
+        return Mat([[*rt[i], -sum(rt[i][k] * t[k] for k in range(3))] for i in range(3)] + [[0, 0, 0, 1]])
+
+
+RZ90_AT_X1 = [[0, -1, 0, 1], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]  # rotate 90 deg about Z, then move to x = 1
+
+
+@pytest.fixture
+def mathutils_stub(monkeypatch):
+    monkeypatch.setitem(sys.modules, "mathutils", types.SimpleNamespace(Vector=Vec))
+
+
+def parent_it(cam, inverse=None):
+    cam.parent = types.SimpleNamespace(matrix_world=Mat(RZ90_AT_X1))
+    cam.matrix_parent_inverse = Mat(inverse or IDENTITY)
+    return cam
+
+
+def test_to_local_without_a_parent_is_the_tuple_and_imports_nothing(monkeypatch):
+    monkeypatch.setitem(sys.modules, "mathutils", None)  # an import would raise ImportError
+    assert camera_fit.to_local(types.SimpleNamespace(), (1, 2.5, -3)) == (1.0, 2.5, -3.0)
+    assert camera_fit.to_local(types.SimpleNamespace(parent=None), [0, 0, 1]) == (0.0, 0.0, 1.0)
+
+
+def test_to_local_with_a_parent_inverts_parent_world_times_parent_inverse(mathutils_stub):
+    cam = parent_it(types.SimpleNamespace())
+    assert camera_fit.to_local(cam, (0.0, -20.0, 4.0)) == pytest.approx((-20.0, 1.0, 4.0))  # R^T (w - t)
+    shift = [[1, 0, 0, 0], [0, 1, 0, 2], [0, 0, 1, 0], [0, 0, 0, 1]]  # a parent inverse that shifts y by 2
+    cam = parent_it(types.SimpleNamespace(), inverse=shift)
+    # inv(P @ I) @ w = inv(I) @ (inv(P) @ w) = (-20, 1, 4) shifted back by the inverse's y offset 2
+    assert camera_fit.to_local(cam, (0.0, -20.0, 4.0)) == pytest.approx((-20.0, -1.0, 4.0))
+    # the round trip: P @ I @ local == world
+    back = Mat(RZ90_AT_X1) @ Mat(shift) @ Vec(camera_fit.to_local(cam, (0.0, -20.0, 4.0)))
+    assert tuple(back) == pytest.approx((0.0, -20.0, 4.0))
+
+
+def test_perspective_fit_writes_the_local_location_after_the_world_margin(fake_bpy, mathutils_stub):
+    cam = parent_it(make_cam())
+    _, seen, _ = make_world(fake_bpy, two_cubes(), cam)
+    res = op_render.run(params("par.png"))
+    # world: fit (0,-20,4), margin pushed back to (0,-22,4) first, then converted: R^T (0-1, -22, 4)
+    assert seen[0]["location"] == pytest.approx((-22.0, 1.0, 4.0))
+    assert res["fit"]["location"] == pytest.approx([-22.0, 1.0, 4.0]) and res["fit"]["from"] == [0.0, -8.0, 4.0]
+    assert cam.location == (0.0, -8.0, 4.0)  # restored
+
+
+def test_ortho_fit_converts_the_location_and_leaves_the_scale_alone(fake_bpy, mathutils_stub):
+    cam = parent_it(make_cam(ortho=True))
+    _, seen, _ = make_world(fake_bpy, two_cubes(), cam)
+    res = op_render.run(params("paro.png"))
+    assert seen[0]["location"] == pytest.approx((-20.0, 1.0, 4.0)) and seen[0]["ortho"] == pytest.approx(12.0 * 1.1)
+    assert res["fit"]["ortho_scale"] == pytest.approx(13.2)
+    assert cam.location == (0.0, -8.0, 4.0) and cam.data.ortho_scale == 6.0
+
+
+def test_unparented_fit_needs_no_mathutils(fake_bpy, monkeypatch):
+    monkeypatch.setitem(sys.modules, "mathutils", None)
+    cam = make_cam()
+    _, seen, _ = make_world(fake_bpy, two_cubes(), cam)
+    op_render.run(params("nomu.png"))
+    assert seen[0]["location"] == pytest.approx((0.0, -22.0, 4.0))

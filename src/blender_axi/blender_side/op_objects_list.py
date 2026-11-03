@@ -5,9 +5,10 @@ Result: {filepath, total, matched, rows[{name,type,collections,visible,<fields>}
 (numbers/lists/None); the CLI formats them.
 """
 
+from . import usage
 from .ops import OpError
 
-FIELDS = ("location", "dimensions", "parent", "verts", "faces", "materials", "modifiers", "data")
+FIELDS = ("location", "dimensions", "parent", "verts", "faces", "materials", "modifiers", "data", "used_by")
 
 
 def _vec(v) -> list:
@@ -79,11 +80,12 @@ def run(params: dict) -> dict:
         objects = objects[: max(int(limit), 0)]
 
     fields = [f for f in (params.get("fields") or []) if f in FIELDS]
+    users = usage.modifier_users(bpy) if "used_by" in fields else {}
     rows = []
     for obj in objects:
         row = {"name": obj.name, "type": obj.type, "collections": [c.name for c in obj.users_collection],
                "visible": _visible(obj)}
         for f in fields:
-            row[f] = _field(obj, f)
+            row[f] = users.get(obj.name, []) if f == "used_by" else _field(obj, f)
         rows.append(row)
     return {"filepath": bpy.data.filepath, "total": total, "matched": matched, "rows": rows}

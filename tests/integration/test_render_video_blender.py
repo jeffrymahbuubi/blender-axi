@@ -5,8 +5,10 @@ the mp4 frame count read from its `stsz` box, the contact sheet compared pixel b
 
 ASSUMED A3 outcome: the sheet's tile 1 equals the first still within 1/255 per channel (byte PNG -> pixels -> new image ->
 PNG round-trips without a colour-space shift): asserted for the first and the last tile, no colour-space fix was needed.
-ASSUMED A5 outcome: `Image.save()` honours `file_format` for JPEG as for PNG (the file starts with the JPEG magic bytes);
-WEBP and the rest are not tested.
+ASSUMED A5 outcome: `Image.save()` honours `file_format` for JPEG as for PNG (the file starts with the JPEG magic bytes).
+0.8.0 plan U3 (K5, K6, A5): every tile carries its number in a black box with white digits (asserted on the PNG: the box
+corner is pure 0,0,0 and the box holds pure 255,255,255 pixels), and `--out sheet.<ext>` is verified by magic bytes for
+jpg, webp, exr, tif, bmp and tga (the other formats are not decoded here).
 """
 
 from __future__ import annotations
@@ -92,6 +94,16 @@ def max_diff(a, b) -> int:
     return max(abs(x - y) for ra, rb in zip(a, b) for pa, pb in zip(ra, rb) for x, y in zip(pa, pb))
 
 
+LABEL_ROWS, LABEL_COLS = 7, 5  # the number box of a 48 px (or 32 px) tile: (4 * digits + 1) x 7 pixels at scale 1
+
+
+def assert_labelled(t) -> None:
+    """A tile's top-left box is black (corner) and holds white pixels (the digit), within the first 7 rows x 8 columns."""
+    assert t[0][0] == (0, 0, 0), t[0][0]
+    box = [px for r in t[:LABEL_ROWS] for px in r[:8]]
+    assert any(px == (255, 255, 255) for px in box), box
+
+
 @pytest.fixture(scope="module")
 def work():
     d = paths.tmp_root() / "video"
@@ -162,10 +174,17 @@ def test_turntable_sheet_matches_the_stills(capsys, work, wide):
         assert len(kept) == 1
         stills = sorted((paths.tmp_root() / "runs" / kept[0]).glob("turn_*.png"))
         assert len(stills) == 6
-        # A3: tile 1 (top-left) and tile 6 (bottom-right) equal their stills within 1/255 per channel
-        assert max_diff(tile(sheet, 0, 0), [[px[:3] for px in r] for r in read_png(stills[0])]) <= 1
-        assert max_diff(tile(sheet, 2, 1), [[px[:3] for px in r] for r in read_png(stills[5])]) <= 1
-        assert max_diff(tile(sheet, 0, 0), tile(sheet, 1, 0)) > 0  # the views differ: not one tile repeated
+        # A3: tile 1 (top-left) and tile 6 (bottom-right) equal their stills within 1/255 per channel, below the label box
+        # (0.8.0: the number sits in the tile's top-left corner, 5 x 7 pixels at this size; the rows under it are the still)
+        below = LABEL_ROWS
+        assert max_diff(tile(sheet, 0, 0)[below:], [[px[:3] for px in r] for r in read_png(stills[0])][below:]) <= 1
+        assert max_diff(tile(sheet, 2, 1)[below:], [[px[:3] for px in r] for r in read_png(stills[5])][below:]) <= 1
+        centre = SIDE // 2  # the centre pixel keeps equalling the still's
+        assert max_diff([[tile(sheet, 0, 0)[centre][centre]]], [[read_png(stills[0])[centre][centre][:3]]]) <= 1
+        assert max_diff(tile(sheet, 0, 0)[below:], tile(sheet, 1, 0)[below:]) > 0  # the views differ: not one tile repeated
+        # A5 (png): every tile's top-left is a pure black box with white digit pixels inside it
+        for col, row in ((c, r) for r in range(2) for c in range(3)):
+            assert_labelled(tile(sheet, col, row))
     finally:
         for name in kept:
             shutil.rmtree(paths.tmp_root() / "runs" / name, ignore_errors=True)
@@ -178,8 +197,41 @@ def test_range_sheet_has_a_two_by_two_grid_and_an_empty_fourth_tile(capsys, work
     assert data["rendered"] == "3 frames -> 1 sheet" and data["sheet"].startswith("2x2 tiles, 96x96, ")
     assert any("--frames <a..b> --sheet --out <sheet.png>" in h for h in data["help"])
     sheet = read_png(out)
-    assert all(px[3] == 0 for r in sheet[SIDE:] for px in r[SIDE:])  # the unused tile stays transparent
+    assert all(px[3] == 0 for r in sheet[SIDE:] for px in r[SIDE:])  # the unused tile stays transparent: no label either
     assert leftover_run_dirs() == []
+
+
+def test_range_sheet_numbers_every_rendered_tile(capsys, work, wide):  # 0.8.0 U3: 3 labels for --frames 3..5
+    out = work / "rsheet35.png"
+    code, data = axi(capsys, *render_args(wide, out, "--frames", "3..5", "--sheet"))
+    assert code == 0, data
+    assert data["rendered"] == "3 frames -> 1 sheet" and data["sheet"].startswith("2x2 tiles, 96x96, ")
+    sheet = read_png(out)
+    labelled = [assert_labelled([[px[:3] for px in r] for r in tile_rgba(sheet, c, r)]) for c, r in ((0, 0), (1, 0), (0, 1))]
+    assert len(labelled) == 3
+    t4 = tile_rgba(sheet, 1, 1)
+    assert all(px[3] == 0 for r in t4 for px in r)  # the empty fourth tile carries no label
+    # frames 3, 4 and 5 are different digits: the three label boxes are not all identical
+    boxes = [[[px[:3] for px in r[:LABEL_COLS]] for r in tile_rgba(sheet, c, r_)[:LABEL_ROWS]] for c, r_ in ((0, 0), (1, 0), (0, 1))]
+    assert boxes[0] != boxes[1] and boxes[1] != boxes[2] and boxes[0] != boxes[2]
+
+
+def tile_rgba(rows, col: int, row: int):
+    return [list(r[col * SIDE:(col + 1) * SIDE]) for r in rows[row * SIDE:(row + 1) * SIDE]]
+
+
+@pytest.mark.parametrize("ext, magic", [("jpg", b"\xff\xd8\xff"), ("webp", b"RIFF"), ("exr", b"v/1\x01"), ("tif", b"II*\x00"),
+                                        ("bmp", b"BM"), ("tga", b"\x00\x00\x0a")])
+def test_sheet_formats_write_the_right_container(capsys, work, wide, ext, magic):  # 0.8.0 K6 / F4
+    out = work / f"fmt.{ext}"
+    runs_before = leftover_run_dirs()
+    code, data = axi(capsys, "render", wide, "--engine", "WORKBENCH", "--resolution", "32x32", "--out", out, "--force",
+                     "--frames", "1..2", "--sheet")
+    assert code == 0, data
+    assert data["rendered"] == "2 frames -> 1 sheet" and data["output"].endswith(f"fmt.{ext}") and data["sheet"].startswith("2x1 tiles, 64x32, ")
+    blob = out.read_bytes()
+    assert blob.startswith(magic), blob[:8]
+    assert leftover_run_dirs() == runs_before and not list(work.glob("frame_*"))
 
 
 def test_sheet_in_jpeg_is_a_real_jpeg(capsys, work, wide):  # A5

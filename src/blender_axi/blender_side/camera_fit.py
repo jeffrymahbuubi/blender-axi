@@ -4,7 +4,8 @@
 scale) that sees all coordinates with the camera's own rotation. The result is pushed back along the view
 axis by the margin, the render runs, and `FitState.undo` puts the camera back (or deletes a temporary one).
 
-Pure Python math only (no `mathutils` import) so the unit tests can drive it with plain stubs.
+Pure Python math only so the unit tests can drive it with plain stubs; `mathutils` is imported lazily and only
+for a parented camera (`to_local`).
 """
 
 import math
@@ -98,6 +99,16 @@ def _make_temp_camera(bpy, scene, state: FitState):
     return obj
 
 
+def to_local(cam, world: tuple[float, float, float]) -> tuple[float, float, float]:
+    """The `location` channel that puts `cam` at `world` (identity without a parent)."""
+    parent = getattr(cam, "parent", None)
+    if parent is None:
+        return tuple(float(v) for v in world)
+    from mathutils import Vector
+
+    return tuple((parent.matrix_world @ cam.matrix_parent_inverse).inverted() @ Vector(world))
+
+
 def fit_scene(bpy, scene, margin: float, temp_camera_ok: bool, state: FitState, coords: list[float] | None = None) -> dict:
     """Frame all visible geometry (or the given `coords`) with `scene.camera` (or a temporary one headless).
     Returns the `fit` result."""
@@ -125,7 +136,7 @@ def fit_scene(bpy, scene, margin: float, temp_camera_ok: bool, state: FitState, 
     loc, scale = cam.camera_fit_coords(depsgraph, coords)
     loc = tuple(loc)
     if ortho:
-        cam.location = loc
+        cam.location = to_local(cam, loc)
         cam.data.ortho_scale = scale * margin
     else:
         mw = cam.matrix_world
@@ -134,7 +145,7 @@ def fit_scene(bpy, scene, margin: float, temp_camera_ok: bool, state: FitState, 
         view = tuple(v / norm for v in view)
         dist = math.dist(loc, _centre(coords))
         loc = tuple(loc[i] - view[i] * dist * (margin - 1) for i in range(3))
-        cam.location = loc
+        cam.location = to_local(cam, loc)  # `loc` is a world position, the channel is relative to the parent
     return {
         "camera": cam.name, "temporary": temporary, "location": [float(v) for v in cam.location],
         "from": list(before) if before is not None else None,

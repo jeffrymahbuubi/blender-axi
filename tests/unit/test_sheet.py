@@ -1,5 +1,6 @@
 """`sheet.compose` / `sheet.grid` (0.7.0 plan U2): tile placement, cleanup and errors with a plain-stub `bpy.data.images`."""
 
+from array import array
 from pathlib import Path
 from types import SimpleNamespace as NS
 
@@ -101,7 +102,7 @@ def test_tiles_are_placed_in_reading_order_top_left_first(bpy):
 def test_result_reports_the_written_file(bpy):
     target = out()
     res = sheet.compose(bpy, ["a.png", "b.png"], target, 2)
-    assert res == {"path": target, "cols": 2, "rows": 1, "width": 4, "height": 2, "size_bytes": 3, "tiles": 2}
+    assert res == {"path": target, "cols": 2, "rows": 1, "width": 4, "height": 2, "size_bytes": 3, "tiles": 2, "labels": 0}
     assert Path(target).read_bytes() == b"img"
 
 
@@ -153,3 +154,107 @@ def test_no_file_written_is_an_error(bpy):
 def test_no_stills_is_an_error(bpy):
     with pytest.raises(OpError, match="no frames to compose"):
         sheet.compose(bpy, [], out(), 1)
+
+
+# --- 0.8.0 U3: numbered tiles -------------------------------------------------------------------------------------------
+
+WHITE, BLACK, GREY = (1.0, 1.0, 1.0, 1.0), (0.0, 0.0, 0.0, 1.0), (0.5,) * 4
+
+
+def blank_canvas(w: int, h: int, value: float = 0.5):
+    return array("f", [value] * (w * h * 4))
+
+
+def px(canvas, sheet_w: int, sheet_h: int, x: int, y_top: int) -> tuple:
+    """Pixel at column x, row y_top counted from the TOP of the sheet (the canvas is stored bottom-up)."""
+    i = ((sheet_h - 1 - y_top) * sheet_w + x) * 4
+    return tuple(canvas[i:i + 4])
+
+
+@pytest.mark.parametrize("tile_h, scale", [(48, 1), (180, 4), (540, 13), (10, 1), (39, 1), (40, 1), (80, 2)])
+def test_label_scale_grows_with_the_tile(tile_h, scale):
+    assert sheet.label_scale(tile_h) == scale
+
+
+def test_digit_font_is_complete_and_five_by_three():
+    assert sorted(sheet._DIGITS) == list("0123456789")
+    assert all(len(rows) == sheet.GLYPH_H and all(len(r) == sheet.GLYPH_W for r in rows) for rows in sheet._DIGITS.values())
+    assert sheet._DIGITS["7"] == ("###", "  #", " # ", " # ", " # ")
+
+
+def test_stamp_draws_box_and_glyph_at_the_tile_top_left():
+    sw, sh = 24, 8  # two 12x8 tiles side by side
+    canvas = blank_canvas(sw, sh)
+    assert sheet.stamp(canvas, sw, 12, 0, 12, 8, "1") is True  # tile 2's top-left
+    # the box is (1*4-1+2) x 7 = 5 x 7 pixels at scale 1: black padding on the border, the glyph one unit in
+    assert px(canvas, sw, sh, 12, 0) == BLACK and px(canvas, sw, sh, 16, 6) == BLACK  # box corners
+    assert px(canvas, sw, sh, 17, 0) == GREY and px(canvas, sw, sh, 12, 7) == GREY  # outside the box
+    # glyph "1": row 0 " # " -> lit at glyph column 1 = x 12 + PAD + 1; row 1 "## "; row 4 "###"
+    assert px(canvas, sw, sh, 14, 1) == WHITE and px(canvas, sw, sh, 13, 1) == BLACK and px(canvas, sw, sh, 15, 1) == BLACK
+    assert px(canvas, sw, sh, 13, 2) == WHITE and px(canvas, sw, sh, 14, 2) == WHITE and px(canvas, sw, sh, 15, 2) == BLACK
+    assert [px(canvas, sw, sh, x, 5) for x in (13, 14, 15)] == [WHITE] * 3
+    assert px(canvas, sw, sh, 0, 0) == GREY  # tile 1 untouched
+
+
+def test_stamp_scales_the_box_with_the_tile():
+    canvas = blank_canvas(60, 80)
+    assert sheet.stamp(canvas, 60, 0, 0, 60, 80, "7") is True  # tile_h 80 -> scale 2: box 10 x 14
+    assert px(canvas, 60, 80, 9, 13) == BLACK and px(canvas, 60, 80, 10, 0) == GREY and px(canvas, 60, 80, 0, 14) == GREY
+    assert px(canvas, 60, 80, 2, 2) == WHITE and px(canvas, 60, 80, 5, 3) == WHITE  # the top bar of the 7 is 2x2 blocks
+    assert px(canvas, 60, 80, 2, 4) == BLACK  # row 1 of the 7 is "  #": its left unit is dark
+
+
+def test_stamp_handles_two_digits():
+    sw, sh = 40, 10
+    canvas = blank_canvas(sw, sh)
+    assert sheet.stamp(canvas, sw, 0, 0, 40, 10, "12") is True  # box (2*4-1+2) = 9 wide
+    assert px(canvas, sw, sh, 8, 0) == BLACK and px(canvas, sw, sh, 9, 0) == GREY
+    assert px(canvas, sw, sh, 6, 1) == WHITE  # the "2" starts at x = PAD + 4 and its top bar is "###"
+
+
+def test_stamp_skips_a_tile_too_small_and_leaves_the_canvas_alone():
+    canvas = blank_canvas(8, 4)
+    before = list(canvas)
+    assert sheet.stamp(canvas, 8, 0, 0, 4, 4, "1") is False and list(canvas) == before
+    assert sheet.stamp(canvas, 8, 0, 0, 8, 4, "") is False and list(canvas) == before
+
+
+def test_a_non_digit_label_draws_only_the_box():
+    canvas = blank_canvas(12, 8)
+    assert sheet.stamp(canvas, 12, 0, 0, 12, 8, "x") is True
+    assert all(px(canvas, 12, 8, x, y) == BLACK for x in range(5) for y in range(7))
+
+
+def test_compose_stamps_one_label_per_tile(bpy):
+    bpy.data.images = FakeImages(sizes={1: (12, 8), 2: (12, 8)})
+    res = sheet.compose(bpy, ["a.png", "b.png"], out(), 2, labels=["1", "2"])
+    assert res["labels"] == 2
+    canvas = array("f", bpy.data.images.sheet.pixels.data)
+    assert px(canvas, 24, 8, 0, 0) == BLACK and px(canvas, 24, 8, 2, 1) == WHITE  # tile 1: the "1" glyph column 1
+    assert px(canvas, 24, 8, 12, 0) == BLACK and px(canvas, 24, 8, 13, 1) == WHITE  # tile 2: the "2" top bar starts at its glyph column 0
+    assert px(canvas, 24, 8, 11, 7) not in (BLACK, WHITE)  # outside the boxes the stills' own pixels remain
+
+
+def test_compose_without_labels_changes_no_pixel(bpy):
+    sizes = {1: (12, 8), 2: (12, 8)}
+    bpy.data.images = FakeImages(sizes=sizes)
+    assert sheet.compose(bpy, ["a.png", "b.png"], out(), 2)["labels"] == 0
+    plain = list(bpy.data.images.sheet.pixels.data)
+    bpy.data.images = FakeImages(sizes=sizes)
+    sheet.compose(bpy, ["a.png", "b.png"], out(), 2, labels=["1", "2"])
+    labelled = list(bpy.data.images.sheet.pixels.data)
+    assert plain != labelled
+    bottom = 24 * 4  # the bottom-up row 0 (visual row 7) lies below both 7-row boxes
+    assert plain[:bottom] == labelled[:bottom]
+
+
+def test_compose_counts_only_the_labels_that_fit(bpy):
+    res = sheet.compose(bpy, ["a.png", "b.png"], out(), 2, labels=["1", "2"])  # 2x2 tiles are far too small
+    assert res["labels"] == 0 and res["tiles"] == 2
+    assert bpy.data.images.sheet.pixels.data[0] == 100.0  # untouched
+
+
+def test_compose_rejects_labels_that_do_not_match_the_frames(bpy):
+    with pytest.raises(OpError, match="contact sheet failed: labels do not match the frames"):
+        sheet.compose(bpy, ["a.png", "b.png"], out(), 2, labels=["1"])
+    assert bpy.data.images.loaded == [] and bpy.data.images.new_calls == []

@@ -142,6 +142,11 @@ def test_missing_blend_and_live_hints(work):
     inv.transport = FakeTransport()
     res = cmd.run(inv)
     assert inv.transport.calls[0][2] is None and "--live" in res.help[0]
+    assert "<file>" not in res.help[0]
+    assert res.help[0] == "Run `blender-axi render --out <path.png> --live` to render a preview"
+    inv, _ = flagparser.parse(cmd.SPEC, ["--live", "--port", "5000", "--out", "a.glb"])
+    inv.transport = FakeTransport()
+    assert cmd.run(inv).help[0].endswith("render --out <path.png> --live --port 5000` to render a preview")
 
 
 # --- op with fake bpy ------------------------------------------------------------------------------

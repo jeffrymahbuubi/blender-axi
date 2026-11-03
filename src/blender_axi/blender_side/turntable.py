@@ -31,7 +31,7 @@ class OrbitState:
         self.matrix = None  # the camera's matrix_world rows before the orbit
         self.channels: dict = {}
         self.centre = None
-        self.aim: dict | None = None  # {"from": [deg x3], "to": [deg x3]} when `aim` ran
+        self.aim: dict | None = None  # {"from", "to", "local_to": [deg x3]} when `aim` ran
 
     def undo(self, bpy) -> list[str]:
         """Best effort; returns descriptions of what could not be restored."""
@@ -87,9 +87,16 @@ def _euler_deg(cam) -> list[float]:
     return [round(math.degrees(v), 4) for v in cam.matrix_world.to_euler()]
 
 
+def _local_deg(cam) -> list[float]:
+    """The camera's own rotation channel in degrees (same rule as `op_snapshot._rotation_deg`)."""
+    euler = cam.rotation_euler if cam.rotation_mode not in ("QUATERNION", "AXIS_ANGLE") else cam.matrix_basis.to_euler()
+    return [round(math.degrees(v), 4) for v in euler]
+
+
 def aim(bpy, cam, centre_: tuple[float, float, float], state: OrbitState) -> dict:
     """Turn `cam` (position unchanged, Z up) so it looks at `centre_`; the original channels are recorded first.
-    Returns `{"from": [deg x3], "to": [deg x3]}` (world rotation before and after, whatever the rotation mode)."""
+    Returns `{"from": [deg x3], "to": [deg x3], "local_to": [deg x3]}`: `from`/`to` are the world rotation before and
+    after (what `aim:` prints), `local_to` is the camera's own channel after (what `set --rotation` takes)."""
     from mathutils import Vector
 
     record(state, cam)
@@ -108,7 +115,7 @@ def aim(bpy, cam, centre_: tuple[float, float, float], state: OrbitState) -> dic
     else:
         cam.rotation_euler = q.to_euler(mode)
     bpy.context.view_layer.update()
-    state.aim = {"from": before, "to": _euler_deg(cam)}
+    state.aim = {"from": before, "to": _euler_deg(cam), "local_to": _local_deg(cam)}
     return state.aim
 
 

@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import shutil
+import time
+from pathlib import Path
 
 import pytest
 
@@ -143,3 +146,65 @@ def test_cli_end_to_end_json(monkeypatch, capsys, basic):
     assert captured.err == "" and captured.out.startswith("file: ")
     assert cli.main(["object", "Nope", basic]) == 1
     assert "code: NOT_FOUND" in capsys.readouterr().out
+
+
+# -- used_by (0.8.0 U4) ----------------------------------------------------------------------------
+
+CITY = Path(__file__).resolve().parents[2] / ".tmp" / "bench" / "scenes" / "city.blend"
+HELPER_STEPS = ["add cube --name Ring --size 2", "add cube --name Hole --size 1",
+                "modifier Ring boolean --cutter Hole", "set Hole --hide"]
+
+
+def axi_json(capsys, *argv):
+    from blender_axi import cli
+
+    code = cli.main(["--json", *map(str, argv)])
+    out = capsys.readouterr()
+    assert out.err == ""
+    return code, json.loads(out.out)
+
+
+@pytest.fixture(scope="module")
+def helper(blender_info, fixtures_dir):
+    from blender_axi import cli, paths
+
+    work = paths.tmp_root() / "scene_objects"
+    shutil.rmtree(work, ignore_errors=True)
+    work.mkdir(parents=True)
+    blend = work / "helper.blend"
+    shutil.copy2(fixtures_dir / "basic.blend", blend)
+    steps = work / "helper.json"
+    steps.write_text(json.dumps(HELPER_STEPS), encoding="utf-8")
+    assert cli.main(["--json", "apply", str(steps), str(blend), "--in-place"]) == 0
+    return blend
+
+
+def test_objects_used_by_names_the_cutter_users(capsys, helper):
+    code, data = axi_json(capsys, "objects", helper, "--fields", "used_by", "--limit", "50")
+    assert code == 0
+    by = {o["name"]: o for o in data["objects"]}
+    assert by["Hole"]["used_by"] == "Ring (Boolean)" and by["Hole"]["visible"] is False  # A4: Object identifier
+    assert by["Ring"]["used_by"] == "none" and by["Cube"]["used_by"] == "none"
+
+
+def test_objects_default_rows_have_no_used_by(capsys, helper):
+    code, data = axi_json(capsys, "objects", helper, "--limit", "50")
+    assert code == 0
+    assert all(set(o) == {"name", "type", "collection", "visible"} for o in data["objects"])
+
+
+def test_object_shows_used_by(capsys, helper):
+    _, hole = axi_json(capsys, "object", "Hole", helper)
+    _, ring = axi_json(capsys, "object", "Ring", helper)
+    assert hole["used_by"] == "Ring (Boolean)" and ring["used_by"] == "none"
+    keys = list(hole)
+    assert keys.index("used_by") == keys.index("children") + 1
+
+
+def test_used_by_city_timing(capsys):
+    if not CITY.exists():
+        pytest.skip("city.blend not generated")
+    started = time.perf_counter()
+    code, data = axi_json(capsys, "objects", CITY, "--fields", "used_by", "--limit", "5")
+    assert code == 0 and "used_by" in data["objects"][0]
+    assert time.perf_counter() - started < 2

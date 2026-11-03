@@ -157,6 +157,21 @@ def test_cli_live_objects_and_object(run_cli, server):
     assert code == 1 and data["code"] == "NOT_FOUND"
 
 
+@needs_cli_splice
+def test_live_hints_carry_the_port_and_drop_the_file(run_cli, server):
+    rd = paths.run_dir("livehints")
+    try:
+        code, data, _ = run_cli(["export", "--live", "--port", str(server), "--out", str(rd / "x.glb"), "--force"])
+        assert code == 0 and (rd / "x.glb").is_file()
+        assert data["help"][0] == f"Run `blender-axi render --out <path.png> --live --port {server}` to render a preview"
+        code, data, _ = run_cli(["--live", "--port", str(server)])  # home
+        assert code == 0
+        assert data["help"][0] == f"Run `blender-axi scene --live --port {server}` for a scene summary"
+        assert not any("<file>" in h for h in data["help"][:3])
+    finally:
+        paths.cleanup(rd, False)
+
+
 def test_read_only_exec_is_not_modified_and_not_strict(server):
     t = live.LiveTransport("127.0.0.1", server, timeout=60)
     out = t.run("exec", {"code": "print('hi')\nresult = {'n': len(bpy.data.objects), 'o': object()}"},

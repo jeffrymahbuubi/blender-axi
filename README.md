@@ -87,8 +87,8 @@ Blender 5.2 LTS is verified. blender-axi finds it via `--blender <path>`, `BLEND
 | `configure [<file>] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--frames a..b] [--fps n] [--samples n] [--camera name] [--world r,g,b] [--world-strength n] --in-place \| --out <copy.blend>` | Persist scene settings; needs at least one setting flag; `--samples` warns on WORKBENCH; `--world` creates a world when the file has none |
 | `import <source> [<file>] [--format F] [--collection C] [--new] --in-place \| --out <copy.blend>` | Import glb, gltf, fbx, obj, stl, ply, usd or abc into a .blend (or a new one with `--new --out x.blend`, or the open session with `--live`); `--collection C` puts the objects in C, creating it when missing |
 | `apply <steps.json\|-> [<file>] [--check] [--strict] --in-place \| --out <copy.blend> [--force]` | Run many add/set/delete/material/modifier/configure/import steps in ONE Blender start (see [Batch](#batch-apply)); every step is validated first; headless is all-or-nothing, live stops at the failing step |
-| `objects [<file>] [--type T] [--collection C] [--name-contains S] [--limit N] [--fields a,b]` | List objects (name, type, collection, visible); extra columns: location, dimensions, parent, verts, faces, materials, modifiers, data |
-| `object <name> [<file>]` | One object's transform, dimensions, parent/children, materials, modifiers, custom props |
+| `objects [<file>] [--type T] [--collection C] [--name-contains S] [--limit N] [--fields a,b]` | List objects (name, type, collection, visible); extra columns: location, dimensions, parent, verts, faces, materials, modifiers, data, used_by |
+| `object <name> [<file>]` | One object's transform, dimensions, parent/children, `used_by` (modifiers of other objects that point at it, or `none`), materials, modifiers, custom props |
 | `audit [<file>] [--checks a,b] [--object name]... [--collection name] [--strict]` | Check a .blend for asset problems (scale, materials, n-gons, non-manifold edges, unused data, hidden objects, missing files, empty collections, no camera or light); read-only (see [Audit and diff](#audit-and-diff)) |
 | `diff <a> [<b>] [--object n] [--collection c]` | Compare two .blend files (or `<a>` with the open session via `--live`): objects added, removed or changed (transform, visibility, materials, modifiers, custom props) and scene settings |
 | `exec [<file>] --code <python> \| --script <path> --allow-exec [--live]` | Run Python inside Blender; `bpy` is predefined, assign a dict to `result` |
@@ -213,13 +213,18 @@ put it, so its height sets the elevation; `--fit` then frames the subject, not t
 what happened; the keep hint carries `--rotation`). `--fit` alone still frames everything; add `--subject a,b` to frame
 those objects only. `--auto-light` combines with all of it. The stills are `name_####.png` (`#` is the step number). `--out name.mp4` instead encodes the same stills into
 one H.264 mp4 through a temporary video-sequencer scene (`--fps`, default 12). The camera and everything else are put
-back afterwards, headless and `--live` (a camera is required in `--live`, as with `--fit`).
+back afterwards, headless and `--live` (a camera is required in `--live`, as with `--fit`). `--fit` and the turntable
+work on a parented camera too; `fit:` and the keep hint show the camera's own channels, i.e. values relative to its
+parent.
 
 `--out name.mp4` also works with `--frames a..b`; the video plays at the scene fps unless `--fps` is given (`--fps`
 without an mp4 is an error). `--sheet` (with `--turntable N` or `--frames a..b`) writes one contact-sheet image instead
 of N files: `ceil(sqrt(N))` columns, tiles in reading order, empty tiles transparent, `--out name.png` (default
-`<stem>_sheet.png`, or `<stem>_turn_sheet.png` for a turntable; png is the tested format). The stills of an mp4 or a
-sheet go to a temporary run dir that is cleaned afterwards (`--keep-tmp` keeps them).
+`<stem>_sheet.png`, or `<stem>_turn_sheet.png` for a turntable; `.jpg`, `.webp`, `.exr`, `.tif`, `.bmp` and `.tga` work
+too). Every tile is numbered in its top-left corner (the step number for `--turntable`, the scene frame for `--frames`),
+so "frame 7 looks wrong" can be re-rendered with `--frame 7`; the white-on-black number scales with the tile and is
+left out when the tile is too small. The stills of an mp4 or a sheet go to a temporary run dir that is cleaned
+afterwards (`--keep-tmp` keeps them).
 
 ```
 blender-axi render scene.blend --turntable 12 --fit --auto-light --out turn.mp4 --fps 24
@@ -255,6 +260,22 @@ only, so a rename shows as one removed and one added. Headless it starts Blender
 in plain Python; nothing is written. `diff <file> --live` compares the file with the open session. Tables are cut at
 20 rows; `--full` shows all. `--object` (repeatable) and `--collection` restrict the comparison. A bevel's width is
 reported once: `width`, or `width_pct` when the offset type is percent.
+
+`objects --fields used_by` names the modifiers that use an object as cutter, mirror or offset object (`Ring (Boolean)`),
+so helper objects stand out; `object` always shows it.
+
+**Changed in 0.8.0**
+- `render --fit` / `--turntable` place a parented camera correctly (the fit location was written as a world value into
+  the parent-relative `location`), and the turntable's keep hint carries the camera's local rotation. Unparented scenes
+  are unchanged.
+- `render --sheet`: every tile is numbered (step number for a turntable, scene frame for a range); `--out` accepts png,
+  jpg, webp, exr, tif, bmp and tga, each verified.
+- `used_by`: `objects --fields used_by` (opt-in column) and an always-present `used_by:` line in `object` (`none` when
+  nothing points at it) name the modifiers whose Object pointers reference the object; default `objects` rows are
+  unchanged.
+- Live hints from `render`, `export` and the home view no longer print `<file>`; they use the same `--live [--port N]`
+  form as every other command. The home hints follow the shared rule too: with `--user-prefs` they read
+  `blender-axi scene <file> --user-prefs`, and they no longer repeat `--blender`.
 
 **Changed in 0.7.0**
 - `render --turntable` looks at its subject: it leaves out a ground plane, turns the camera toward the subject's centre

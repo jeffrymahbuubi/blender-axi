@@ -15,7 +15,8 @@ from pathlib import Path
 
 from .. import __version__, paths
 from ..errors import AxiError
-from ..spec import DEFAULT_LIVE_HOST, DEFAULT_LIVE_PORT, CommandSpec, Invocation, Result
+from ..spec import CommandSpec, Invocation, Result
+from ._common import Hints
 
 DESCRIPTION = "Agent-ergonomic CLI for Blender: inspect, render, export and script .blend files headlessly"
 MAX_BLENDS = 20
@@ -103,23 +104,6 @@ def _tmp_line() -> str:
     return f"{line} ({copies} exec {'copy' if copies == 1 else 'copies'})" if copies > 0 else line
 
 
-def _carry(inv: Invocation) -> str:
-    """Global flags worth repeating in suggested commands."""
-    g = inv.globals
-    parts = []
-    if g.live:
-        parts.append("--live")
-        if g.host != DEFAULT_LIVE_HOST:
-            parts.append(f"--host {g.host}")
-        if g.port != DEFAULT_LIVE_PORT:
-            parts.append(f"--port {g.port}")
-    if g.user_prefs:
-        parts.append("--user-prefs")
-    if g.blender:
-        parts.append(f'--blender "{g.blender}"')
-    return (" " + " ".join(parts)) if parts else ""
-
-
 def run(inv: Invocation) -> Result:
     g = inv.globals
     with ThreadPoolExecutor(max_workers=1) as pool:  # probe overlaps with `blender --version`
@@ -139,11 +123,11 @@ def run(inv: Invocation) -> Result:
     }
     data["blends"] = rows if rows else f"0 .blend files in {collapse_home(cwd)}"
 
-    carry = _carry(inv)
+    h = Hints(inv)
     help_lines = [
-        f"Run `blender-axi{carry} scene <file>` for a scene summary",
-        f"Run `blender-axi{carry} objects <file>` to list objects",
-        f"Run `blender-axi{carry} render <file> --out <path.png>` to render a still",
+        f"Run `{h.cmd('scene <file>')}` for a scene summary",
+        f"Run `{h.cmd('objects <file>')}` to list objects",
+        f"Run `{h.cmd('render <file> --out <path.png>')}` to render a still",
     ]
     if total > len(rows):
         help_lines.append(f"Showing the newest {len(rows)} of {total} .blend files; pass a path to use another one")

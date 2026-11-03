@@ -179,6 +179,15 @@ def test_keep_hint_after_an_aim_carries_the_rotation(work):
                            "to keep this framing")
 
 
+def test_keep_hint_prefers_the_local_rotation_of_a_parented_camera(work):
+    aim = {**AIM, "local_to": [63.4, 0.0, 0.0]}
+    res, _ = invoke(["scene.blend", "--turntable", "4", "--fit", "--out", "t_####.png"],
+                    FakeTransport(extra={"fit": FIT, "subject": AUTO, "aim": aim}))
+    assert res.help[0] == ("Run `blender-axi set Cam scene.blend --location 0,-17.2,8.3 --rotation 63.4,0,0 --in-place` "
+                           "to keep this framing")
+    assert res.data["aim"] == "Cam turned 63.6,0,46.7 -> 65.1,0,46.7 toward 0,0,0.9"  # the aim: text stays world
+
+
 def test_keep_hint_without_an_aim_is_unchanged(work):
     res, _ = invoke(["scene.blend", "--fit", "--out", "f.png"], FakeTransport(extra={"fit": FIT}))
     assert res.help[0] == "Run `blender-axi set Cam scene.blend --location 0,-17.2,8.3 --in-place` to keep this framing"
