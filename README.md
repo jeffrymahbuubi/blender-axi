@@ -32,7 +32,7 @@ blender-axi's defaults, so compare per task, not field for field. To reproduce:
 
 | Task | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving | Note |
 |---|---:|---:|---:|---|
-| Scene overview | 310 ([raw](benchmarks/results/city/scene__mcp.json)) | 405 ([raw](benchmarks/results/city/scene__axi.txt)) | -30.6% |  |
+| Scene overview | 310 ([raw](benchmarks/results/city/scene__mcp.json)) | 301 ([raw](benchmarks/results/city/scene__axi.txt)) | 2.9% |  |
 | List objects (default --limit 100) | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 2,100 ([raw](benchmarks/results/city/objects__axi.txt)) | 94.9% |  |
 | List all 502 objects | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 9,494 ([raw](benchmarks/results/city/objects_all__axi.txt)) | 77.1% | MCP call shared with objects |
 | Objects in District05 | 41,531 ([raw, truncated](benchmarks/results/city/objects__mcp.json)) | 540 ([raw](benchmarks/results/city/objects_collection__axi.txt)) | 98.7% | MCP has no collection filter: full list; MCP call shared with objects |
@@ -41,7 +41,7 @@ blender-axi's defaults, so compare per task, not field for field. To reproduce:
 
 | Item | Official MCP, tokens (claude-opus-5-5) | blender-axi, tokens (claude-opus-5-5) | Saving |
 |---|---:|---:|---:|
-| Tool definitions vs. skill text | 7,843 (26 tools, [raw](benchmarks/results/fixed/tools_list__mcp.json)) | 2,381 ([raw](skills/blender-axi/SKILL.md)) | 69.6% |
+| Tool definitions vs. skill text | 7,843 (26 tools, [raw](benchmarks/results/fixed/tools_list__mcp.json)) | 2,594 ([raw](skills/blender-axi/SKILL.md)) | 66.9% |
 
 *The tool-list figure is a lower bound: it is the compact JSON of the server's `tools/list` reply, and real clients serialise tool schemas more verbosely.*
 
@@ -77,7 +77,7 @@ Blender 5.2 LTS is verified. blender-axi finds it via `--blender <path>`, `BLEND
 | Command | What it does |
 |---|---|
 | `blender-axi` | Home view: Blender found, live status, `.blend` files here |
-| `scene [<file>]` | Overview of a .blend file: engine, resolution, frames, camera, object and collection counts (collections include the Scene Collection, e.g. `3 (Scene Collection, Collection, Props)`) |
+| `scene [<file>]` | Overview of a .blend file: engine, resolution, frames, camera, object and collection counts (collections include the Scene Collection, e.g. `3 (Scene Collection, Collection, Props)`); warns when the scene would render black |
 | `new <file.blend> [--template empty\|default] [--force]` | Create a new .blend (empty, or Blender's default Camera, Cube and Light); headless only, refuses to overwrite without `--force`. Build the scene with `apply <steps.json> <file> --in-place` |
 | `add <kind> [<file>] [--name N] [--location x,y,z] [--rotation x,y,z] [--scale x,y,z] [--size n \| --radius n --depth n --segments n] [--collection C] [--type POINT\|SUN\|SPOT\|AREA --energy n] --in-place \| --out <copy.blend>` | Add a cube, plane, sphere, icosphere, cylinder, cone, monkey, camera, light or empty (see [Modeling](#modeling)) |
 | `set <name> [<file>] [--name N] [--location x,y,z] [--rotation x,y,z] [--scale x,y,z] [--parent P\|none] [--collection C] [--hide \| --show] --in-place \| --out <copy.blend>` | Move, rotate, scale, rename, reparent, move to a collection or hide/show one object; reports `changed` |
@@ -89,8 +89,10 @@ Blender 5.2 LTS is verified. blender-axi finds it via `--blender <path>`, `BLEND
 | `apply <steps.json\|-> [<file>] [--check] [--strict] --in-place \| --out <copy.blend> [--force]` | Run many add/set/delete/material/modifier/configure/import steps in ONE Blender start (see [Batch](#batch-apply)); every step is validated first; headless is all-or-nothing, live stops at the failing step |
 | `objects [<file>] [--type T] [--collection C] [--name-contains S] [--limit N] [--fields a,b]` | List objects (name, type, collection, visible); extra columns: location, dimensions, parent, verts, faces, materials, modifiers, data |
 | `object <name> [<file>]` | One object's transform, dimensions, parent/children, materials, modifiers, custom props |
+| `audit [<file>] [--checks a,b] [--object name]... [--collection name] [--strict]` | Check a .blend for asset problems (scale, materials, n-gons, non-manifold edges, unused data, hidden objects, missing files, empty collections, no camera or light); read-only (see [Audit and diff](#audit-and-diff)) |
+| `diff <a> [<b>] [--object n] [--collection c]` | Compare two .blend files (or `<a>` with the open session via `--live`): objects added, removed or changed (transform, visibility, materials, modifiers, custom props) and scene settings |
 | `exec [<file>] --code <python> \| --script <path> --allow-exec [--live]` | Run Python inside Blender; `bpy` is predefined, assign a dict to `result` |
-| `render [<file>] [--frame n \| --frames a..b] [--out path] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--samples n] [--camera name] [--fit [--fit-margin n]] [--format PNG\|JPEG\|…] [--force]` | Render stills or a frame range (default `./<stem>_f####.png`); `--fit` frames all visible geometry without changing the file |
+| `render [<file>] [--frame n \| --frames a..b] [--out path] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--samples n] [--camera name] [--fit [--fit-margin n]] [--auto-light] [--turntable n [--fps n]] [--format PNG\|JPEG\|…] [--force]` | Render stills, a frame range (default `./<stem>_f####.png`) or a turntable; `--fit` frames all visible geometry, `--auto-light` lights an unlit scene temporarily, `--out name.mp4` with `--turntable` writes one H.264 video; the file is never changed (see [Render](#render)) |
 | `export [<file>] --out path [--format glb\|gltf\|fbx\|obj\|stl\|ply\|usd\|usdc\|usda\|abc] [--collection name \| --objects a,b \| --object name…] [--exclude a,b] [--include-hidden] [--no-apply-modifiers] [--dry-run] [--force]` | Export the scene, a collection or objects to a 3D file; modifiers applied and hidden objects skipped by default (see [Export](#export)) |
 | `live` | Check a running Blender (MCP add-on server) and show the open file |
 
@@ -123,7 +125,8 @@ MCP server and in the GUI. With `--live` they change the open session like `exec
 missing collection, while `add --collection` stays strict. For a whole scene use `new` + `apply <steps.json>`: one
 Blender start instead of one per command (about 2.3 s each). `render --fit` frames all visible geometry without changing
 the file and hints the `set <camera> --location …` that keeps the framing; headless without a camera it uses a temporary
-one (`--live` without a camera is `NOT_FOUND`).
+one (`--live` without a camera is `NOT_FOUND`). `scene` and `render` warn `unlit scene` when EEVEE/CYCLES has nothing to
+light the scene; `add light --type SUN` fixes it.
 
 ### Batch (`apply`)
 
@@ -192,6 +195,60 @@ raw meshes (glb, gltf, fbx, obj, stl, ply). usd, usdc, usda and abc always expor
 - The result gains `modifiers` and `skipped`; new flags `--object`, `--exclude`, `--include-hidden`, `--dry-run`.
 - `modifier … boolean` needs `--cutter` (or its alias `--object`) unless `--remove`.
 - `apply --check` no longer needs the file; unknown top-level keys in the steps document produce a warning.
+
+### Render
+
+If the scene is unlit (EEVEE or CYCLES with no light, no world background and no emissive material) `render` still
+renders but adds `warning: unlit scene …` and a hint. `--auto-light` lights such a scene for that render with a
+temporary Sun, plus a grey world fill only when the file has no world; both are removed afterwards and nothing is
+saved. On an already lit scene it is a no-op with a note (`auto_light: not needed (scene is lit)`). It works headless
+and with `--live` (also together with `--fit`); in a GUI session `unsaved_changes` may read true afterwards although
+every temporary datablock is removed again.
+
+`--turntable N` renders N stills of the current frame (the scene animation is frozen) with the camera orbited 360
+degrees about the Z axis through the centre of the visible geometry; `--fit` runs first, and `--auto-light` combines
+with it. The stills are `name_####.png` (`#` is the step number). `--out name.mp4` instead encodes the same stills into
+one H.264 mp4 through a temporary video-sequencer scene (`--fps`, default 12; mp4 only for `--turntable`, not for
+`--frames` ranges). The camera and everything else are put back afterwards, headless and `--live` (a camera is
+required in `--live`, as with `--fit`).
+
+```
+blender-axi render scene.blend --turntable 12 --fit --auto-light --out turn.mp4 --fps 24
+```
+
+### Audit and diff
+
+`audit` runs read-only checks over a .blend in one Blender start (about 1 s on a 500-object scene) and prints a
+`findings` table (check, level, count, items; at most 5 items per row, `--full` shows all) plus a `status`. It always
+exits 0; `--strict` exits 1 when a warn-level finding exists and still prints the report. `--checks` selects checks,
+`--object`/`--collection` limit the objects and skip the scene-level checks, `--live` audits the open session.
+
+| check | level | what it flags |
+|---|---|---|
+| camera | warn | no scene camera |
+| lighting | warn | EEVEE/CYCLES scene with no light, world background or emissive material (renders black) |
+| scale | warn | any non-unit object scale (`Name (2,2,2)`, negative flagged) |
+| materials | warn | mesh/curve/text objects with no material |
+| nonmanifold | warn | meshes with non-manifold edges |
+| files | warn | image or library files that are missing on disk |
+| ngons | info | faces with more than 4 corners |
+| loose | info | vertices without edges |
+| unused | info | datablocks with zero users |
+| visibility | info | hidden or render-disabled objects |
+| collections | info | empty collections |
+
+`diff` compares two .blend files object by object and reports objects added, removed or changed (type, parent,
+collections, location, rotation, scale, dimensions, visibility, materials, modifiers with their settings, custom
+properties), then the scene settings (engine, resolution, frames, fps, camera, world). Objects are matched by name
+only, so a rename shows as one removed and one added. Headless it starts Blender twice (about 2-3 s each) and compares
+in plain Python; nothing is written. `diff <file> --live` compares the file with the open session. Tables are cut at
+20 rows; `--full` shows all. `--object` (repeatable) and `--collection` restrict the comparison.
+
+**Changed in 0.6.0**
+- `scene` prints two hints (`objects` plus one of `add camera` / `add light` / `render`) and warns on an unlit scene.
+- `render` warns on an unlit scene; new `--auto-light`, `--turntable N`, `--fps` and mp4 output for turntables.
+- New commands: `audit` (11 read-only asset checks; `--strict` exits 1 on warn findings) and `diff` (two .blend files,
+  or a file with the open session).
 
 ## Live mode
 

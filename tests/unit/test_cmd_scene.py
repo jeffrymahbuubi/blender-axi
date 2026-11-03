@@ -18,7 +18,11 @@ SUMMARY = {
     "fps": 24, "fps_base": 1.0, "camera": "Camera", "object_count": 5,
     "types": {"CAMERA": 1, "MESH": 2, "LIGHT": 1, "EMPTY": 1},
     "collections": ["Props"], "materials": ["Material"], "is_dirty": True,
+    "lighting": {"engine": "BLENDER_EEVEE", "needs_light": True, "lights": ["Light"], "world": "World",
+                 "emissive": [], "unlit": False},
 }
+UNLIT = {"engine": "BLENDER_EEVEE", "needs_light": True, "lights": [], "world": "none", "emissive": [], "unlit": True}
+UNLIT_TEXT = "unlit scene: no light, no world background and no emissive material; EEVEE renders black"
 
 
 class FakeTransport:
@@ -60,13 +64,11 @@ def test_scene_shape_and_order(blend_dir):
     assert d["camera"] == "Camera"
     assert d["objects"] == "5 (MESH 2, CAMERA 1, EMPTY 1, LIGHT 1)"
     assert d["collections"] == "2 (Scene Collection, Props)" and d["materials"] == "1 (Material)"
-    assert "unsaved_changes" not in d
+    assert "unsaved_changes" not in d and "warning" not in d
     op, params, blend, timeout = t.calls[0]
     assert op == "scene_summary" and params == {} and blend == (blend_dir / "basic.blend").resolve()
     assert [h.split("`")[1] for h in res.help] == [
-        "blender-axi objects <file>", "blender-axi render <file> --out <path.png>",
-        "blender-axi configure <file> --engine CYCLES --resolution 1920x1080 --in-place",
-        "blender-axi export <file> --out <path.glb>"]
+        "blender-axi objects <file>", "blender-axi render <file> --out <path.png>"]
     toon.encode({**res.data, "help": res.help})  # encodable
 
 
@@ -93,9 +95,58 @@ def test_scene_live(blend_dir):
     assert t.calls[0][2] is None
     assert res.data["file"] == "C:/x/basic.blend" and res.data["unsaved_changes"] is True
     assert res.help[0] == "Run `blender-axi objects --live --port 9877` to list objects"
-    assert [h for h in res.help if "configure" in h] == [
-        "Run `blender-axi configure --engine CYCLES --resolution 1920x1080 --in-place --live --port 9877` "
-        "to change these settings"]
+    assert len(res.help) == 2 and res.help[1] == "Run `blender-axi render --out <path.png> --live --port 9877` to render a still"
+
+
+def test_scene_hint_camera_none_wins_over_unlit(blend_dir):
+    r = dict(SUMMARY, camera=None, lighting=UNLIT)
+    res = invoke(scene.SPEC, [], FakeTransport(r))
+    assert len(res.help) == 2
+    assert res.help[1] == ("Run `blender-axi add camera <file> --location 7,-7,5 --rotation 63.6,0,46.7 --in-place` "
+                           "(render needs a camera)")
+    assert res.data["warning"] == UNLIT_TEXT
+
+
+def test_scene_hint_unlit_adds_light(blend_dir):
+    res = invoke(scene.SPEC, [], FakeTransport(dict(SUMMARY, lighting=UNLIT)))
+    assert res.data["warning"] == UNLIT_TEXT
+    assert list(res.data)[-2:] == ["materials", "warning"]
+    assert len(res.help) == 2
+    assert res.help[1] == "Run `blender-axi add light <file> --type SUN --in-place` (render would be black)"
+    toon.encode({**res.data, "help": res.help})
+
+
+def test_scene_hint_lit_renders_and_no_warning(blend_dir):
+    res = invoke(scene.SPEC, [], FakeTransport())
+    assert "warning" not in res.data
+    assert res.help[1] == "Run `blender-axi render <file> --out <path.png>` to render a still"
+
+
+def test_scene_live_drops_in_place_from_hints(blend_dir):
+    res = invoke(scene.SPEC, ["--live"], FakeTransport(dict(SUMMARY, lighting=UNLIT)))
+    assert res.help[1] == "Run `blender-axi add light --type SUN --live` (render would be black)"
+    res = invoke(scene.SPEC, ["--live", "--port", "9877"], FakeTransport(dict(SUMMARY, camera=None)))
+    assert res.help[1] == ("Run `blender-axi add camera --location 7,-7,5 --rotation 63.6,0,46.7 --live --port 9877` "
+                           "(render needs a camera)")
+    assert "--in-place" not in "".join(res.help)
+
+
+def test_scene_warning_merges_with_transport_warnings(blend_dir):
+    res = invoke(scene.SPEC, ["--live"], FakeTransport(dict(SUMMARY, lighting=UNLIT), warnings=["Blender 4.2 untested"]))
+    assert res.data["warning"] == f"{UNLIT_TEXT}; Blender 4.2 untested"
+    assert list(res.data)[-2:] == ["warning", "unsaved_changes"]
+
+
+def test_scene_without_lighting_key_does_not_crash(blend_dir):
+    r = {k: v for k, v in SUMMARY.items() if k != "lighting"}
+    res = invoke(scene.SPEC, [], FakeTransport(r))
+    assert "warning" not in res.data and len(res.help) == 2
+
+
+def test_scene_workbench_never_warns(blend_dir):
+    r = dict(SUMMARY, engine="BLENDER_WORKBENCH", lighting=dict(UNLIT, engine="BLENDER_WORKBENCH", needs_light=False,
+                                                                  unlit=False))
+    assert "warning" not in invoke(scene.SPEC, [], FakeTransport(r)).data
 
 
 def test_scene_live_file_uses_forward_slashes(blend_dir):
@@ -161,7 +212,7 @@ def test_unknown_flag_exit_2(blend_dir):
 
 # -- op with a fake bpy ----------------------------------------------------------------------------
 
-def test_op_scene_summary(fake_bpy):
+def test_op_scene_summary(fake_bpy, monkeypatch):
     obj = lambda n, t: types.SimpleNamespace(name=n, type=t)  # noqa: E731
     sc = types.SimpleNamespace(
         name="S", objects=[obj("a", "MESH"), obj("b", "MESH"), obj("c", "CAMERA")], camera=obj("c", "CAMERA"),
@@ -173,7 +224,11 @@ def test_op_scene_summary(fake_bpy):
     fake_bpy.data.materials = [types.SimpleNamespace(name="M")]
     fake_bpy.data.filepath = "f.blend"
     fake_bpy.data.is_dirty = True
+    seen = []
+    monkeypatch.setattr(op_scene_summary.lighting, "assess",
+                        lambda bpy, scene: seen.append((bpy, scene)) or {"unlit": False, "marker": 1})
     r = op_scene_summary.run({})
+    assert r["lighting"] == {"unlit": False, "marker": 1} and seen == [(fake_bpy, sc)]
     assert r["types"] == {"MESH": 2, "CAMERA": 1} and r["object_count"] == 3 and r["camera"] == "c"
     assert r["collections"] == ["K"] and r["materials"] == ["M"] and r["is_dirty"] is True
     assert r["engine"] == "CYCLES" and (r["res_x"], r["res_y"], r["percent"]) == (8, 4, 50)

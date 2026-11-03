@@ -82,7 +82,7 @@ def test_acceptance_story_and_rerun_writes_nothing(capsys, basic):
     _, scene = axi(capsys, "scene", basic)
     assert scene["engine"] == "CYCLES" and scene["resolution"] == "1920x1080@100%"
     assert scene["frames"] == "1-48 (current 1)" and scene["fps"] == 30 and scene["camera"] == "Cam"
-    assert any("configure" in h for h in scene["help"])
+    assert len(scene["help"]) == 2  # 0.6.0 U1: objects + one conditional hint (the configure hint was dropped)
 
     before = stamps(basic)
     code, data = axi(capsys, *args)

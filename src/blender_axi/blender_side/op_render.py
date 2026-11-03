@@ -3,8 +3,12 @@
 params: out (absolute path or `name_####.png` template), frames (list[int] | None = current frame),
 engine (WORKBENCH|EEVEE|CYCLES | None), resolution ([w, h] | None), percent, samples, camera,
 format (image format enum | None), force, fit (bool), fit_margin (float >= 1), temp_camera_ok (bool: headless
-may use a temporary camera when the scene has none). `fit` frames all visible geometry (see `camera_fit`)
-and the camera is put back afterwards.
+may use a temporary camera when the scene has none), auto_light (bool: light an unlit scene with a temporary Sun
+and, when the file has no world, a grey world fill; see `auto_light`). `fit` frames all visible geometry (see
+`camera_fit`) and the camera is put back afterwards; the result always carries `lighting` (see `lighting`).
+turntable (int | None: render that many stills of the current frame with the camera orbited around the visible
+geometry, see `turntable`), video ({out, fps, frames_dir} | None: with `turntable`, write the stills into
+`frames_dir` and encode them into the mp4 `out`, see `video`).
 
 Pure-Python helpers (`output_paths`, `ENGINE_IDS`, `EXT_FORMATS`) have no `bpy` dependency; the CLI
 imports them so the write-refusal pre-check and the op agree on every path.
@@ -13,7 +17,7 @@ imports them so the write-refusal pre-check and the op agree on every path.
 import os
 import re
 
-from . import camera_fit
+from . import auto_light, camera_fit, lighting, turntable, video
 from .ops import OpError
 
 ENGINE_IDS = {"WORKBENCH": "BLENDER_WORKBENCH", "EEVEE": "BLENDER_EEVEE", "CYCLES": "CYCLES"}
@@ -151,7 +155,8 @@ def _restore(scene, snap: dict) -> list[str]:
     return failures
 
 
-def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState") -> dict:
+def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState", light_state: "auto_light.AutoLightState",
+            orbit_state: "turntable.OrbitState") -> dict:
     render = scene.render
 
     if params.get("engine"):
@@ -177,25 +182,44 @@ def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState") -> dict:
     elif scene.camera is None:
         raise OpError("NOT_FOUND", "scene has no active camera")
 
+    lit = lighting.assess(bpy, scene)  # after the fit (a temporary camera exists) and before any temporary light
+    light = None
+    if params.get("auto_light"):
+        light = auto_light.apply(bpy, scene, light_state) if lit["unlit"] else {"applied": False, "sun": None, "fill": None}
+
     fmt = params.get("format") or EXT_FORMATS.get(os.path.splitext(params["out"])[1].lower(), "PNG")
     render.image_settings.file_format = fmt
     render.use_file_extension = False  # write exactly the path we computed
 
-    frames = params.get("frames") or [scene.frame_current]
-    files = output_paths(params["out"], frames)
+    n_turn = params.get("turntable")
+    vid = params.get("video") if n_turn else None
+    if n_turn:
+        frames = list(range(1, int(n_turn) + 1))  # step numbers, not scene frames: the scene stays on its current frame
+        target = vid["out"] if vid else None
+        files = ([os.path.join(vid["frames_dir"], f"turn_{i:04d}.png") for i in frames] if vid
+                 else output_paths(params["out"], frames, multi=True))
+    else:
+        frames = params.get("frames") or [scene.frame_current]
+        target = None
+        files = output_paths(params["out"], frames)
     if not params.get("force"):
-        existing = [f for f in files if os.path.exists(f)]
+        existing = [f for f in ([target] if vid else files) if os.path.exists(f)]
         if existing:
             raise OpError("WRITE_REFUSED", f"output exists: {existing[0]}")
-    for f in files:
+    steps = turntable.plan(bpy, scene, int(n_turn), orbit_state) if n_turn else None  # before anything is written
+    for f in files + ([target] if vid else []):
         os.makedirs(os.path.dirname(os.path.abspath(f)), exist_ok=True)
 
-    for frame, path in zip(frames, files):
-        scene.frame_set(frame)
+    for i, (frame, path) in enumerate(zip(frames, files)):
+        if steps is not None:
+            turntable.apply(bpy, steps[i])  # the current frame stays: no frame_set
+        else:
+            scene.frame_set(frame)
         render.filepath = path
         bpy.ops.render.render(write_still=True)
         if not os.path.isfile(path):
-            raise OpError("OP_FAILED", f"Blender rendered frame {frame} but wrote no file at {path}")
+            what = "turntable step" if steps is not None else "frame"
+            raise OpError("OP_FAILED", f"Blender rendered {what} {frame} but wrote no file at {path}")
 
     scale = render.resolution_percentage / 100
     result = {
@@ -206,9 +230,20 @@ def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState") -> dict:
         "samples": _effective_samples(scene),
         "samples_ignored": samples_ignored,
         "format": fmt,
+        "lighting": lit,
     }
     if fit is not None:
         result["fit"] = fit
+    if light is not None:
+        result["auto_light"] = light
+    if n_turn:
+        result["turntable"] = {"steps": int(n_turn), "centre": [round(v, 4) for v in orbit_state.centre],
+                               "camera": scene.camera.name}
+        if vid:
+            movie = video.encode(bpy, files, vid["out"], int(vid["fps"]),
+                                 (int(render.resolution_x * scale), int(render.resolution_y * scale)))
+            result["files"] = [vid["out"]]
+            result["video"] = {"codec": movie["codec"], "fps": int(vid["fps"]), "size_bytes": movie["size_bytes"]}
     return result
 
 
@@ -218,10 +253,14 @@ def run(params: dict) -> dict:
     scene = bpy.context.scene
     snap = _snapshot(scene)
     fit_state = camera_fit.FitState()
+    light_state = auto_light.AutoLightState()
+    orbit_state = turntable.OrbitState()
     try:
-        result = _render(bpy, scene, params, fit_state)  # the result is computed from the render settings, before restoring
+        result = _render(bpy, scene, params, fit_state, light_state, orbit_state)  # the result is computed from the render settings, before restoring
     finally:
         failures = _restore(scene, snap)  # also on failure; never masks the original exception
+        failures += light_state.undo(bpy, scene)  # the temporary Sun and world fill; scene.world is not in the snapshot
+        failures += orbit_state.undo(bpy)  # the orbit wraps the fitted matrix, so it is undone before the fit
         failures += fit_state.undo(bpy)  # after scene.camera is back: a temporary camera is deleted, a fitted one moved back
     if failures:
         result["restore_warnings"] = failures

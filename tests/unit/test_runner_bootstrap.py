@@ -240,6 +240,7 @@ def test_scene_summary_reports_the_marker_as_unsaved_changes(world, saved_file):
     scene = world.context.scene
     scene.name, scene.objects, scene.camera = "Scene", [], None
     scene.collection = SimpleNamespace(children_recursive=[])
+    scene.world = None  # lighting.assess reads it (0.6.0)
     scene.render = SimpleNamespace(engine="X", resolution_x=1, resolution_y=1, resolution_percentage=100, fps=24,
                                    fps_base=1.0)
     scene.frame_start = scene.frame_end = 1

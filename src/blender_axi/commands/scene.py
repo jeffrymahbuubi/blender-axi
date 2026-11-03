@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..blender_side import lighting
 from ..spec import CommandSpec, Invocation, Positional, Result
 from ._common import Hints, names_summary, posix_path, resolve_blend, with_warnings
 
@@ -37,14 +38,19 @@ def run(inv: Invocation) -> Result:
         "collections": names_summary(["Scene Collection", *r["collections"]]),
         "materials": names_summary(r["materials"]),
     }
+    unlit = lighting.warning(r["lighting"], data["engine"]) if r.get("lighting") else None
+    with_warnings(data, [*([unlit] if unlit else []), *out.warnings])
     if inv.globals.live:
         data["unsaved_changes"] = bool(r.get("is_dirty"))
-    with_warnings(data, out.warnings)
-    help_ = [f"Run `{hints.cmd('objects <file>')}` to list objects",
-             f"Run `{hints.cmd('render <file> --out <path.png>')}` to render a still",
-             f"Run `{hints.cmd('configure <file> --engine CYCLES --resolution 1920x1080 --in-place')}` to change these settings",
-             f"Run `{hints.cmd('export <file> --out <path.glb>')}` to export the scene"]
-    return Result(data=data, help=help_)
+    ip = "" if inv.globals.live else " --in-place"
+    if data["camera"] == "none":
+        nxt = (f"Run `{hints.cmd(f'add camera <file> --location 7,-7,5 --rotation 63.6,0,46.7{ip}')}` "
+               "(render needs a camera)")
+    elif unlit:
+        nxt = f"Run `{hints.cmd(f'add light <file> --type SUN{ip}')}` (render would be black)"
+    else:
+        nxt = f"Run `{hints.cmd('render <file> --out <path.png>')}` to render a still"
+    return Result(data=data, help=[f"Run `{hints.cmd('objects <file>')}` to list objects", nxt])
 
 
 SPEC = CommandSpec(

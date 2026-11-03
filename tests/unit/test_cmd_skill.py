@@ -80,6 +80,7 @@ def test_description_mentions_new_live_and_modeling():
     assert "assign materials with typed commands" in skill.SKILL_DESCRIPTION
     assert "import glb/fbx/obj/stl assets" in skill.SKILL_DESCRIPTION
     assert "(`apply`)" in skill.SKILL_DESCRIPTION
+    assert "diff two .blend files, render a turntable" in skill.SKILL_DESCRIPTION
 
 
 def test_install_text_is_git_url_and_never_pypi(fake_registry):

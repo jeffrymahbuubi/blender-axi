@@ -21,6 +21,8 @@ SKILL_DESCRIPTION = (
     "export glb/fbx/obj/stl, run a Blender Python script headlessly, create a new .blend, "
     "add, move or delete objects and assign materials with typed commands (no exec gate), "
     "add modifiers, import glb/fbx/obj/stl assets, persist scene settings, "
+    "audit a .blend for asset problems (scale, materials, n-gons, unused data, missing files), "
+    "diff two .blend files, render a turntable, "
     "or run many modeling steps from a JSON file in one Blender start (`apply`), "
     "or run Python inside an open Blender (`--live`)."
 )

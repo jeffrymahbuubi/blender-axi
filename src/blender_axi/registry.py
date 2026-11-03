@@ -16,6 +16,8 @@ COMMANDS: dict[str, str] = {
     "apply": "blender_axi.commands.apply:SPEC",
     "objects": "blender_axi.commands.objects:SPEC",
     "object": "blender_axi.commands.objects:OBJECT_SPEC",
+    "audit": "blender_axi.commands.audit:SPEC",
+    "diff": "blender_axi.commands.diff:SPEC",
     "render": "blender_axi.commands.render:SPEC",
     "export": "blender_axi.commands.export:SPEC",
     "exec": "blender_axi.commands.exec_cmd:SPEC",

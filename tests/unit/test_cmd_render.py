@@ -245,7 +245,7 @@ def make_scene(bpy, engine="BLENDER_EEVEE", camera=True):
     render = types.SimpleNamespace(engine=engine, resolution_x=1920, resolution_y=1080, resolution_percentage=100,
                                    filepath="/user/own.png", use_file_extension=True, image_settings=FakeImageSettings())
     scene = types.SimpleNamespace(render=render, camera=object() if camera else None, frame_current=5,
-                                  frame_subframe=0.0, cycles=types.SimpleNamespace(samples=128),
+                                  frame_subframe=0.0, objects=[], world=None, cycles=types.SimpleNamespace(samples=128),
                                   eevee=types.SimpleNamespace(taa_render_samples=64), frames_set=[])
 
     def frame_set(frame, subframe=0.0):

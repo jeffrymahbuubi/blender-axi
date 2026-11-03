@@ -45,13 +45,17 @@ def test_scene_basic(transport, basic):
     assert d["objects"] == "5 (MESH 2, CAMERA 1, EMPTY 1, LIGHT 1)"
     assert d["collections"] == "3 (Scene Collection, Collection, Props)" and d["materials"].startswith("1 (")
     assert d["engine"] in {"EEVEE", "CYCLES", "WORKBENCH"}
-    assert "unsaved_changes" not in d
+    assert "unsaved_changes" not in d and "warning" not in d
+    assert len(res.help) == 2 and res.help[1].startswith("Run `blender-axi render ")
     toon.encode({**d, "help": res.help})
 
 
 def test_scene_empty(transport, empty):
-    d = invoke(cmd_scene.SPEC, [empty], transport).data
+    res = invoke(cmd_scene.SPEC, [empty], transport)
+    d = res.data
     assert d["objects"] == "0" and d["camera"] == "none" and d["collections"] == "1 (Scene Collection)"
+    assert d["warning"].startswith("unlit scene: ") and d["warning"].endswith(f"{d['engine']} renders black")
+    assert len(res.help) == 2 and res.help[1].startswith("Run `blender-axi add camera ")  # camera wins over unlit
 
 
 def test_objects_default(transport, basic):

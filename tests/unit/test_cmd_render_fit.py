@@ -190,7 +190,7 @@ def make_world(bpy, objects, camera, engine="BLENDER_WORKBENCH"):
     scene_objects = list(objects) + ([camera] if camera is not None else [])
     scene = types.SimpleNamespace(render=render, camera=camera, frame_current=1, frame_subframe=0.0,
                                   cycles=types.SimpleNamespace(samples=8),
-                                  eevee=types.SimpleNamespace(taa_render_samples=8), objects=scene_objects,
+                                  eevee=types.SimpleNamespace(taa_render_samples=8), objects=scene_objects, world=None,
                                   collection=types.SimpleNamespace(objects=Collection(scene_objects)))
     scene.frame_set = lambda frame, subframe=0.0: setattr(scene, "frame_current", frame)
     bpy.context.scene = scene

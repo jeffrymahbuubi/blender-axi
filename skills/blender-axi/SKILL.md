@@ -1,6 +1,6 @@
 ---
 name: blender-axi
-description: Inspect, render, export and script Blender (.blend) files from the terminal with the blender-axi CLI. Use when asked what is in a .blend file, to list its objects, render a still or frames, export glb/fbx/obj/stl, run a Blender Python script headlessly, create a new .blend, add, move or delete objects and assign materials with typed commands (no exec gate), add modifiers, import glb/fbx/obj/stl assets, persist scene settings, or run many modeling steps from a JSON file in one Blender start (`apply`), or run Python inside an open Blender (`--live`).
+description: Inspect, render, export and script Blender (.blend) files from the terminal with the blender-axi CLI. Use when asked what is in a .blend file, to list its objects, render a still or frames, export glb/fbx/obj/stl, run a Blender Python script headlessly, create a new .blend, add, move or delete objects and assign materials with typed commands (no exec gate), add modifiers, import glb/fbx/obj/stl assets, persist scene settings, audit a .blend for asset problems (scale, materials, n-gons, unused data, missing files), diff two .blend files, render a turntable, or run many modeling steps from a JSON file in one Blender start (`apply`), or run Python inside an open Blender (`--live`).
 ---
 
 # blender-axi
@@ -27,7 +27,9 @@ Install with `uv tool install git+https://github.com/jeffrymahbuubi/blender-axi`
 | `apply` | Run many add/set/delete/material/modifier/configure/import steps on a .blend in one Blender start (or the open session with --live) | `blender-axi apply steps.json scene.blend --in-place` |
 | `objects` | List objects in a .blend file (name, type, collection, visible) with optional filters and columns | `blender-axi objects scene.blend` |
 | `object` | Details of one object: transform, dimensions, parent/children, materials, modifiers, custom props | `blender-axi object Cube scene.blend` |
-| `render` | Render a frame or frame range of a .blend to image files | `blender-axi render scene.blend --engine WORKBENCH --resolution 640x360 --out preview.png` |
+| `audit` | Check a .blend for asset problems: unapplied scale, missing materials, n-gons, non-manifold edges, unused data, hidden or render-disabled objects, missing files, empty collections, no camera or light | `blender-axi audit scene.blend` |
+| `diff` | Compare two .blend files: objects added, removed or changed (transform, visibility, materials, modifiers) and scene settings | `blender-axi diff v1.blend v2.blend` |
+| `render` | Render a frame, frame range or turntable (png or mp4) of a .blend to image files | `blender-axi render scene.blend --engine WORKBENCH --resolution 640x360 --out preview.png` |
 | `export` | Export a scene, collection or objects to glb, fbx, obj, stl, ply, usd or abc | `blender-axi export scene.blend --out model.glb` |
 | `exec` | Run Python inside Blender on a .blend, or the open session with --live (requires --allow-exec; original only changed with --in-place) | `blender-axi exec scene.blend --code "result={'n': len(bpy.data.objects)}" --allow-exec` |
 | `skill` | Agent skill file: `skill gen` writes it, `skill gen --check` verifies it | `blender-axi skill gen` |

@@ -1,4 +1,6 @@
-"""`scene_summary`: one-call overview of the active scene (settings, camera, object/collection counts)."""
+"""`scene_summary`: one-call overview of the active scene (settings, camera, object/collection counts, lighting)."""
+
+from . import lighting
 
 
 def run(params: dict) -> dict:
@@ -34,5 +36,6 @@ def run(params: dict) -> dict:
         "types": types,
         "collections": collections,
         "materials": [m.name for m in bpy.data.materials],
+        "lighting": lighting.assess(bpy, scene),
         "is_dirty": session.unsaved_changes(bpy),  # dirty flag or a valid blender-axi marker (live)
     }
