@@ -80,7 +80,7 @@ def run(params: dict) -> dict:
         objects = objects[: max(int(limit), 0)]
 
     fields = [f for f in (params.get("fields") or []) if f in FIELDS]
-    users = usage.modifier_users(bpy) if "used_by" in fields else {}
+    users = usage.users(bpy) if "used_by" in fields else {}
     rows = []
     for obj in objects:
         row = {"name": obj.name, "type": obj.type, "collections": [c.name for c in obj.users_collection],

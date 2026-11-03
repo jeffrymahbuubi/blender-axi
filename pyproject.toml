@@ -32,6 +32,7 @@ blender-axi = "blender_axi.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+showcase = ["pillow>=11"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

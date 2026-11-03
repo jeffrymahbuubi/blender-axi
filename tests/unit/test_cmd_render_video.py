@@ -226,10 +226,25 @@ def test_plain_range_png_is_unchanged(work):
     assert "sheet" not in res.data and "video" not in res.data
 
 
+def test_no_labels_sets_the_sheet_labels_param(work):
+    _, t = invoke(["scene.blend", "--turntable", "4", "--sheet", "--no-labels", "--out", "s.png"])
+    assert t.calls[0][1]["sheet"]["labels"] is False
+    _, t = invoke(["scene.blend", "--turntable", "4", "--sheet", "--out", "s.png", "--force"])
+    assert t.calls[0][1]["sheet"]["labels"] is True
+    _, t = invoke(["scene.blend", "--turntable", "4", "--sheet", "--labels", "--out", "s.png", "--force"])
+    assert t.calls[0][1]["sheet"]["labels"] is True
+
+
+def test_no_labels_needs_sheet(work):
+    fails(["--frames", "1..3", "--no-labels", "--out", "x_####.png"], "--no-labels applies to --sheet")
+    fails(["--turntable", "4", "--no-labels", "--out", "x.mp4"], "--no-labels applies to --sheet")
+
+
 def test_flags_are_declared():
     from blender_axi import helptext
 
     flags = {f["flag"].split()[0]: f for f in helptext.render(cmd.SPEC)["flags"]}
+    assert "--no-labels" in flags["--labels"]["help"] and "numbers" in flags["--labels"]["help"]
     assert "--sheet" in flags and "scene fps" in flags["--fps"]["help"] and "12" in flags["--fps"]["help"]
 
 
@@ -388,3 +403,18 @@ def test_op_compose_failure_still_restores_the_scene(fake_bpy, monkeypatch):
     with pytest.raises(OpError, match="contact sheet failed"):
         op_render.run({"out": str(out), "force": True, "frames": [1, 2], "sheet": {"out": str(out), "cols": 2, "frames_dir": str(op_dir() / "bf")}})
     assert scene.frame_current == 7 and scene.render.use_file_extension is True
+
+
+def test_op_sheet_without_labels_composes_with_labels_none(fake_bpy, monkeypatch):
+    make_scene(fake_bpy, monkeypatch)
+    seen = []
+    def spy(bpy, files, target, cols, labels="unset"):
+        seen.append(labels)
+        return {"path": target, "cols": cols, "rows": 1, "width": 96, "height": 48, "size_bytes": 1, "tiles": len(files)}
+
+    monkeypatch.setattr(sheet, "compose", spy)
+    out = op_dir() / "nolab.png"  # labels False -> None; True or absent -> the frame numbers
+    for key, want in (({"labels": False}, None), ({"labels": True}, ["1", "2"]), ({}, ["1", "2"])):
+        op_render.run({"out": str(out), "force": True, "frames": [1, 2],
+                       "sheet": {"out": str(out), "cols": 2, "frames_dir": str(op_dir() / "nl"), **key}})
+        assert seen.pop() == want

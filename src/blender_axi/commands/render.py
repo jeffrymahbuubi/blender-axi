@@ -200,6 +200,9 @@ def run(inv: Invocation) -> Result:
 
     blend, inferred = resolve_blend_inferred(inv, "render")
     sheet = bool(flags.get("sheet"))
+    if flags.get("labels") is False and not sheet:
+        raise invalid("--no-labels applies to --sheet",
+                      ["Example: blender-axi render <file> --turntable 12 --fit --sheet --no-labels --out sheet.png"])
     ranged = flags.get("frames") is not None  # a `--frames` range (not a single `--frame`)
     out, fmt = _resolve_out(inv, blend, turn is not None or ranged, sheet, turn is not None)
     mp4 = os.path.splitext(out)[1].lower() in VIDEO_EXTS
@@ -235,7 +238,8 @@ def run(inv: Invocation) -> Result:
                                "fps": int(fps) if fps is not None else (_DEFAULT_FPS if turn is not None else None)}
         else:
             n = turn if turn is not None else len(frames)
-            params["sheet"] = {"out": out, "cols": grid(n)[0], "frames_dir": str(run_dir)}
+            params["sheet"] = {"out": out, "cols": grid(n)[0], "frames_dir": str(run_dir),
+                               "labels": flags.get("labels") is not False}
     try:
         outcome = _transport_render(inv, params, blend, fit)
     finally:
@@ -366,6 +370,7 @@ SPEC = CommandSpec(
              "geometry minus a ground plane)"),
         Flag("--sheet", "bool", help="Write one contact-sheet image (grid of all frames, each tile numbered) instead of N files "
              "(--turntable or --frames; --out name.png, .jpg, .webp, .exr, .tif, .bmp or .tga)"),
+        Flag("--labels", "bool", default=True, help="Number the sheet tiles (default); --no-labels writes the grid without numbers"),
         Flag("--fps", "int", help="Frames per second of the mp4 (default: 12 for --turntable, the scene fps for --frames)"),
         Flag("--format", "str", choices=_FORMATS, help="Image format (default: from the --out extension)"),
         Flag("--force", "bool", help="Overwrite existing output files"),

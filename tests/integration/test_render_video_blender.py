@@ -6,6 +6,7 @@ the mp4 frame count read from its `stsz` box, the contact sheet compared pixel b
 ASSUMED A3 outcome: the sheet's tile 1 equals the first still within 1/255 per channel (byte PNG -> pixels -> new image ->
 PNG round-trips without a colour-space shift): asserted for the first and the last tile, no colour-space fix was needed.
 ASSUMED A5 outcome: `Image.save()` honours `file_format` for JPEG as for PNG (the file starts with the JPEG magic bytes).
+0.9.0 plan U3 (A3): `--no-labels` leaves the tile corner equal to the still (max_diff <= 1, no black box).
 0.8.0 plan U3 (K5, K6, A5): every tile carries its number in a black box with white digits (asserted on the PNG: the box
 corner is pure 0,0,0 and the box holds pure 255,255,255 pixels), and `--out sheet.<ext>` is verified by magic bytes for
 jpg, webp, exr, tif, bmp and tga (the other formats are not decoded here).
@@ -214,6 +215,27 @@ def test_range_sheet_numbers_every_rendered_tile(capsys, work, wide):  # 0.8.0 U
     # frames 3, 4 and 5 are different digits: the three label boxes are not all identical
     boxes = [[[px[:3] for px in r[:LABEL_COLS]] for r in tile_rgba(sheet, c, r_)[:LABEL_ROWS]] for c, r_ in ((0, 0), (1, 0), (0, 1))]
     assert boxes[0] != boxes[1] and boxes[1] != boxes[2] and boxes[0] != boxes[2]
+
+
+def test_no_labels_sheet_has_no_number_box(capsys, work, wide):  # 0.9.0 U3, A3: the corner block equals the still
+    out = work / "plain.png"
+    runs_before = set(leftover_run_dirs())
+    code, data = axi(capsys, "--keep-tmp", *render_args(wide, out, "--frames", "1..2", "--sheet", "--no-labels"))
+    assert code == 0, data
+    kept = [p for p in leftover_run_dirs() if p not in runs_before]
+    try:
+        assert data["rendered"] == "2 frames -> 1 sheet" and data["sheet"].startswith("2x1 tiles, 96x48, ")
+        assert any("--frames <a..b> --sheet --out <sheet.png>" in h for h in data["help"])  # hints unchanged: no --no-labels echo
+        sheet, stills = read_png(out), sorted((paths.tmp_root() / "runs" / kept[0]).glob("frame_*.png"))
+        assert len(kept) == 1 and len(stills) == 2
+        for col, still in enumerate(stills):
+            block = [r[:LABEL_COLS] for r in tile(sheet, col, 0)[:LABEL_ROWS]]
+            ref = [[px[:3] for px in r[:LABEL_COLS]] for r in read_png(still)[:LABEL_ROWS]]
+            assert max_diff(block, ref) <= 1  # A3: no black box, the pixels are the still's
+            assert not any(px == (255, 255, 255) for r in block for px in r)  # a label would put white digits here
+    finally:
+        for name in kept:
+            shutil.rmtree(paths.tmp_root() / "runs" / name, ignore_errors=True)
 
 
 def tile_rgba(rows, col: int, row: int):

@@ -382,6 +382,28 @@ def test_op_detail_used_by(scene_bpy):
     assert op_object_detail.run({"name": "Cube"})["used_by"] == []
 
 
+def with_constraint(bpy):
+    """Give Camera a Track To constraint whose target is Anchor (Obj has no `constraints` attribute otherwise)."""
+    cam = next(o for o in bpy.data.objects if o.name == "Camera")
+    anchor = next(o for o in bpy.data.objects if o.name == "Anchor")
+    struct = types.SimpleNamespace(identifier="Object", base=types.SimpleNamespace(identifier="ID", base=None))
+    props = [types.SimpleNamespace(identifier="target", type="POINTER", fixed_type=struct)]
+    cam.constraints = [types.SimpleNamespace(name="Track To", target=anchor,
+                                             bl_rna=types.SimpleNamespace(properties=props))]
+
+
+def test_op_list_used_by_includes_constraints_and_cli_joins_them(scene_bpy):
+    with_boolean(scene_bpy)
+    with_constraint(scene_bpy)
+    result = op_objects_list.run({"fields": ["used_by"]})
+    rows = {x["name"]: x for x in result["rows"]}
+    assert rows["Anchor"]["used_by"] == ["Ball (Boolean)", "Camera (Track To)"]
+    assert rows["Camera"]["used_by"] == [] and rows["Cube"]["used_by"] == []
+    res = invoke(cmd.OBJECTS_SPEC, ["--fields", "used_by"], FakeTransport(result))
+    assert {o["name"]: o["used_by"] for o in res.data["objects"]}["Anchor"] == "Ball (Boolean), Camera (Track To)"
+    assert op_object_detail.run({"name": "Anchor"})["used_by"] == ["Ball (Boolean)", "Camera (Track To)"]
+
+
 def test_op_list_unknown_collection(scene_bpy):
     with pytest.raises(OpError) as e:
         op_objects_list.run({"collection": "Nope"})

@@ -88,11 +88,11 @@ Blender 5.2 LTS is verified. blender-axi finds it via `--blender <path>`, `BLEND
 | `import <source> [<file>] [--format F] [--collection C] [--new] --in-place \| --out <copy.blend>` | Import glb, gltf, fbx, obj, stl, ply, usd or abc into a .blend (or a new one with `--new --out x.blend`, or the open session with `--live`); `--collection C` puts the objects in C, creating it when missing |
 | `apply <steps.json\|-> [<file>] [--check] [--strict] --in-place \| --out <copy.blend> [--force]` | Run many add/set/delete/material/modifier/configure/import steps in ONE Blender start (see [Batch](#batch-apply)); every step is validated first; headless is all-or-nothing, live stops at the failing step |
 | `objects [<file>] [--type T] [--collection C] [--name-contains S] [--limit N] [--fields a,b]` | List objects (name, type, collection, visible); extra columns: location, dimensions, parent, verts, faces, materials, modifiers, data, used_by |
-| `object <name> [<file>]` | One object's transform, dimensions, parent/children, `used_by` (modifiers of other objects that point at it, or `none`), materials, modifiers, custom props |
+| `object <name> [<file>]` | One object's transform, dimensions, parent/children, `used_by` (modifiers, object constraints and collection instancers of other objects that point at it, or `none`), materials, modifiers, custom props |
 | `audit [<file>] [--checks a,b] [--object name]... [--collection name] [--strict]` | Check a .blend for asset problems (scale, materials, n-gons, non-manifold edges, unused data, hidden objects, missing files, empty collections, no camera or light); read-only (see [Audit and diff](#audit-and-diff)) |
 | `diff <a> [<b>] [--object n] [--collection c]` | Compare two .blend files (or `<a>` with the open session via `--live`): objects added, removed or changed (transform, visibility, materials, modifiers, custom props) and scene settings |
 | `exec [<file>] --code <python> \| --script <path> --allow-exec [--live]` | Run Python inside Blender; `bpy` is predefined, assign a dict to `result` |
-| `render [<file>] [--frame n \| --frames a..b] [--out path] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--samples n] [--camera name] [--fit [--fit-margin n]] [--auto-light] [--turntable n [--subject a,b]] [--sheet] [--fps n] [--format PNG\|JPEG\|…] [--force]` | Render stills, a frame range (default `./<stem>_f####.png`) or a turntable that aims at its subject (a ground plane is left out); `--fit` frames all visible geometry, `--auto-light` lights an unlit scene temporarily, `--out name.mp4` with `--turntable` or `--frames` writes one H.264 video, `--sheet` one contact-sheet image; the file is never changed (see [Render](#render)) |
+| `render [<file>] [--frame n \| --frames a..b] [--out path] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--samples n] [--camera name] [--fit [--fit-margin n]] [--auto-light] [--turntable n [--subject a,b]] [--sheet [--no-labels]] [--fps n] [--format PNG\|JPEG\|…] [--force]` | Render stills, a frame range (default `./<stem>_f####.png`) or a turntable that aims at its subject (a ground plane is left out); `--fit` frames all visible geometry, `--auto-light` lights an unlit scene temporarily, `--out name.mp4` with `--turntable` or `--frames` writes one H.264 video, `--sheet` one contact-sheet image; the file is never changed (see [Render](#render)) |
 | `export [<file>] --out path [--format glb\|gltf\|fbx\|obj\|stl\|ply\|usd\|usdc\|usda\|abc] [--collection name \| --objects a,b \| --object name…] [--exclude a,b] [--include-hidden] [--no-apply-modifiers] [--dry-run] [--force]` | Export the scene, a collection or objects to a 3D file; modifiers applied and hidden objects skipped by default (see [Export](#export)) |
 | `live` | Check a running Blender (MCP add-on server) and show the open file |
 
@@ -223,7 +223,8 @@ of N files: `ceil(sqrt(N))` columns, tiles in reading order, empty tiles transpa
 `<stem>_sheet.png`, or `<stem>_turn_sheet.png` for a turntable; `.jpg`, `.webp`, `.exr`, `.tif`, `.bmp` and `.tga` work
 too). Every tile is numbered in its top-left corner (the step number for `--turntable`, the scene frame for `--frames`),
 so "frame 7 looks wrong" can be re-rendered with `--frame 7`; the white-on-black number scales with the tile and is
-left out when the tile is too small. The stills of an mp4 or a sheet go to a temporary run dir that is cleaned
+left out when the tile is too small. `--no-labels` leaves the numbers out and writes the plain grid (only with
+`--sheet`; elsewhere it is an error). The stills of an mp4 or a sheet go to a temporary run dir that is cleaned
 afterwards (`--keep-tmp` keeps them).
 
 ```
@@ -261,8 +262,17 @@ in plain Python; nothing is written. `diff <file> --live` compares the file with
 20 rows; `--full` shows all. `--object` (repeatable) and `--collection` restrict the comparison. A bevel's width is
 reported once: `width`, or `width_pct` when the offset type is percent.
 
-`objects --fields used_by` names the modifiers that use an object as cutter, mirror or offset object (`Ring (Boolean)`),
-so helper objects stand out; `object` always shows it.
+`objects --fields used_by` names what depends on an object: modifiers (cutter, mirror or offset object,
+`Ring (Boolean)`), object constraints (`Cam (Track To)`, incl. a custom-space object) and collection instancers
+(`Inst (instance of Parts)`), so helper objects stand out; `object` always shows it.
+
+**Changed in 0.9.0**
+- `used_by` now also lists object constraints (`target`, `pole_target`, `space_object`, `camera`, `depth_object`,
+  armature targets) as `Owner (Constraint)` and collection instancers as `Owner (instance of Collection)`; owners are
+  sorted by name, then modifiers, constraints and the instance. The mirror, array and boolean pointers are verified on
+  real Blender. Files without constraints or instancers print exactly as before.
+- `render --sheet --no-labels` writes the contact sheet without tile numbers (default stays numbered; `--no-labels`
+  without `--sheet` exits 2).
 
 **Changed in 0.8.0**
 - `render --fit` / `--turntable` place a parented camera correctly (the fit location was written as a world value into
@@ -330,7 +340,8 @@ add-on, GPL-3.0-or-later, https://projects.blender.org/lab/blender_mcp (commit d
 - `--full` — do not truncate long text fields (default cut at 1500 chars)
 - `--debug` — print tracebacks and Blender stderr to stderr
 - `--keep-tmp` — keep per-run temp directories under `.tmp/`
-- `--blender <path>` — Blender executable (or set `BLENDER_AXI_BLENDER`)
+- `--blender <path>` — Blender executable (or set `BLENDER_AXI_BLENDER`). Hints never repeat `--blender`: set
+  `BLENDER_AXI_BLENDER` to make it stick; under `--live` the flag is ignored (no Blender is started).
 - `--user-prefs` — headless only: load your preferences and add-ons instead of `--factory-startup`; not valid with `--live`
 - `--timeout <seconds>` — override timeouts (default 120, render 600, live 300)
 - `--live` — talk to a running Blender instead of starting one
