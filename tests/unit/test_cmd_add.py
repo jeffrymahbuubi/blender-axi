@@ -72,18 +72,19 @@ def test_spec_shape():
     assert [p.name for p in cmd.SPEC.positionals] == ["kind", "file"] and cmd.SPEC.positionals[1].required is False
     names = [f.name for f in cmd.SPEC.flags]
     assert names == ["--name", "--location", "--rotation", "--scale", "--size", "--radius", "--depth", "--segments",
-                     "--collection", "--type", "--energy", "--in-place", "--out", "--force"]
+                     "--minor-radius", "--minor-segments", "--dimensions", "--collection", "--type", "--energy", "--in-place", "--out", "--force"]
     assert next(f for f in cmd.SPEC.flags if f.name == "--type").choices == ("POINT", "SUN", "SPOT", "AREA")
-    assert op_add.KINDS == ("cube", "plane", "sphere", "icosphere", "cylinder", "cone", "monkey", "camera", "light", "empty")
+    assert op_add.KINDS == ("cube", "plane", "sphere", "icosphere", "cylinder", "cone", "monkey", "torus", "camera", "light",
+                           "empty")
 
 
 # -- validation -------------------------------------------------------------------------------------------------------
 
 def test_unknown_kind_lists_the_kinds(work):
     t = Fake()
-    err, _ = fails(["torus", "scene.blend", "--in-place"], t)
+    err, _ = fails(["donut", "scene.blend", "--in-place"], t)
     assert err.code == "VALIDATION_ERROR" and err.exit_code == 2 and t.calls == []
-    assert "unknown kind 'torus'" in err.message and "cube, plane, sphere" in err.message and "monkey" in err.message
+    assert "unknown kind 'donut'" in err.message and "cube, plane, sphere" in err.message and "monkey" in err.message
 
 
 def test_kind_is_case_insensitive(work):
@@ -95,8 +96,8 @@ def test_kind_is_case_insensitive(work):
     ("cylinder", "--size", "1", "--size applies to cube and plane"),
     ("sphere", "--depth", "1", "--depth applies to cylinder and cone"),
     ("cube", "--depth", "1", "--depth applies to cylinder and cone"),
-    ("cube", "--radius", "1", "--radius applies to sphere, icosphere, cylinder and cone"),
-    ("plane", "--segments", "8", "--segments applies to sphere, icosphere, cylinder and cone"),
+    ("cube", "--radius", "1", "--radius applies to sphere, icosphere, cylinder, cone and torus"),
+    ("plane", "--segments", "8", "--segments applies to sphere, icosphere, cylinder, cone and torus"),
     ("cube", "--type", "SUN", "--type applies to light"),
     ("camera", "--energy", "3", "--energy applies to light"),
 ])
@@ -146,7 +147,8 @@ def test_params_shape_defaults_to_none(work):
     call = t.calls[0]
     assert call["op"] == "add" and call["params"] == {
         "kind": "cube", "name": None, "location": None, "rotation_deg": None, "scale": None, "size": None,
-        "radius": None, "depth": None, "segments": None, "collection": None, "light_type": None, "energy": None}
+        "radius": None, "depth": None, "segments": None, "minor_radius": None, "minor_segments": None,
+        "dimensions": None, "collection": None, "light_type": None, "energy": None}
     assert call["blend"] == (WORK / "scene.blend").resolve() and call["save"] == SaveSpec("in_place", str(call["blend"]))
 
 
@@ -156,8 +158,8 @@ def test_params_passthrough_with_degrees(work):
                    "--out", "o.blend"])
     assert t.calls[0]["params"] == {
         "kind": "cylinder", "name": "Pipe", "location": [1.0, 2.0, 3.0], "rotation_deg": [0.0, 0.0, 90.0],
-        "scale": [1.0, 1.0, 2.0], "size": None, "radius": 0.5, "depth": 3.0, "segments": 16, "collection": "Props",
-        "light_type": None, "energy": None}
+        "scale": [1.0, 1.0, 2.0], "size": None, "radius": 0.5, "depth": 3.0, "segments": 16, "minor_radius": None,
+        "minor_segments": None, "dimensions": None, "collection": "Props", "light_type": None, "energy": None}
     assert t.calls[0]["save"] == SaveSpec("copy", str((WORK / "o.blend").resolve()))
 
 
@@ -304,6 +306,9 @@ class StubBmesh(types.ModuleType):
         outer = self
 
         class Bm:
+            verts = types.SimpleNamespace(new=lambda co: co)  # the sphere/torus builders add vertices and faces
+            faces = types.SimpleNamespace(new=lambda vs: vs)
+
             def to_mesh(self, mesh):
                 mesh.vertices, mesh.polygons = list(range(8)), list(range(6))
 
@@ -313,7 +318,7 @@ class StubBmesh(types.ModuleType):
         self.new = Bm
         self.ops = types.SimpleNamespace(**{
             n: (lambda name: lambda bm, **kw: calls.append((name, kw)))(n)
-            for n in ("create_cube", "create_grid", "create_uvsphere", "create_icosphere", "create_cone", "create_monkey")})
+            for n in ("create_cube", "create_grid", "create_uvsphere", "create_icosphere", "create_cone", "create_monkey", "scale")})
 
 
 @pytest.fixture
@@ -343,14 +348,13 @@ def world(fake_bpy, monkeypatch):
 
 def add_op(**params):
     base = {k: None for k in ("name", "location", "rotation_deg", "scale", "size", "radius", "depth", "segments",
-                              "collection", "light_type", "energy")}
+                              "minor_radius", "minor_segments", "dimensions", "collection", "light_type", "energy")}
     return op_add.run({**base, **params})
 
 
 @pytest.mark.parametrize("kind,expected_op,kwargs,name", [
     ("cube", "create_cube", {"size": 2.0}, "Cube"),
     ("plane", "create_grid", {"x_segments": 1, "y_segments": 1, "size": 1.0}, "Plane"),
-    ("sphere", "create_uvsphere", {"u_segments": 32, "v_segments": 16, "radius": 1.0}, "Sphere"),
     ("icosphere", "create_icosphere", {"subdivisions": 2, "radius": 1.0}, "Icosphere"),
     ("cylinder", "create_cone", {"cap_ends": True, "cap_tris": False, "segments": 32, "radius1": 1.0, "radius2": 1.0,
                                  "depth": 2.0}, "Cylinder"),
@@ -369,22 +373,15 @@ def test_op_kind_to_bmesh_op_and_defaults(world, kind, expected_op, kwargs, name
 def test_op_params_reach_bmesh(world):
     add_op(kind="plane", size=6)
     add_op(kind="cube", size=3)
-    add_op(kind="sphere", radius=0.5, segments=8)
     add_op(kind="icosphere", radius=2, segments=3)
     add_op(kind="cylinder", radius=0.5, depth=3, segments=12)
     add_op(kind="cone", radius=0.25, depth=1)
     c = {n: kw for n, kw in world.calls if n != "view_layer.update"}
     assert c["create_grid"]["size"] == 3.0 and c["create_cube"]["size"] == 3.0
-    assert c["create_uvsphere"] == {"u_segments": 8, "v_segments": 4, "radius": 0.5}
     assert c["create_icosphere"] == {"subdivisions": 3, "radius": 2.0}
     cones = [kw for n, kw in world.calls if n == "create_cone"]
     assert cones[0]["segments"] == 12 and cones[0]["radius2"] == 0.5 and cones[0]["depth"] == 3.0
     assert cones[1]["radius1"] == 0.25 and cones[1]["radius2"] == 0.0 and cones[1]["depth"] == 1.0
-
-
-def test_op_small_uv_sphere_keeps_two_rings(world):
-    add_op(kind="sphere", segments=3)
-    assert world.calls[0][1]["v_segments"] == 2
 
 
 def test_op_transform_name_and_view_layer_update(world):
@@ -460,7 +457,7 @@ def test_op_missing_collection_is_not_found_and_creates_nothing(world):
 
 def test_op_unknown_kind_or_light_type(world):
     with pytest.raises(OpError) as exc:
-        add_op(kind="torus")
+        add_op(kind="donut")
     assert exc.value.code == "OP_FAILED"
     with pytest.raises(OpError):
         add_op(kind="light", light_type="LASER")

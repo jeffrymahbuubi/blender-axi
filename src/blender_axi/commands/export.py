@@ -48,6 +48,17 @@ def _modifiers_text(res: dict) -> str:
     return res["modifiers"]
 
 
+def _also_text(rows: list[dict]) -> str:
+    """`1 empty (Grp)` / `2 empties (Grp, Rig), 1 camera (Cam)`: non-geometry objects the format writes."""
+    parts = []
+    for kind, singular, plural in (("EMPTY", "empty", "empties"), ("CAMERA", "camera", "cameras")):
+        names = [r["name"] for r in rows if r["type"] == kind]
+        if names:
+            n, _, rest = names_summary(names).partition(" ")
+            parts.append(f"{n} {singular if len(names) == 1 else plural} {rest}")
+    return ", ".join(parts)
+
+
 def _replay(inv: Invocation, out_raw: str) -> str:
     """The same export without --dry-run (the hint after a dry run)."""
     f = inv.flags
@@ -67,6 +78,8 @@ def _replay(inv: Invocation, out_raw: str) -> str:
         parts += ["--exclude", quote_name(",".join(f["exclude"]))]
     if f.get("include_hidden"):
         parts.append("--include-hidden")
+    if f.get("cameras"):
+        parts.append("--cameras")
     if not f.get("apply_modifiers", True):
         parts.append("--no-apply-modifiers")
     if f.get("force"):
@@ -76,7 +89,7 @@ def _replay(inv: Invocation, out_raw: str) -> str:
 
 def _dry_run_result(inv: Invocation, res: dict, outcome, out_raw: str, file_name: str | None) -> Result:
     geometry = [row["name"] for row in res["export_set"]]
-    rows = res["export_set"] if inv.globals.full else res["export_set"][:SET_ROWS]
+    rows = res["export_set"] if (inv.globals.full or inv.globals.json) else res["export_set"][:SET_ROWS]
     data: dict = {}
     if file_name:
         data["file"] = file_name
@@ -84,7 +97,11 @@ def _dry_run_result(inv: Invocation, res: dict, outcome, out_raw: str, file_name
     data["dry_run"] = True
     data["would_export"] = names_summary(geometry)
     data["export_set"] = rows
+    if res.get("also"):
+        data["also"] = _also_text(res["also"])
     data["skipped"] = _skipped_text(res["skipped_hidden"], res["excluded"])
+    if res.get("triangles") is not None:
+        data["triangles"] = res["triangles"]
     data["modifiers"] = _modifiers_text(res)
     data["duration_ms"] = outcome.duration_ms
     warnings = ([res["modifiers_note"]] if res.get("modifiers_note") else []) + list(outcome.warnings)
@@ -108,6 +125,8 @@ def run(inv: Invocation) -> Result:
         out_str += FORMAT_EXTS[flags["format"]][0]
     out = os.path.abspath(os.path.expanduser(out_str))
     fmt = _resolve_format(out, flags.get("format"))
+    if flags.get("cameras") and fmt not in ("glb", "gltf"):
+        raise invalid("--cameras applies to glb and gltf", ["Use --out with a .glb or .gltf extension, or drop --cameras"])
 
     collection = flags.get("collection")
     names = _merged_objects(flags)
@@ -127,7 +146,7 @@ def run(inv: Invocation) -> Result:
     params = {"out": out, "format": fmt, "collection": collection, "objects": names, "exclude": exclude,
               "include_hidden": bool(flags.get("include_hidden")),
               "apply_modifiers": bool(flags.get("apply_modifiers", True)),
-              "dry_run": dry_run, "force": bool(flags.get("force"))}
+              "dry_run": dry_run, "force": bool(flags.get("force")), "cameras": bool(flags.get("cameras"))}
     try:
         outcome = inv.transport.run("export", params, blend=blend, timeout=inv.globals.timeout)
     except AxiError as err:
@@ -149,6 +168,10 @@ def run(inv: Invocation) -> Result:
     data["exported"] = display_path(res["path"])
     data["format"] = res["format"]
     data["objects"] = res["objects"]
+    if res.get("triangles") is not None:
+        data["triangles"] = res["triangles"]
+    if res.get("cameras") is not None:
+        data["cameras"] = names_summary(res["cameras"])
     data["modifiers"] = _modifiers_text(res)
     data["skipped"] = _skipped_text(res.get("skipped_hidden") or [], res.get("excluded") or [])
     data["size_kb"] = round(res["size_bytes"] / 1024, 1)
@@ -178,6 +201,7 @@ SPEC = CommandSpec(
         Flag("--apply-modifiers", "bool", default=True,
              help="Export the evaluated meshes (default); --no-apply-modifiers exports the raw meshes "
                   "(glb, gltf, fbx, obj, stl, ply)"),
+        Flag("--cameras", "bool", help="Also write the cameras (glb, gltf): one glTF camera node per camera in the export set"),
         Flag("--dry-run", "bool", help="Print the export set and write nothing"),
         Flag("--force", "bool", help="Overwrite an existing output file"),
     ),

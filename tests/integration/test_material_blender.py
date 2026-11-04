@@ -140,6 +140,55 @@ def test_light_camera_and_empty_cannot_take_a_material(capsys, basic):
     assert basic.read_bytes() == before and not basic.with_name("basic.blend1").exists()
 
 
+def glb_doc(path: Path) -> dict:
+    raw = path.read_bytes()
+    length, kind = struct.unpack_from("<I4s", raw, 12)
+    assert raw[:4] == b"glTF" and kind == b"JSON"
+    return json.loads(raw[20:20 + length])
+
+
+def test_fourth_colour_value_drives_alpha_and_exports_as_blend(capsys, basic, work):  # 0.10.0 F10
+    code, data = axi(capsys, "material", "Cube", basic, "--name", "Shell", "--color", "0.9,0.55,0.12,0.15", "--in-place")
+    assert code == 0, data
+    assert data["alpha"] == "0.15" and data["color"] == "0.9,0.55,0.12,0.15" and data["object"] == "Cube"
+    code, data = axi(capsys, "export", basic, "--out", work / "s.glb")
+    assert code == 0, data
+    mat = next(m for m in glb_doc(work / "s.glb")["materials"] if m["name"] == "Shell")
+    assert mat["alphaMode"] == "BLEND"
+    assert mat["pbrMetallicRoughness"]["baseColorFactor"][3] == pytest.approx(0.15, abs=1e-3)
+
+
+def test_three_value_colour_leaves_alpha_alone(capsys, basic, work):
+    code, data = axi(capsys, "material", "Cube", basic, "--name", "Solid", "--color", "0.9,0.55,0.12", "--in-place")
+    assert code == 0 and "alpha" not in data
+    axi(capsys, "export", basic, "--out", work / "o.glb")
+    mat = next(m for m in glb_doc(work / "o.glb")["materials"] if m["name"] == "Solid")
+    assert "alphaMode" not in mat and mat["pbrMetallicRoughness"]["baseColorFactor"][3] == 1
+
+
+def test_glob_gives_one_material_to_every_match(capsys, basic):
+    for n in ("Rg3", "Rg1", "Rg2"):
+        code, data = axi(capsys, "add", "cube", basic, "--name", n, "--in-place")
+        assert code == 0, data
+    code, data = axi(capsys, "material", "Rg*", basic, "--name", "Red", "--color", "1,0,0", "--in-place")
+    assert code == 0, data
+    assert data["objects"] == "3 (Rg1, Rg2, Rg3)" and "object" not in data and data["created"] is True
+    code, data = axi(capsys, "exec", basic, "--allow-exec", "--code",
+                     "result = {'slots': {n: [m.name for m in bpy.data.objects[n].data.materials] for n in ('Rg1', 'Rg2', 'Rg3')},"
+                     " 'red': [m.name for m in bpy.data.materials if m.name.startswith('Red')],"
+                     " 'cube': [m.name for m in bpy.data.objects['Cube'].data.materials]}")
+    assert code == 0, data
+    assert data["result"]["slots"] == {"Rg1": ["Red"], "Rg2": ["Red"], "Rg3": ["Red"]}
+    assert data["result"]["red"] == ["Red"] and data["result"]["cube"] == ["Material"]
+
+
+def test_glob_without_a_match_is_not_found(capsys, basic):
+    before = basic.read_bytes()
+    code, data = axi(capsys, "material", "Region*", basic, "--name", "X", "--in-place")
+    assert code == 1 and data["code"] == "NOT_FOUND" and data["error"] == "no object matches 'Region*'"
+    assert basic.read_bytes() == before
+
+
 def test_unknown_object_is_not_found(capsys, basic):
     before = basic.read_bytes()
     code, data = axi(capsys, "material", "Cub", basic, "--name", "X", "--in-place")

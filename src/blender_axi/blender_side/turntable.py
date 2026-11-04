@@ -52,6 +52,18 @@ def centre(coords: list[float]) -> tuple[float, float, float]:
     return tuple((min(a) + max(a)) / 2 for a in axes)
 
 
+def sweep(coords: list[float], c, n: int) -> list[float]:
+    """The flat `coords` rotated by `Rz(-2*pi*i/n)` about `c` for every step i (0.10.0 K6): the camera at step i viewing
+    the subject equals the step-1 camera viewing these points, so fitting them frames every step. `n * len(coords)` long."""
+    out: list[float] = []
+    for i in range(n):
+        cos, sin = math.cos(2 * math.pi * i / n), math.sin(2 * math.pi * i / n)
+        for k in range(0, len(coords), 3):
+            dx, dy = coords[k] - c[0], coords[k + 1] - c[1]
+            out += [c[0] + cos * dx + sin * dy, c[1] - sin * dx + cos * dy, coords[k + 2]]
+    return out
+
+
 def orbit_rows(m0: list, c, angle: float) -> list[list[float]]:
     """`T(c) · Rz(angle) · T(-c) · M0` for a 4x4 matrix given as rows; pure Python."""
     cos, sin = math.cos(angle), math.sin(angle)

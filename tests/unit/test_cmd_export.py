@@ -173,7 +173,9 @@ class Lookup(dict):
 
 
 @pytest.fixture
-def scene(fake_bpy):
+def scene(fake_bpy, monkeypatch):
+    fake_bpy.context.evaluated_depsgraph_get = lambda: "depsgraph"  # 0.10.0: `triangles`; tris.py has its own tests
+    monkeypatch.setattr(op_export.tris, "triangles", lambda obj, depsgraph=None: 0)
     cube, ball, anchor, cam = FakeObj("Cube"), FakeObj("Ball"), FakeObj("Anchor", "EMPTY"), FakeObj("Camera", "CAMERA")
     objs = [cube, cam, ball, anchor]
     fake_bpy.context.scene = types.SimpleNamespace(objects=objs)

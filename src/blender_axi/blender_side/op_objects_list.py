@@ -5,10 +5,10 @@ Result: {filepath, total, matched, rows[{name,type,collections,visible,<fields>}
 (numbers/lists/None); the CLI formats them.
 """
 
-from . import usage
+from . import tris, usage
 from .ops import OpError
 
-FIELDS = ("location", "dimensions", "parent", "verts", "faces", "materials", "modifiers", "data", "used_by")
+FIELDS = ("location", "dimensions", "parent", "verts", "faces", "materials", "modifiers", "data", "used_by", "tris")
 
 
 def _vec(v) -> list:
@@ -22,8 +22,10 @@ def _visible(obj) -> bool:
         return not getattr(obj, "hide_viewport", False)
 
 
-def _field(obj, name: str):
+def _field(obj, name: str, depsgraph=None):
     is_mesh = obj.type == "MESH"
+    if name == "tris":
+        return tris.triangles(obj, depsgraph)
     if name == "location":
         return _vec(obj.location)
     if name == "dimensions":
@@ -81,11 +83,12 @@ def run(params: dict) -> dict:
 
     fields = [f for f in (params.get("fields") or []) if f in FIELDS]
     users = usage.users(bpy) if "used_by" in fields else {}
+    depsgraph = bpy.context.evaluated_depsgraph_get() if "tris" in fields else None
     rows = []
     for obj in objects:
         row = {"name": obj.name, "type": obj.type, "collections": [c.name for c in obj.users_collection],
                "visible": _visible(obj)}
         for f in fields:
-            row[f] = users.get(obj.name, []) if f == "used_by" else _field(obj, f)
+            row[f] = users.get(obj.name, []) if f == "used_by" else _field(obj, f, depsgraph)
         rows.append(row)
     return {"filepath": bpy.data.filepath, "total": total, "matched": matched, "rows": rows}

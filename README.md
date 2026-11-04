@@ -86,7 +86,7 @@ Across models (medians of 5 repeats):
 
 **Where blender-axi wins:** the turntable task (one typed `render --turntable --sheet` command vs a hand-written orbit, compositing and encoding script): about half the tokens and cost on Opus, under 40% on Sonnet, on Haiku about a quarter of the input tokens. **Where it ties or loses:** building a lamp from scratch (one generated script is as cheap as many typed steps), and wall time in general (blender-axi starts Blender per command). **What it got wrong:** on Sonnet the blender-axi agent trusted `audit`, which does not report materials kept alive only by a fake user, and failed `qa_cleanup` 3 of 5 times; that is a blender-axi gap, now on the backlog. **Looks are not scored:** the judge checks files, sizes and scene facts, not beauty; with the same prompt the MCP agents more often chose EEVEE with colour and shadows, the blender-axi agents the cheaper grey WORKBENCH (see the side-by-side images).
 
-Replay GIFs (one frame per tool call), transcripts and every repeat: [Opus](benchmarks/showcase/results/opus/results.md) · [Sonnet](benchmarks/showcase/results/sonnet/results.md) · [Haiku](benchmarks/showcase/results/haiku/results.md). Method and fairness: [benchmarks/showcase/README.md](benchmarks/showcase/README.md).
+Replay GIFs (one frame per tool call), transcripts and every repeat: [Opus](benchmarks/showcase/results/opus/results.md) · [Sonnet](benchmarks/showcase/results/sonnet/results.md) · [Haiku](benchmarks/showcase/results/haiku/results.md). Method and fairness: [benchmarks/showcase/README.md](benchmarks/showcase/README.md). Workflow videos (both arms stacked, one mp4 per model and task): [release showcase-0.9.0](https://github.com/jeffrymahbuubi/blender-axi/releases/tag/showcase-0.9.0).
 <!-- showcase:end -->
 
 ## Install
@@ -116,21 +116,21 @@ Blender 5.2 LTS is verified. blender-axi finds it via `--blender <path>`, `BLEND
 | `blender-axi` | Home view: Blender found, live status, `.blend` files here |
 | `scene [<file>]` | Overview of a .blend file: engine, resolution, frames, camera, object and collection counts (collections include the Scene Collection, e.g. `3 (Scene Collection, Collection, Props)`); warns when the scene would render black |
 | `new <file.blend> [--template empty\|default] [--force]` | Create a new .blend (empty, or Blender's default Camera, Cube and Light); headless only, refuses to overwrite without `--force`. Build the scene with `apply <steps.json> <file> --in-place` |
-| `add <kind> [<file>] [--name N] [--location x,y,z] [--rotation x,y,z] [--scale x,y,z] [--size n \| --radius n --depth n --segments n] [--collection C] [--type POINT\|SUN\|SPOT\|AREA --energy n] --in-place \| --out <copy.blend>` | Add a cube, plane, sphere, icosphere, cylinder, cone, monkey, camera, light or empty (see [Modeling](#modeling)) |
+| `add <kind> [<file>] [--name N] [--location x,y,z] [--rotation x,y,z] [--scale x,y,z] [--size n \| --dimensions x,y,z \| --radius n --depth n --segments n \| --minor-radius n --minor-segments n] [--collection C] [--type POINT\|SUN\|SPOT\|AREA --energy n] --in-place \| --out <copy.blend>` | Add a cube, plane, sphere, icosphere, cylinder, cone, monkey, camera, light or empty (see [Modeling](#modeling)) |
 | `set <name> [<file>] [--name N] [--location x,y,z] [--rotation x,y,z] [--scale x,y,z] [--parent P\|none] [--collection C] [--hide \| --show] --in-place \| --out <copy.blend>` | Move, rotate, scale, rename, reparent, move to a collection or hide/show one object; reports `changed` |
 | `delete <a,b,...> [<file>] --in-place \| --out <copy.blend>` | Delete objects (all or nothing); children stay in place and are listed as `children_kept` |
-| `material <object> [<file>] --name M [--color r,g,b[,a]] [--metallic n] [--roughness n] [--emission r,g,b --emission-strength n] [--slot replace\|add] --in-place \| --out <copy.blend>` | Give a mesh a Principled BSDF material (reused by name, created if missing); replaces slot 0 unless `--slot add` |
+| `material <object\|glob> [<file>] --name M [--color r,g,b[,a]] [--metallic n] [--roughness n] [--emission r,g,b --emission-strength n] [--slot replace\|add] --in-place \| --out <copy.blend>` | Give a mesh a Principled BSDF material (reused by name, created if missing); replaces slot 0 unless `--slot add` |
 | `modifier <object> <kind> [<file>] [--name N] [--width n --segments n --limit NONE\|ANGLE\|WEIGHT --angle deg] [--levels n --render-levels n --simple] [--count n --offset x,y,z --constant x,y,z] [--axis xyz --clip --object O] [--cutter O --operation DIFFERENCE\|UNION\|INTERSECT --solver EXACT\|FLOAT\|MANIFOLD] [--thickness n --offset n --even] [--prop key=value] [--remove] --in-place \| --out <copy.blend>` | Add, configure or remove a modifier: bevel, subdivision, array, mirror, boolean, solidify, or any Blender type as `IDENT --prop key=value`. Upsert by name (a rerun changes nothing); `--remove` deletes; a boolean needs `--cutter` (`--object` is an alias) and a cutter Blender rejects (e.g. a camera) fails with nothing written; the file may come before or after `<kind>` |
 | `configure [<file>] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--frames a..b] [--fps n] [--samples n] [--camera name] [--world r,g,b] [--world-strength n] --in-place \| --out <copy.blend>` | Persist scene settings; needs at least one setting flag; `--samples` warns on WORKBENCH; `--world` creates a world when the file has none |
 | `import <source> [<file>] [--format F] [--collection C] [--new] --in-place \| --out <copy.blend>` | Import glb, gltf, fbx, obj, stl, ply, usd or abc into a .blend (or a new one with `--new --out x.blend`, or the open session with `--live`); `--collection C` puts the objects in C, creating it when missing |
 | `apply <steps.json\|-> [<file>] [--check] [--strict] --in-place \| --out <copy.blend> [--force]` | Run many add/set/delete/material/modifier/configure/import steps in ONE Blender start (see [Batch](#batch-apply)); every step is validated first; headless is all-or-nothing, live stops at the failing step |
-| `objects [<file>] [--type T] [--collection C] [--name-contains S] [--limit N] [--fields a,b]` | List objects (name, type, collection, visible); extra columns: location, dimensions, parent, verts, faces, materials, modifiers, data, used_by |
+| `objects [<file>] [--type T] [--collection C] [--name-contains S] [--limit N] [--fields a,b]` | List objects (name, type, collection, visible); extra columns: location, dimensions, parent, verts, faces, materials, modifiers, data, used_by, tris |
 | `object <name> [<file>]` | One object's transform, dimensions, parent/children, `used_by` (modifiers, object constraints and collection instancers of other objects that point at it, or `none`), materials, modifiers, custom props |
-| `audit [<file>] [--checks a,b] [--object name]... [--collection name] [--strict]` | Check a .blend for asset problems (scale, materials, n-gons, non-manifold edges, unused data, hidden objects, missing files, empty collections, no camera or light); read-only (see [Audit and diff](#audit-and-diff)) |
-| `diff <a> [<b>] [--object n] [--collection c]` | Compare two .blend files (or `<a>` with the open session via `--live`): objects added, removed or changed (transform, visibility, materials, modifiers, custom props) and scene settings |
+| `audit [<file>] [--checks a,b] [--ignore a,b] [--object name]... [--collection name] [--strict \| --fail-on error\|warn]` | Check a .blend for asset problems (scale, materials, n-gons, non-manifold edges, unused data, hidden objects, missing files, empty collections, no camera or light); read-only (see [Audit and diff](#audit-and-diff)) |
+| `diff <a> [<b>] [--object n] [--collection c] [--exit-code]` | Compare two .blend files (or `<a>` with the open session via `--live`): objects added, removed or changed (transform, visibility, materials, modifiers, custom props) and scene settings |
 | `exec [<file>] --code <python> \| --script <path> --allow-exec [--live]` | Run Python inside Blender; `bpy` is predefined, assign a dict to `result` |
-| `render [<file>] [--frame n \| --frames a..b] [--out path] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--samples n] [--camera name] [--fit [--fit-margin n]] [--auto-light] [--turntable n [--subject a,b]] [--sheet [--no-labels]] [--fps n] [--format PNG\|JPEG\|…] [--force]` | Render stills, a frame range (default `./<stem>_f####.png`) or a turntable that aims at its subject (a ground plane is left out); `--fit` frames all visible geometry, `--auto-light` lights an unlit scene temporarily, `--out name.mp4` with `--turntable` or `--frames` writes one H.264 video, `--sheet` one contact-sheet image; the file is never changed (see [Render](#render)) |
-| `export [<file>] --out path [--format glb\|gltf\|fbx\|obj\|stl\|ply\|usd\|usdc\|usda\|abc] [--collection name \| --objects a,b \| --object name…] [--exclude a,b] [--include-hidden] [--no-apply-modifiers] [--dry-run] [--force]` | Export the scene, a collection or objects to a 3D file; modifiers applied and hidden objects skipped by default (see [Export](#export)) |
+| `render [<file>] [--frame n \| --frames a..b] [--out path] [--engine WORKBENCH\|EEVEE\|CYCLES] [--resolution WxH] [--percent n] [--samples n] [--camera name] [--fit [--fit-margin n]] [--auto-light] [--turntable n [--subject a,b]] [--sheet [--no-labels] [--columns n]] [--transparent] [--fps n] [--format PNG\|JPEG\|…] [--force]` | Render stills, a frame range (default `./<stem>_f####.png`) or a turntable that aims at its subject (a ground plane is left out); `--fit` frames all visible geometry, `--auto-light` lights an unlit scene temporarily, `--out name.mp4` with `--turntable` or `--frames` writes one H.264 video, `--sheet` one contact-sheet image; the file is never changed (see [Render](#render)) |
+| `export [<file>] --out path [--format glb\|gltf\|fbx\|obj\|stl\|ply\|usd\|usdc\|usda\|abc] [--collection name \| --objects a,b \| --object name…] [--exclude a,b] [--include-hidden] [--cameras] [--no-apply-modifiers] [--dry-run] [--force]` | Export the scene, a collection or objects to a 3D file; modifiers applied and hidden objects skipped by default (see [Export](#export)) |
 | `live` | Check a running Blender (MCP add-on server) and show the open file |
 
 `<file>` is optional when the current directory has exactly one `.blend` (it is echoed as `file:`).
@@ -163,7 +163,11 @@ missing collection, while `add --collection` stays strict. For a whole scene use
 Blender start instead of one per command (about 2.3 s each). `render --fit` frames all visible geometry without changing
 the file and hints the `set <camera> --location …` that keeps the framing; headless without a camera it uses a temporary
 one (`--live` without a camera is `NOT_FOUND`). `scene` and `render` warn `unlit scene` when EEVEE/CYCLES has nothing to
-light the scene; `add light --type SUN` fixes it.
+light the scene; `add light --type SUN` fixes it. `add cube --dimensions 14,4.4,0.5` bakes the size into the mesh
+(scale stays 1, so glTF nodes and `audit scale` stay clean); `add torus` takes `--radius`, `--minor-radius`,
+`--segments` and `--minor-segments`. `material` accepts a glob for the object (`"Region*"`, case-sensitive) and a 4th
+`--color` value for alpha. `modifier … array --constant x,y,z` is in the object's local units (Blender multiplies it by
+the object's scale); on a scaled object the result warns with the distance in scene units.
 
 ### Batch (`apply`)
 
@@ -208,7 +212,9 @@ The extension of `--out` picks the format.
 (`--object` takes one name verbatim, so use it for names that contain a comma). From the pool the set drops everything
 in `--exclude a,b` and every object hidden in the viewport (`visible: false` in `objects`). Hidden is not excluded:
 `--include-hidden` brings hidden objects back, `--exclude` removes objects whatever their visibility. `--exclude`
-cannot be combined with `--objects`. The result says what was left out, for example `skipped: 1 hidden (Hole), 2 excluded (A, B)`.
+cannot be combined with `--objects`. The result says what was left out, for example `skipped: 1 hidden (Hole), 2 excluded (A, B)`. Every export prints `triangles` (the evaluated meshes; the
+glb's index count / 3), and `--dry-run` also names the Empties the format writes as nodes (`also: 1 empty (Grp)`).
+`--cameras` (glb/gltf) writes camera nodes; Blender `(x, y, z)` becomes glTF `(x, z, -y)`.
 
 **Modifiers.** Modifiers are applied by default, so the file contains what renders. `--no-apply-modifiers` exports the
 raw meshes (glb, gltf, fbx, obj, stl, ply). usd, usdc, usda and abc always export the evaluated scene; with
@@ -261,7 +267,9 @@ of N files: `ceil(sqrt(N))` columns, tiles in reading order, empty tiles transpa
 too). Every tile is numbered in its top-left corner (the step number for `--turntable`, the scene frame for `--frames`),
 so "frame 7 looks wrong" can be re-rendered with `--frame 7`; the white-on-black number scales with the tile and is
 left out when the tile is too small. `--no-labels` leaves the numbers out and writes the plain grid (only with
-`--sheet`; elsewhere it is an error). The stills of an mp4 or a sheet go to a temporary run dir that is cleaned
+`--sheet`; elsewhere it is an error). The grid has the fewest empty tiles, at most twice as wide as high (8 frames give
+4x2); `--columns N` sets any shape. `--transparent` renders with a transparent background (png, webp, exr, tif, bmp
+or tga; not jpg or mp4) and is restored afterwards in `--live`. The stills of an mp4 or a sheet go to a temporary run dir that is cleaned
 afterwards (`--keep-tmp` keeps them).
 
 ```
@@ -273,21 +281,24 @@ blender-axi render scene.blend --frames 1..48 --out clip.mp4
 ### Audit and diff
 
 `audit` runs read-only checks over a .blend in one Blender start (about 1 s on a 500-object scene) and prints a
-`findings` table (check, level, count, items; at most 5 items per row, `--full` shows all) plus a `status`. It always
-exits 0; `--strict` exits 1 when a warn-level finding exists and still prints the report. `--checks` selects checks,
-`--object`/`--collection` limit the objects and skip the scene-level checks, `--live` audits the open session.
+`findings` table (check, level, count, items; at most 5 items per row, `--full` shows all) plus a `status`. Findings have three
+levels: `error` (a missing texture or library file), `warn` and `info`. By default it exits 0; `--fail-on error|warn`
+exits 1 when a finding of that level or worse exists and still prints the report, so it can gate CI (`--strict` is the
+same as `--fail-on warn`). `--checks` selects checks, `--ignore a,b` skips checks you accept (the `checked:` line then
+ends with `(ignored: a, b)`), `--object`/`--collection` limit the objects and skip the scene-level checks, `--live`
+audits the open session.
 
 | check | level | what it flags |
 |---|---|---|
 | camera | warn | no scene camera |
 | lighting | warn | EEVEE/CYCLES scene with no light, world background or emissive material (renders black) |
 | scale | warn | any non-unit object scale (`Name (2,2,2)`, negative flagged) |
-| materials | warn | mesh/curve/text objects with no material |
+| materials | warn | mesh/curve/text objects with no material (render-disabled objects and boolean cutters are skipped) |
 | nonmanifold | warn | meshes with non-manifold edges |
-| files | warn | image or library files that are missing on disk |
+| files | error | image or library files that are missing on disk |
 | ngons | info | faces with more than 4 corners |
 | loose | info | vertices without edges |
-| unused | info | datablocks with zero users |
+| unused | info | datablocks with zero users, or kept alive only by a fake user (`material Spare (fake user)`) |
 | visibility | info | hidden or render-disabled objects |
 | collections | info | empty collections |
 
@@ -297,11 +308,31 @@ properties), then the scene settings (engine, resolution, frames, fps, camera, w
 only, so a rename shows as one removed and one added. Headless it starts Blender twice (about 2-3 s each) and compares
 in plain Python; nothing is written. `diff <file> --live` compares the file with the open session. Tables are cut at
 20 rows; `--full` shows all. `--object` (repeatable) and `--collection` restrict the comparison. A bevel's width is
-reported once: `width`, or `width_pct` when the offset type is percent.
+reported once: `width`, or `width_pct` when the offset type is percent. `diff` exits 0 either way; with `--exit-code`
+it exits 1 when the files differ (as `git diff --exit-code`), the report is still printed.
 
 `objects --fields used_by` names what depends on an object: modifiers (cutter, mirror or offset object,
 `Ring (Boolean)`), object constraints (`Cam (Track To)`, incl. a custom-space object) and collection instancers
-(`Inst (instance of Parts)`), so helper objects stand out; `object` always shows it.
+(`Inst (instance of Parts)`), so helper objects stand out; `object` always shows it. `objects --fields tris` and the
+`tris:` line of `object` give the triangle count of the evaluated mesh (modifiers applied; equal to `export`'s
+`triangles`), so a triangle budget can be checked before exporting.
+
+**Changed in 0.10.0**
+- `audit`: new `error` level (the `files` check), `--fail-on error|warn` and `--ignore a,b`; `--strict` still exits 1
+  on warn or worse, and the status reads `(1 error, N warn, M info)` when an error exists. `unused` now reports
+  fake-user-only datablocks, `materials` no longer warns on render-disabled objects or boolean cutters.
+- `render --sheet`: the grid has the fewest empty tiles, at most twice as wide as high (8 frames: 4x2 instead of 3x3
+  with a black tile; 10 frames stay 4x3); `--columns N` sets any shape. `render --turntable --fit` checks every step, so
+  the camera stands a little further back and the subject stays in frame. New `--transparent` (png/webp/exr/tif/bmp/tga).
+- `export` and `export --dry-run` print `triangles`; the dry run lists Empties as `also:` and `--json --dry-run` no
+  longer stops at 20 rows; new `--cameras` (glb/gltf).
+- `add sphere` is built deterministically: the same steps give byte-identical glbs across Blender starts (vertex and
+  face counts unchanged; the vertex numbering changes once, the seam is now at +X). New `add torus`
+  (`--minor-radius`, `--minor-segments`) and `add cube --dimensions x,y,z` (size baked into the mesh, scale stays 1).
+- `material`: a 4th `--color` value sets the Principled Alpha (translucent in EEVEE/Cycles, glTF `alphaMode: BLEND`;
+  3-value colours unchanged); the object argument may be a glob such as `"Region*"`, also in `apply` steps.
+- `diff --exit-code`; `objects --fields tris` and `object` `tris:`; `BLENDER_AXI_NO_LIVE`; `modifier array --constant`
+  help now says object-local units and a scaled object adds a warning with the scene-unit distance.
 
 **Changed in 0.9.0**
 - `used_by` now also lists object constraints (`target`, `pole_target`, `space_object`, `camera`, `depth_object`,
@@ -379,6 +410,8 @@ add-on, GPL-3.0-or-later, https://projects.blender.org/lab/blender_mcp (commit d
 - `--keep-tmp` — keep per-run temp directories under `.tmp/`
 - `--blender <path>` — Blender executable (or set `BLENDER_AXI_BLENDER`). Hints never repeat `--blender`: set
   `BLENDER_AXI_BLENDER` to make it stick; under `--live` the flag is ignored (no Blender is started).
+- `BLENDER_AXI_NO_LIVE=1` (any value but empty or `0`) — the bare `blender-axi` home view does not probe port 9876 and
+  prints `live: not probed (BLENDER_AXI_NO_LIVE)`; `--live` ignores it.
 - `--user-prefs` — headless only: load your preferences and add-ons instead of `--factory-startup`; not valid with `--live`
 - `--timeout <seconds>` — override timeouts (default 120, render 600, live 300)
 - `--live` — talk to a running Blender instead of starting one

@@ -65,6 +65,29 @@ result = {"objects": len(bpy.context.scene.objects)}
 """
 
 
+EXTRAS = """
+import bpy
+bpy.data.materials.new("Spare").use_fake_user = True
+def bare(name):
+    bpy.ops.mesh.primitive_cube_add(location=(0, 12, 0))
+    bpy.context.active_object.name = name
+    return bpy.context.active_object
+big = bpy.data.objects
+cut_a = bare("CutA")
+cut_a.hide_set(True)
+mod = big["Big0"].modifiers.new("Cut", "BOOLEAN")
+mod.object = cut_a
+cut_b = bare("CutB")
+coll = bpy.data.collections.new("Cutters")
+coll.objects.link(cut_b)
+mod = big["Big1"].modifiers.new("CutC", "BOOLEAN")
+mod.operand_type = "COLLECTION"
+mod.collection = coll
+bare("Naked").hide_render = True
+result = {"users": bpy.data.materials["Spare"].users, "operand": mod.operand_type}
+"""
+
+
 def axi(capsys, *argv):
     code = cli.main(["--json", *map(str, argv)])
     out = capsys.readouterr()
@@ -91,6 +114,18 @@ def stand_in(work):
     script = work / "build.py"
     script.write_text(BUILD, encoding="utf-8")
     assert cli.main(["--json", "new", str(path)]) == 0
+    assert cli.main(["--json", "exec", str(path), "--script", str(script), "--allow-exec", "--in-place"]) == 0
+    return path
+
+
+@pytest.fixture(scope="module")
+def extras(work, stand_in):
+    """A copy of the stand-in with a fake-user material, two boolean cutters (object and collection operand) and a
+    render-off object, none of them with a material. The stand-in itself stays untouched (the live test needs it)."""
+    path = work / "extras.blend"
+    shutil.copy(stand_in, path)
+    script = work / "extras.py"
+    script.write_text(EXTRAS, encoding="utf-8")
     assert cli.main(["--json", "exec", str(path), "--script", str(script), "--allow-exec", "--in-place"]) == 0
     return path
 
@@ -126,6 +161,57 @@ def test_strict_exits_1_and_prints_the_report(capsys, stand_in):
     assert code == 1 and data["status"].endswith("; --strict: exit 1") and "scale" in rows(data)
     code, data = axi(capsys, "audit", stand_in, "--strict", "--checks", "ngons,visibility")
     assert code == 0 and "--strict" not in data["status"]  # info findings only
+
+
+def test_files_is_an_error_level_finding(capsys, stand_in):
+    code, data = axi(capsys, "audit", stand_in)
+    assert code == 0 and rows(data)["files"]["level"] == "error"
+    assert "(1 error, " in data["status"] and "--fail-on" not in data["status"]
+
+
+def test_fail_on_error_exits_1_for_the_missing_image_only(capsys, work, stand_in, fixtures_dir):
+    code, data = axi(capsys, "audit", stand_in, "--fail-on", "error")
+    assert code == 1 and data["status"].endswith("; --fail-on error: exit 1") and "files" in rows(data)
+    code, data = axi(capsys, "audit", stand_in, "--fail-on", "error", "--ignore", "files")
+    assert code == 0 and "files" not in rows(data) and "--fail-on" not in data["status"]
+    code, data = axi(capsys, "audit", fixtures_dir / "basic.blend", "--fail-on", "error")  # warns, but no error
+    assert code == 0 and "materials" in rows(data)
+    clean = work / "no_missing_image.blend"
+    shutil.copy(stand_in, clean)
+    drop = "bpy.data.images.remove(bpy.data.images['Wood.png']); result = {}"
+    assert cli.main(["--json", "exec", str(clean), "--code", drop, "--allow-exec", "--in-place"]) == 0
+    capsys.readouterr()
+    code, data = axi(capsys, "audit", clean, "--fail-on", "error")
+    assert code == 0 and "files" not in rows(data)
+    bad = ("i = bpy.data.images.new('Bad.png', 4, 4); i.source, i.filepath = 'FILE', '//bad_missing.png'; "
+           "i.use_fake_user = True; result = {}")  # an unused image would be purged on save
+    assert cli.main(["--json", "exec", str(clean), "--code", bad, "--allow-exec", "--in-place"]) == 0
+    capsys.readouterr()
+    code, data = axi(capsys, "audit", clean, "--fail-on", "error")
+    assert code == 1 and rows(data)["files"]["items"].startswith("image Bad.png (missing: ")
+    code, data = axi(capsys, "audit", clean, "--strict", "--fail-on", "error")
+    assert code == 2 and data["code"] == "VALIDATION_ERROR"
+
+
+def test_ignore_removes_checks_from_the_run(capsys, stand_in):
+    code, data = axi(capsys, "audit", stand_in, "--ignore", "scale,materials")
+    assert code == 0 and data["checked"] == "9 checks, 16 objects (ignored: scale, materials)"
+    assert "scale" not in rows(data) and "materials" not in rows(data) and "ngons" in rows(data)
+    code, data = axi(capsys, "audit", stand_in, "--ignore", "scale", "--checks", "ngons")
+    assert code == 2 and data["code"] == "VALIDATION_ERROR"
+
+
+def test_fake_user_cutters_and_render_off_objects(capsys, extras):
+    code, data = axi(capsys, "audit", extras)
+    assert code == 0
+    found = rows(data)
+    # F4: a fake user alone leaves users == 1, which 0.9.0 missed
+    assert found["unused"]["items"] == "material Spare (fake user)"
+    # CutA (hidden, object operand), CutB (collection operand) and Naked (render off) have no material and no finding
+    assert found["materials"]["items"] == "Bare"
+    assert "Naked (render off)" in found["visibility"]["items"]  # still reported, by the visibility check
+    code, data = axi(capsys, "audit", extras, "--checks", "materials", "--object", "CutA", "--object", "CutB")
+    assert code == 0 and "findings" not in data  # the --object filter keeps the cutter rule
 
 
 def test_checks_object_filter(capsys, stand_in):

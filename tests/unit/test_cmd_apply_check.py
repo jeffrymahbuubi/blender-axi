@@ -283,3 +283,13 @@ def test_plain_check_never_contacts_blender(work):
     assert t.calls == []
     _, t = invoke([steps_file(work, ["add cube"]), "--check", *LIVE])
     assert t.calls == []
+
+
+def test_strict_material_glob_needs_a_match(work):
+    res, _ = strict(work, ["material Ri* --name Red", "add cube --name RegionA", "material Region* --name Blue"])
+    assert res.data["targets"].startswith("verified")
+    err, _ = fails([steps_file(work, ["material Region* --name Red"]), "scene.blend", "--check", "--strict"], Fake())
+    assert err.code == "NOT_FOUND" and err.message == "step 1 (material): no object matches 'Region*' in scene.blend"
+    assert err.help[-1] == "Fix step 1 in steps.json (nothing ran)"
+    err, _ = fails([steps_file(work, ["delete Ring", "material Ri* --name Red"]), "scene.blend", "--check", "--strict"], Fake())
+    assert err.message == "step 2 (material): no object matches 'Ri*' in scene.blend"

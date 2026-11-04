@@ -314,8 +314,11 @@ def test_op_orders_aim_fit_lighting_plan(fake_bpy, monkeypatch):
     calls = spy(monkeypatch, order)
     res = op_render.run({"out": str(op_dir() / "o_####.png"), "force": True, "turntable": 3, "fit": True})
     assert order == ["aim", "fit", "lighting", "plan"]
-    # the floor is excluded: aim looks at the centre of the table top and the mug, fit and plan get the same corners
-    assert calls["fit"] == calls["plan"] == DESK[1][1] + DESK[2][1]
+    # the floor is excluded: aim looks at the centre of the table top and the mug; plan gets the corners, fit their
+    # sweep over the 3 steps (0.10.0 K6; step 1 is the corners themselves)
+    corners = DESK[1][1] + DESK[2][1]
+    assert calls["plan"] == corners
+    assert calls["fit"] == turntable.sweep(corners, turntable.centre(corners), 3) and calls["fit"][:len(corners)] == corners
     assert calls["aim"] == [0.0, 0.0, 0.95]
     assert res["subject"] == {"mode": "auto", "objects": ["Top", "Mug"], "excluded": ["Floor"], "centre": [0.0, 0.0, 0.95]}
     assert res["aim"] == AIM and res["turntable"]["centre"] == [0.0, 0.0, 0.95]

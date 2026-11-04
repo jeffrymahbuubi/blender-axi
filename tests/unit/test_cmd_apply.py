@@ -255,7 +255,7 @@ def test_flag_parse_errors_are_prefixed_too(work):
     err = fails([steps_file(work, ["add cube --bogus 1"]), "scene.blend", "--in-place"])
     assert err.exit_code == 2 and err.message == "step 1 (add): unknown flag --bogus for `add`"
     err = fails([steps_file(work, ["add cube --segments 3"]), "scene.blend", "--in-place"])
-    assert err.message == "step 1 (add): --segments applies to sphere, icosphere, cylinder and cone"
+    assert err.message == "step 1 (add): --segments applies to sphere, icosphere, cylinder, cone and torus"
 
 
 def test_check_prints_the_plan_without_the_transport(work):

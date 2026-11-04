@@ -15,9 +15,12 @@ from ._common import Hints, fmt_vec, invalid, quote_name, translate_not_found
 # flag key -> the kinds it applies to
 APPLIES: dict[str, tuple[str, ...]] = {
     "size": ("cube", "plane"),
-    "radius": ("sphere", "icosphere", "cylinder", "cone"),
-    "segments": ("sphere", "icosphere", "cylinder", "cone"),
+    "radius": ("sphere", "icosphere", "cylinder", "cone", "torus"),
+    "segments": ("sphere", "icosphere", "cylinder", "cone", "torus"),
     "depth": ("cylinder", "cone"),
+    "minor_radius": ("torus",),
+    "minor_segments": ("torus",),
+    "dimensions": ("cube",),
     "type": ("light",),
     "energy": ("light",),
 }
@@ -31,7 +34,8 @@ def _and(names: tuple[str, ...]) -> str:
 def _positive(inv: Invocation, key: str) -> float | None:
     value = inv.flags.get(key)
     if value is not None and not value > 0:
-        raise invalid(f"--{key} must be greater than 0, got {value:g}", [f"Example: --{key} 1"])
+        flag = key.replace("_", "-")
+        raise invalid(f"--{flag} must be greater than 0, got {value:g}", [f"Example: --{flag} 1"])
     return value
 
 
@@ -44,12 +48,14 @@ def _validate(inv: Invocation) -> str:
     f = inv.flags
     for key, kinds in APPLIES.items():
         if f.get(key) is not None and kind not in kinds:
-            allowed = [f"--{k}" for k, ks in APPLIES.items() if kind in ks]
-            raise invalid(f"--{key} applies to {_and(kinds)}",
+            allowed = [f"--{k.replace('_', '-')}" for k, ks in APPLIES.items() if kind in ks]
+            raise invalid(f"--{key.replace('_', '-')} applies to {_and(kinds)}",
                           [f"Flags for {kind}: " + ", ".join([*allowed, *COMMON])])
     if f.get("name") is not None and not str(f["name"]).strip():
         raise invalid("--name is empty", ["Example: --name Box"])
-    for key in ("size", "radius", "depth"):
+    if f.get("dimensions") is not None and f.get("size") is not None:
+        raise invalid("--dimensions replaces --size", ["Pass one of them: --dimensions 14,4.4,0.5 or --size 2"])
+    for key in ("size", "radius", "depth", "minor_radius"):
         _positive(inv, key)
     if f.get("energy") is not None and f["energy"] < 0:
         raise invalid(f"--energy must be 0 or more, got {f['energy']:g}", ["Example: --energy 3"])
@@ -58,6 +64,8 @@ def _validate(inv: Invocation) -> str:
         if not low <= f["segments"] <= high:
             raise invalid(f"--segments must be {low}-{high} for {kind}, got {f['segments']}",
                           ["--segments is the subdivision level for an icosphere"] if kind == "icosphere" else [])
+    if f.get("minor_segments") is not None and not 3 <= f["minor_segments"] <= 512:
+        raise invalid(f"--minor-segments must be 3-512, got {f['minor_segments']}", ["Example: --minor-segments 12"])
     return kind
 
 
@@ -65,12 +73,16 @@ def _params(inv: Invocation) -> dict:
     """The pure checks plus the `add` op params (shared with `apply`)."""
     kind = _validate(inv)
     f = inv.flags
+    dimensions = _mutate.parse_vec(SPEC, "--dimensions", f.get("dimensions"))
+    if dimensions is not None and not all(v > 0 for v in dimensions):
+        raise invalid(f"--dimensions must all be greater than 0, got {f['dimensions']}", ["Example: --dimensions 14,4.4,0.5"])
     return {
         "kind": kind, "name": f.get("name"),
         "location": _mutate.parse_vec(SPEC, "--location", f.get("location")),
         "rotation_deg": _mutate.parse_vec(SPEC, "--rotation", f.get("rotation")),
         "scale": _mutate.parse_vec(SPEC, "--scale", f.get("scale")),
         "size": f.get("size"), "radius": f.get("radius"), "depth": f.get("depth"), "segments": f.get("segments"),
+        "minor_radius": f.get("minor_radius"), "minor_segments": f.get("minor_segments"), "dimensions": dimensions,
         "collection": f.get("collection"), "light_type": f.get("type"), "energy": f.get("energy"),
     }
 
@@ -125,9 +137,12 @@ SPEC = CommandSpec(
         Flag("--rotation", "str", help="x,y,z Euler rotation in degrees (default 0,0,0)"),
         Flag("--scale", "str", help="x,y,z scale (default 1,1,1)"),
         Flag("--size", "float", help="Edge length of a cube or plane (default 2)"),
-        Flag("--radius", "float", help="Radius of a sphere, icosphere, cylinder or cone (default 1)"),
+        Flag("--radius", "float", help="Radius of a sphere, icosphere, cylinder or cone (default 1); the ring radius of a torus"),
         Flag("--depth", "float", help="Height of a cylinder or cone (default 2)"),
-        Flag("--segments", "int", help="Segments of a sphere, cylinder or cone (default 32, min 3); subdivisions of an icosphere (default 2, 1-6)"),
+        Flag("--segments", "int", help="Segments of a sphere, cylinder or cone (default 32, min 3); subdivisions of an icosphere (default 2, 1-6); ring segments of a torus (default 48)"),
+        Flag("--minor-radius", "float", help="Tube radius of a torus (default 0.25)"),
+        Flag("--minor-segments", "int", help="Segments around the tube of a torus (default 12, 3-512)"),
+        Flag("--dimensions", "str", help="Cube only: x,y,z size baked into the mesh (scale stays 1,1,1); not with --size"),
         Flag("--collection", "str", help="Collection to link it to (default: the active collection)"),
         Flag("--type", "str", choices=LIGHT_TYPES, help="Light type (light only; default POINT)"),
         Flag("--energy", "float", help="Light power in watts (light only)"),

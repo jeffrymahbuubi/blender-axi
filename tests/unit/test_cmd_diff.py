@@ -260,3 +260,22 @@ def test_headless_helper_builds_the_cli_lazy_transport():
 
     t = cmd._headless(GlobalOpts())
     assert isinstance(t, cli._LazyHeadless) and t.name == "headless"
+
+
+def test_exit_code_flag_is_1_on_different_and_0_on_identical():
+    a, b = snap(obj("A")), snap(obj("A", scale=[2.0, 2.0, 2.0]))
+    different = invoke(["a.blend", "b.blend", "--exit-code"], Pair(a, b))
+    assert different.exit_code == 1 and different.data["status"] == "different"
+    assert "objects" in different.data  # the report is still printed
+    same = invoke(["a.blend", "a.blend", "--exit-code"], Pair(a, a))
+    assert same.exit_code == 0 and same.data["status"] == "identical"
+
+
+def test_exit_code_defaults_to_0_without_the_flag():
+    res = invoke(["a.blend", "b.blend"], Pair(snap(obj("A")), snap(obj("B"))))
+    assert res.data["status"] == "different" and res.exit_code == 0
+
+
+def test_exit_code_listed_in_help():
+    flag = next(f for f in cmd.SPEC.flags if f.name == "--exit-code")
+    assert "Exit 1 when the files differ" in flag.help

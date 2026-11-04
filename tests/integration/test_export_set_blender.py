@@ -29,6 +29,13 @@ RECIPE = [
     {"cmd": "add", "kind": "cube", "name": "A,B", "location": [5, 0, 0]},
     "add camera --name Cam --location 0,-8,4 --rotation 65,0,0",
 ]
+GROUP_RECIPE = [
+    "add empty --name Grp",
+    "add cube --name A",
+    "add cube --name B --location 3,0,0",
+    "set A --parent Grp",
+    "set B --parent Grp",
+]
 AXIS_RECIPE = [
     "add cube --name Moved --location 1,2,3 --scale 1,2,3",
     "add cube --name Turned --location 0,0,0 --rotation 90,0,0",
@@ -58,6 +65,11 @@ def build(work):
 @pytest.fixture(scope="module")
 def ring(build):
     return build("ring", RECIPE)
+
+
+@pytest.fixture(scope="module")
+def group(build):
+    return build("group", GROUP_RECIPE)
 
 
 def axi(capsys, *argv):
@@ -187,6 +199,89 @@ def test_gltf_axis_conversion_facts(capsys, build, work):
     assert [round(v, 4) for v in moved["translation"]] == [1, 3, -2]
     assert [round(v, 4) for v in moved["scale"]] == [1, 3, 2]
     assert len(turned["rotation"]) == 4 and abs(turned["rotation"][0]) > 0.5  # 90 degrees about X, quaternion x != 0
+
+
+def index_triangles(doc: dict) -> int:
+    return sum(doc["accessors"][p["indices"]]["count"] // 3 for m in doc["meshes"] for p in m["primitives"])
+
+
+def test_triangles_equal_the_glb_index_count_in_dry_run_and_export(capsys, ring, work):
+    """0.10.0: `triangles` counts the evaluated meshes (boolean applied, hidden cutter evaluated), as the glb has them."""
+    code, dry = axi(capsys, "export", ring, "--out", work / "tri.glb", "--dry-run")
+    assert code == 0, dry
+    assert "also" not in dry and not (work / "tri.glb").exists()  # the camera is not geometry; no Empty in the file
+    out = work / "tri.glb"
+    code, real = axi(capsys, "export", ring, "--out", out)
+    assert code == 0, real
+    expected = index_triangles(glb_json(out))
+    assert dry["triangles"] == real["triangles"] == expected
+    raw = work / "tri_raw.glb"
+    code, raw_data = axi(capsys, "export", ring, "--out", raw, "--no-apply-modifiers")
+    assert raw_data["triangles"] == index_triangles(glb_json(raw)) < expected  # the cut adds triangles
+    print("OBSERVED ring triangles", dry["triangles"], real["triangles"], expected, "raw", raw_data["triangles"])
+
+
+def test_dry_run_lists_the_empty_and_the_glb_writes_it(capsys, group, work):
+    """Y3-6: a parent Empty of the set is a node of a whole-scene glb; the dry run now says so."""
+    blend = group
+    out = work / "group.glb"
+    code, dry = axi(capsys, "export", blend, "--out", out, "--dry-run")
+    assert code == 0, dry
+    assert dry["also"] == "1 empty (Grp)" and dry["would_export"] == "2 (A, B)"
+    assert [r["name"] for r in dry["export_set"]] == ["A", "B"]
+    code, real = axi(capsys, "export", blend, "--out", out)
+    assert code == 0, real
+    doc = glb_json(out)
+    grp = next(n for n in doc["nodes"] if n.get("name") == "Grp")
+    assert set(node_names(doc)) == {"Grp", "A", "B"} and len(grp["children"]) == 2
+    assert real["triangles"] == index_triangles(doc) == 24
+    selected = work / "group_ab.glb"  # F6: the unselected parent is not added by a selective export
+    code, data = axi(capsys, "export", blend, "--out", selected, "--objects", "A,B")
+    assert code == 0 and sorted(node_names(glb_json(selected))) == ["A", "B"], data
+    code, dry = axi(capsys, "export", blend, "--out", work / "g.obj", "--dry-run")
+    assert code == 0 and "also" not in dry  # obj writes no Empty
+    print("OBSERVED Grp node", grp, "nodes", node_names(doc), "triangles", real["triangles"])
+
+
+def test_fbx_whole_scene_writes_the_empty(capsys, group, work):
+    """A1: the fbx exporter writes the Empty of a whole-scene export, so `also` is right for fbx too."""
+    blend = group
+    out = work / "group.fbx"
+    code, data = axi(capsys, "export", blend, "--out", out)
+    assert code == 0, data
+    raw = out.read_bytes()
+    assert b"Grp" in raw
+    code, dry = axi(capsys, "export", blend, "--out", work / "g2.fbx", "--dry-run")
+    assert dry["also"] == "1 empty (Grp)"
+    print("OBSERVED fbx has Grp:", b"Grp" in raw)
+
+
+def test_cameras_flag_writes_the_camera_node(capsys, ring, work):
+    plain = work / "nocam.glb"
+    code, data = axi(capsys, "export", ring, "--out", plain)
+    assert code == 0 and "cameras" not in data and "cameras" not in glb_json(plain), data
+    out = work / "cam.glb"
+    code, data = axi(capsys, "export", ring, "--out", out, "--cameras")
+    assert code == 0 and data["cameras"] == "1 (Cam)", data
+    doc = glb_json(out)
+    cam = next(n for n in doc["nodes"] if n.get("name") == "Cam")
+    assert len(doc["cameras"]) == 1 and "camera" in cam
+    assert [round(v, 4) for v in cam["translation"]] == [0, 4, 8]  # Blender (0, -8, 4) -> (x, z, -y)
+    code, dry = axi(capsys, "export", ring, "--out", work / "cam_dry.glb", "--dry-run", "--cameras")
+    assert dry["also"] == "1 camera (Cam)" and dry["help"][0].endswith("--cameras` to write it")
+    code, data = axi(capsys, "export", ring, "--out", work / "cam.fbx", "--cameras")
+    assert code == 2 and data["code"] == "VALIDATION_ERROR" and "glb and gltf" in data["error"]
+    code, data = axi(capsys, "export", ring, "--out", work / "camsel.glb", "--objects", "Ring,Cam", "--cameras")
+    assert code == 0 and data["cameras"] == "1 (Cam)" and sorted(node_names(glb_json(work / "camsel.glb"))) == ["Cam", "Ring"], data
+    print("OBSERVED Cam node", cam, "camera", doc["cameras"])
+
+
+def test_json_dry_run_lists_every_object(capsys, build, work):
+    recipe = [f"add cube --name C{i:02d} --location {i},0,0" for i in range(23)]
+    blend = build("many", recipe)
+    code, dry = axi(capsys, "export", blend, "--out", work / "many.glb", "--dry-run")
+    assert code == 0 and len(dry["export_set"]) == 23 and dry["would_export"].startswith("23 (")
+    assert not any("--full" in h for h in dry["help"])
 
 
 # --- live: the open session keeps its hide state and selection ----------------------------------------------------

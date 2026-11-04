@@ -2,7 +2,7 @@
 
 params: out (absolute path), format (glb|gltf|fbx|obj|stl|ply|usd|usdc|usda|abc), collection (name | None),
 objects (list[str] | None), exclude (list[str] | None), include_hidden, apply_modifiers (default True),
-dry_run, force.
+dry_run, force, cameras (glb/gltf: also write the cameras).
 
 The export set (0.5.0): pool (scene / collection / named objects) minus `exclude` minus hidden geometry (unless
 `include_hidden`). The whole-scene exporter path is used only when nothing was filtered out of the scene;
@@ -14,6 +14,7 @@ otherwise the selection path (`_select` + `_override`) exports exactly the set.
 import contextlib
 import os
 
+from . import tris
 from .ops import OpError
 
 FORMAT_EXTS = {
@@ -23,9 +24,10 @@ FORMAT_EXTS = {
 }
 GEOMETRY_TYPES = {"MESH", "CURVE", "SURFACE", "META", "FONT", "CURVES", "ARMATURE"}
 EVALUATED_FORMATS = ("usd", "usdc", "usda", "abc")  # no raw-mesh mode: they always export the evaluated scene
+NODE_FORMATS = ("glb", "gltf", "fbx", "usd", "usdc", "usda", "abc")  # formats that write non-geometry nodes (Empties)
 
 
-def _call(bpy, fmt: str, path: str, selected: bool, apply: bool = True) -> None:
+def _call(bpy, fmt: str, path: str, selected: bool, apply: bool = True, cameras: bool = False) -> None:
     """Invoke the format's exporter. Verified operator names/params on Blender 5.2."""
     ops = bpy.ops
     if fmt == "obj":
@@ -33,7 +35,7 @@ def _call(bpy, fmt: str, path: str, selected: bool, apply: bool = True) -> None:
     elif fmt in ("glb", "gltf"):
         ops.export_scene.gltf(
             filepath=path, export_format="GLB" if fmt == "glb" else "GLTF_SEPARATE", use_selection=selected,
-            export_apply=apply)
+            export_apply=apply, export_cameras=bool(cameras))
     elif fmt == "fbx":
         ops.export_scene.fbx(filepath=path, use_selection=selected, use_mesh_modifiers=apply)
     elif fmt == "stl":
@@ -202,6 +204,19 @@ def _export_set(bpy, scene, params: dict) -> dict:
             "whole": objs is None and len(chosen) == len(pool)}
 
 
+def _also(fmt: str, objs: list, cameras: bool) -> list[dict]:
+    """Non-geometry objects of the set that the format writes as nodes: Empties, plus cameras under `cameras`."""
+    types = (("EMPTY",) if fmt in NODE_FORMATS else ()) + (("CAMERA",) if cameras else ())
+    return [{"name": o.name, "type": o.type} for o in objs if o.type in types]
+
+
+def _triangles(bpy, objs: list, fmt: str, apply: bool) -> int:
+    """Triangles the exporter writes: evaluated meshes when modifiers apply (or the format always evaluates)."""
+    evaluated = apply or fmt in EVALUATED_FORMATS
+    depsgraph = bpy.context.evaluated_depsgraph_get() if evaluated else None
+    return sum(tris.triangles(o, depsgraph) or 0 for o in objs)
+
+
 def run(params: dict) -> dict:
     import bpy
 
@@ -217,9 +232,11 @@ def run(params: dict) -> dict:
     modifiers, note = _modifier_mode(fmt, apply)
     hidden_names = [o.name for o in plan["hidden"]]
     geometry = plan["geometry"]
+    cameras = bool(params.get("cameras"))
     if dry_run:
         return {"format": fmt, "dry_run": True, "objects": len(geometry),
                 "export_set": [{"name": o.name, "type": o.type} for o in geometry],
+                "also": _also(fmt, plan["set"], cameras), "triangles": _triangles(bpy, geometry, fmt, apply),
                 "skipped_hidden": hidden_names, "excluded": plan["excluded"],
                 "non_geometry": [o.name for o in plan["set"] if o.type not in GEOMETRY_TYPES],
                 "modifiers": modifiers, "modifiers_note": note}
@@ -247,9 +264,10 @@ def run(params: dict) -> dict:
 
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         with _override(bpy, chosen):
-            _call(bpy, fmt, path, selected, apply)
+            _call(bpy, fmt, path, selected, apply, cameras)
         if not os.path.isfile(path):
             raise OpError("OP_FAILED", f"the {fmt} exporter finished but wrote no file at {path}")
+        triangle_count = _triangles(bpy, geometry, fmt, apply)  # while hidden members are still un-hidden
     finally:
         failures += _rehide(saved_hidden)  # hide state first: hide_set(True) deselects
         failures += _restore_selection(scene, snap)  # also on failure; never masks the original exception
@@ -259,9 +277,12 @@ def run(params: dict) -> dict:
         sidecar = os.path.splitext(path)[0] + ".bin"
         if os.path.isfile(sidecar):
             size += os.path.getsize(sidecar)
-    result = {"path": path, "format": fmt, "objects": len(geometry), "size_bytes": size,
+    result = {"path": path, "format": fmt, "objects": len(geometry), "triangles": triangle_count, "size_bytes": size,
               "skipped_hidden": hidden_names, "excluded": plan["excluded"],
               "modifiers": modifiers, "modifiers_note": note}
+    if cameras:
+        written = chosen if chosen is not None else plan["set"]
+        result["cameras"] = [o.name for o in written if o.type == "CAMERA"]
     if failures:
         result["restore_warnings"] = failures
     return result

@@ -210,6 +210,16 @@ def run(inv: Invocation) -> Result:
     if fps is not None and not mp4:
         raise invalid("--fps applies to mp4 output", ["Example: blender-axi render <file> --turntable 12 --out turn.mp4 --fps 24"])
     pack = mp4 or sheet  # one output file for the whole turn / range
+    columns, transparent = flags.get("columns"), bool(flags.get("transparent"))
+    if columns is not None and not sheet:
+        raise invalid("--columns applies to --sheet", ["Example: blender-axi render <file> --turntable 8 --fit --sheet --columns 4"])
+    if columns is not None and columns < 1:
+        raise invalid(f"--columns must be >= 1, got {columns}", ["blender-axi render --help"])
+    if transparent and mp4:
+        raise invalid("--transparent does not apply to mp4 output", ["Use --out name.png (or webp, exr, tif, bmp, tga)"])
+    if transparent and (fmt == "JPEG" or os.path.splitext(out)[1].lower() in (".jpg", ".jpeg")):
+        raise invalid("--transparent needs a format with alpha (png, webp, exr, tif, bmp, tga)",
+                      ["Example: blender-axi render <file> --transparent --out cutout.png"])
 
     if pack:
         known = [0]
@@ -228,7 +238,7 @@ def run(inv: Invocation) -> Result:
         "format": fmt, "force": bool(flags.get("force")),
         "fit": fit, "fit_margin": float(margin), "temp_camera_ok": not inv.globals.live,
         "auto_light": bool(flags.get("auto_light")),
-        "subject": subject, "turntable": turn, "video": None, "sheet": None,
+        "subject": subject, "turntable": turn, "video": None, "sheet": None, "transparent": transparent,
     }
     run_dir = None
     if pack:  # where the stills go; made here so a live Blender (same machine) can write into it
@@ -238,7 +248,7 @@ def run(inv: Invocation) -> Result:
                                "fps": int(fps) if fps is not None else (_DEFAULT_FPS if turn is not None else None)}
         else:
             n = turn if turn is not None else len(frames)
-            params["sheet"] = {"out": out, "cols": grid(n)[0], "frames_dir": str(run_dir),
+            params["sheet"] = {"out": out, "cols": grid(n, columns)[0], "frames_dir": str(run_dir),
                                "labels": flags.get("labels") is not False}
     try:
         outcome = _transport_render(inv, params, blend, fit)
@@ -300,6 +310,8 @@ def _result(inv: Invocation, blend: Path | None, inferred: bool, out: str, outco
         data["output"] = display_path(res["files"][0]) if n == 1 else display_path(_pattern(out, True))
     data["size"] = res["size"]
     data["engine"] = res["engine"]
+    if res.get("transparent"):
+        data["background"] = "transparent"
     data["samples"] = res["samples"] if res.get("samples") is not None else "n/a"
     if res.get("fit"):
         data["fit"] = _fit_text(res["fit"])
@@ -371,6 +383,8 @@ SPEC = CommandSpec(
         Flag("--sheet", "bool", help="Write one contact-sheet image (grid of all frames, each tile numbered) instead of N files "
              "(--turntable or --frames; --out name.png, .jpg, .webp, .exr, .tif, .bmp or .tga)"),
         Flag("--labels", "bool", default=True, help="Number the sheet tiles (default); --no-labels writes the grid without numbers"),
+        Flag("--columns", "int", help="Columns of the contact sheet (default: the fewest empty tiles, at most twice the rows)"),
+        Flag("--transparent", "bool", help="Transparent background (film transparent, RGBA): png, webp, exr, tif, bmp or tga; not jpg or mp4"),
         Flag("--fps", "int", help="Frames per second of the mp4 (default: 12 for --turntable, the scene fps for --frames)"),
         Flag("--format", "str", choices=_FORMATS, help="Image format (default: from the --out extension)"),
         Flag("--force", "bool", help="Overwrite existing output files"),

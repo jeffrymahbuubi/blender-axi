@@ -125,7 +125,7 @@ def test_params_defaults(work):
     _, t = invoke(["Cube", "scene.blend", "--name", "Red", "--in-place"])
     call = t.calls[0]
     assert call["op"] == "material" and call["params"] == {
-        "object": "Cube", "name": "Red", "color": None, "metallic": None, "roughness": None, "emission": None,
+        "object": "Cube", "name": "Red", "color": None, "alpha": None, "metallic": None, "roughness": None, "emission": None,
         "emission_strength": None, "slot": "replace"}
     assert call["blend"] == (WORK / "scene.blend").resolve() and call["save"] == SaveSpec("in_place", str(call["blend"]))
 
@@ -141,7 +141,7 @@ def test_params_passthrough(work):
     _, t = invoke(["Cube", "scene.blend", "--name", "Glow", "--metallic", "0.5", "--roughness", "0.25",
                    "--emission", "1,0.8,0.4", "--emission-strength", "10", "--slot", "add", "--out", "o.blend"])
     assert t.calls[0]["params"] == {
-        "object": "Cube", "name": "Glow", "color": None, "metallic": 0.5, "roughness": 0.25,
+        "object": "Cube", "name": "Glow", "color": None, "alpha": None, "metallic": 0.5, "roughness": 0.25,
         "emission": [1.0, 0.8, 0.4], "emission_strength": 10.0, "slot": "add"}
     assert t.calls[0]["save"] == SaveSpec("copy", str((WORK / "o.blend").resolve()))
 
@@ -277,7 +277,7 @@ def world(fake_bpy):
 
 
 def material_op(**params):
-    base = {"object": "Cube", "name": "Red", "color": None, "metallic": None, "roughness": None, "emission": None,
+    base = {"object": "Cube", "name": "Red", "color": None, "alpha": None, "metallic": None, "roughness": None, "emission": None,
             "emission_strength": None, "slot": "replace"}
     return op_material.run({**base, **params})
 
@@ -290,7 +290,7 @@ def test_op_creates_the_material_and_sets_the_given_values(world):
     r = material_op(color=[1, 0, 0, 1], metallic=0.25, roughness=0.75, emission=[1, 0.5, 0], emission_strength=4)
     mat = world.materials[0]
     node = principled(mat)
-    assert r == {"object": "Cube", "material": "Red", "created": True, "color": [1.0, 0.0, 0.0, 1.0],
+    assert r == {"object": "Cube", "objects": ["Cube"], "material": "Red", "created": True, "color": [1.0, 0.0, 0.0, 1.0],
                  "metallic": 0.25, "roughness": 0.75, "slots": ["Red"]}
     assert node.inputs["Base Color"].default_value == (1.0, 0.0, 0.0, 1.0)
     assert (node.inputs["Metallic"].default_value, node.inputs["Roughness"].default_value) == (0.25, 0.75)

@@ -17,6 +17,7 @@ from .op_export import GEOMETRY_TYPES
 CHECK_IDS = ("camera", "lighting", "scale", "materials", "ngons", "nonmanifold", "loose", "unused", "visibility",
              "files", "collections")
 BMESH_IDS = ("nonmanifold", "loose")
+LEVELS = ("error", "warn", "info")
 MATERIAL_TYPES = {"MESH", "CURVE", "FONT", "SURFACE", "META"}
 SCALE_TOLERANCE = 1e-4
 ENGINE_LABELS = {"BLENDER_EEVEE": "EEVEE", "BLENDER_EEVEE_NEXT": "EEVEE", "CYCLES": "CYCLES"}
@@ -28,7 +29,7 @@ FILE_SOURCES = ("FILE", "SEQUENCE", "MOVIE")
 
 @dataclass(frozen=True)
 class Check:
-    level: str  # "warn" | "info"
+    level: str  # "error" | "warn" | "info" (LEVELS, worst first)
     scope: str  # "scene" | "object"
     fn: Callable
 
@@ -54,8 +55,11 @@ def check_unused(bpy, scene) -> list[str]:
     items = []
     for attr, word in UNUSED_KINDS:
         for datablock in getattr(bpy.data, attr, ()):
-            if datablock.users == 0:
+            users = datablock.users
+            if users == 0:
                 items.append(f"{word} {datablock.name}")
+            elif users == 1 and getattr(datablock, "use_fake_user", False):  # kept alive by the fake user only (F4)
+                items.append(f"{word} {datablock.name} (fake user)")
     return items
 
 
@@ -97,8 +101,25 @@ def check_scale(bpy, obj) -> str | None:
     return f"{obj.name} ({vec}, negative)" if any(s < 0 for s in scale) else f"{obj.name} ({vec})"
 
 
+_CUTTERS: set[str] = set()
+
+
+def _collect_cutters(scene) -> None:
+    """Names of the objects some boolean modifier in the scene cuts with (object or collection operand)."""
+    for owner in scene.objects:
+        for mod in getattr(owner, "modifiers", ()):
+            if getattr(mod, "type", None) != "BOOLEAN":
+                continue
+            if getattr(mod, "operand_type", "OBJECT") == "COLLECTION":
+                collection = getattr(mod, "collection", None)
+                if collection is not None:
+                    _CUTTERS.update(o.name for o in collection.all_objects)
+            elif getattr(mod, "object", None) is not None:
+                _CUTTERS.add(mod.object.name)
+
+
 def check_materials(bpy, obj) -> str | None:
-    if obj.type not in MATERIAL_TYPES:
+    if obj.type not in MATERIAL_TYPES or obj.hide_render or obj.name in _CUTTERS:
         return None
     return None if any(slot.material is not None for slot in obj.material_slots) else obj.name
 
@@ -163,7 +184,7 @@ CHECKS: dict[str, Check] = {
     "loose": Check("info", "object", check_loose),
     "unused": Check("info", "scene", check_unused),
     "visibility": Check("info", "object", check_visibility),
-    "files": Check("warn", "scene", check_files),
+    "files": Check("error", "scene", check_files),
     "collections": Check("info", "scene", check_collections),
 }
 SCENE_IDS = frozenset(k for k, c in CHECKS.items() if c.scope == "scene")
@@ -175,6 +196,7 @@ def run_checks(bpy, scene, ids: list[str], objects: list, scene_level: bool = Tr
     Scene checks run only when `scene_level` (no object/collection filter); object checks run over `objects`.
     """
     _STATS.clear()
+    _CUTTERS.clear()
     found: dict[str, list[str]] = {}
     try:
         wanted = [i for i in CHECK_IDS if i in ids and (scene_level or i not in SCENE_IDS)]
@@ -183,6 +205,8 @@ def run_checks(bpy, scene, ids: list[str], objects: list, scene_level: bool = Tr
             if check.scope == "scene":
                 found[check_id] = check.fn(bpy, scene)
         object_ids = [i for i in wanted if CHECKS[i].scope == "object"]
+        if "materials" in object_ids:
+            _collect_cutters(scene)
         for check_id in object_ids:
             found[check_id] = []
         for obj in objects:
@@ -192,4 +216,5 @@ def run_checks(bpy, scene, ids: list[str], objects: list, scene_level: bool = Tr
                     found[check_id].append(item)
     finally:
         _STATS.clear()
+        _CUTTERS.clear()
     return {i: found[i] for i in wanted}

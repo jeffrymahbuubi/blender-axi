@@ -106,7 +106,7 @@ def test_objects_used_by_field_sent_and_formatted():
 
 def test_objects_fields_help_lists_used_by_last():
     flag = next(f for f in cmd.OBJECTS_SPEC.flags if f.name == "--fields")
-    assert flag.help.endswith(", data, used_by")
+    assert flag.help.endswith(", data, used_by, tris")
 
 
 def test_objects_default_rows_never_carry_used_by():
@@ -292,6 +292,15 @@ class Obj:
     def visible_get(self):
         return not self._hidden
 
+    def evaluated_get(self, depsgraph):  # `tris.triangles` path: quads of the stub's polygons
+        return self
+
+    def to_mesh(self):
+        return types.SimpleNamespace(polygons=[types.SimpleNamespace(vertices=range(4)) for _ in self.data.polygons])
+
+    def to_mesh_clear(self):
+        pass
+
     def keys(self):
         return list(self._props)
 
@@ -319,6 +328,7 @@ def scene_bpy(fake_bpy):
     sc = types.SimpleNamespace(objects=[cube, cam, ball, anchor], collection=types.SimpleNamespace(name="Scene Collection",
                                                                                           all_objects=[cube, cam, ball, anchor]))
     fake_bpy.context.scene = sc
+    fake_bpy.context.evaluated_depsgraph_get = lambda: "depsgraph"
     fake_bpy.data.objects = [cube, cam, ball, anchor]
     fake_bpy.data.collections = [props]
     fake_bpy.data.filepath = "f.blend"

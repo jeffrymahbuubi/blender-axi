@@ -239,3 +239,43 @@ def test_all_hints_within_bound_when_everything_applies(monkeypatch, no_live, tm
     monkeypatch.setattr(paths, "_checkout_root", lambda: None)
     res = home.run(_inv())
     assert len(res.help) <= 6
+
+
+@pytest.fixture(autouse=True)
+def _clean_env(monkeypatch):
+    monkeypatch.delenv("BLENDER_AXI_NO_LIVE", raising=False)
+
+
+def _must_not_probe(monkeypatch):
+    def boom(host, port):
+        raise AssertionError("the live port must not be probed")
+
+    monkeypatch.setattr(home, "_live_reachable", boom)
+
+
+def test_no_live_env_skips_the_probe_and_the_hint(fake_blender, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _must_not_probe(monkeypatch)
+    monkeypatch.setenv("BLENDER_AXI_NO_LIVE", "1")
+    res = home.run(_inv())
+    assert list(res.data) == ["bin", "version", "description", "blender", "live", "tmp", "blends"]
+    assert res.data["live"] == "not probed (BLENDER_AXI_NO_LIVE)"
+    assert not any("live Blender is reachable" in h for h in res.help)
+
+
+def test_no_live_env_any_non_zero_value_counts(fake_blender, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _must_not_probe(monkeypatch)
+    monkeypatch.setenv("BLENDER_AXI_NO_LIVE", "yes")
+    res = home.run(_inv())
+    assert res.data["live"] == "not probed (BLENDER_AXI_NO_LIVE)" and res.data["blender"].startswith("5.2.0")
+
+
+@pytest.mark.parametrize("value", ["", "0"])
+def test_no_live_env_empty_or_zero_still_probes(value, fake_blender, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(home, "_live_reachable", lambda host, port: True)
+    monkeypatch.setenv("BLENDER_AXI_NO_LIVE", value)
+    res = home.run(_inv())
+    assert res.data["live"] == "reachable localhost:9876"
+    assert any("live Blender is reachable" in h for h in res.help)

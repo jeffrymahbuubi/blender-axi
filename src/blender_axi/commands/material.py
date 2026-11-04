@@ -3,7 +3,8 @@
 Replaces the object's first material slot with the named material (created when it does not exist); `--slot add`
 appends instead. Built with the data API (see `op_material`); headless writes need `--in-place` or
 `--out <copy.blend>` (`_mutate`). Colours are linear 0..1 values; the colour also sets the viewport colour, which is
-what `render --engine WORKBENCH` shows.
+what `render --engine WORKBENCH` shows. A 4th colour value is written to the Principled Alpha input; the object
+argument may be a glob (`Region*`) that matches many objects.
 """
 
 from __future__ import annotations
@@ -39,11 +40,12 @@ def _params(inv: Invocation) -> dict:
     if not name:
         raise invalid("--name is empty", ["Example: --name Red"])
     color = _unit_range(inv, "--color", _mutate.parse_vec(SPEC, "--color", f.get("color"), (3, 4)))
+    alpha = color[3] if color is not None and len(color) == 4 else None
     if color is not None and len(color) == 3:
         color.append(1.0)
     emission = _unit_range(inv, "--emission", _mutate.parse_vec(SPEC, "--emission", f.get("emission")))
     return {
-        "object": inv.positionals["object"], "name": name, "color": color,
+        "object": inv.positionals["object"], "name": name, "color": color, "alpha": alpha,
         "metallic": _scalar(inv, "metallic"), "roughness": _scalar(inv, "roughness"),
         "emission": emission, "emission_strength": _scalar(inv, "emission_strength", None),
         "slot": f.get("slot") or "replace",
@@ -51,7 +53,8 @@ def _params(inv: Invocation) -> dict:
 
 
 def _line(r: dict) -> str:
-    return f"{r['object']} <- {r['material']} ({'created' if r['created'] else 'reused'})"
+    who = f"{r['pattern']} ({len(r['objects'])})" if r.get("pattern") else r["object"]
+    return f"{who} <- {r['material']} ({'created' if r['created'] else 'reused'})"
 
 
 def run(inv: Invocation) -> Result:
@@ -63,11 +66,16 @@ def run(inv: Invocation) -> Result:
         listing = f"objects {quote_name(given)}" if given and not inv.globals.live else "objects"
         raise translate_not_found(err, [f"Run `{Hints(inv).cmd(listing)}` to list the objects"]) from err
     r = outcome.result
-    data: dict = {
-        "file": target.label, "object": r["object"], "material": r["material"], "created": r["created"],
-        "color": fmt_vec(r["color"]), "metallic": fmt_num(r["metallic"]), "roughness": fmt_num(r["roughness"]),
-        "slots": names_summary(r["slots"]),
-    }
+    data: dict = {"file": target.label}
+    if r.get("pattern"):
+        data["objects"] = names_summary(r["objects"])
+    else:
+        data["object"] = r["object"]
+    data.update({"material": r["material"], "created": r["created"], "color": fmt_vec(r["color"])})
+    if r.get("alpha") is not None and r["alpha"] < 1:
+        data["alpha"] = fmt_num(r["alpha"])
+    data.update({"metallic": fmt_num(r["metallic"]), "roughness": fmt_num(r["roughness"]),
+                 "slots": names_summary(r["slots"])})
     hints = ["Run `" + _mutate.hint_cmd(inv, target, outcome, "render <file> --engine WORKBENCH --out <path.png>")
              + "` to preview it"]
     return _mutate.finish(inv, SPEC, target, outcome, data, hints)
@@ -77,12 +85,13 @@ SPEC = CommandSpec(
     name="material",
     summary="Give an object a material (Principled BSDF) in a .blend (or the open session with --live)",
     positionals=(
-        Positional("object", help="Name of the mesh (or curve, text) object that gets the material"),
+        Positional("object", help="Name of the mesh (or curve, text) object that gets the material; a glob such as "
+                                  "\"Region*\" (*, ?, [) gives it to every match"),
         Positional("file", required=False, help="The .blend file (default: the single .blend in the current directory)"),
     ),
     flags=(
         Flag("--name", "str", required=True, help="Material name; an existing material of that name is reused and edited"),
-        Flag("--color", "str", help="Base colour r,g,b or r,g,b,a, each 0..1 (linear)"),
+        Flag("--color", "str", help="Base colour r,g,b or r,g,b,a, each 0..1 (linear); a sets the Alpha input (below 1: translucent, glTF BLEND)"),
         Flag("--metallic", "float", help="Metallic, 0..1"),
         Flag("--roughness", "float", help="Roughness, 0..1"),
         Flag("--emission", "str", help="Emission colour r,g,b, each 0..1 (glows only with --emission-strength above 0)"),

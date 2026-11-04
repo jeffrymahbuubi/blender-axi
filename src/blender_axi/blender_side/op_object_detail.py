@@ -3,7 +3,7 @@
 import difflib
 import math
 
-from . import usage
+from . import tris, usage
 from .common import count
 from .ops import OpError
 
@@ -63,6 +63,7 @@ def run(params: dict) -> dict:
         "data": obj.data.name if obj.data is not None else None,
         "verts": len(obj.data.vertices) if is_mesh else None,
         "faces": len(obj.data.polygons) if is_mesh else None,
+        "tris": tris.triangles(obj, bpy.context.evaluated_depsgraph_get()),
         "materials": [s.material.name for s in obj.material_slots if s.material is not None],
         "modifiers": [{"name": m.name, "type": m.type} for m in obj.modifiers],
         "custom_props": props,

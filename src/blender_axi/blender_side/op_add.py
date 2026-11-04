@@ -1,8 +1,11 @@
 """`add`: create a primitive, camera, light or empty with the data API (no operators, so no context is needed).
 
-params: kind, name, location[3], rotation_deg[3], scale[3], size, radius, depth, segments, collection, light_type,
-energy (all but `kind` may be None = the default). Meshes are built with `bmesh.ops.create_*`; `size` is the full
-edge of a cube/plane, `segments` the UV segments (sphere, cylinder, cone) or the subdivisions (icosphere).
+params: kind, name, location[3], rotation_deg[3], scale[3], size, radius, depth, segments, minor_radius,
+minor_segments, dimensions[3], collection, light_type, energy (all but `kind` may be None = the default). Meshes are
+built with `bmesh.ops.create_*`, except the UV sphere and the torus, which are built vertex by vertex in a fixed order
+(bmesh's UV-sphere face order differs from one Blender start to the next, so the exported glb bytes did); `size` is the
+full edge of a cube/plane, `segments` the UV segments (sphere, cylinder, cone), the subdivisions (icosphere) or the ring
+segments (torus); `dimensions` is a cube's x,y,z size baked into the mesh (the object scale stays 1,1,1).
 Result: {name, type, kind, collection, location, dimensions, verts, faces, scene_camera_set, scene_camera} (verts/faces
 None for non-meshes). A camera becomes the scene camera only when the scene has none (`scene_camera_set`);
 `scene_camera` is the scene camera's name after the op (None when there is none).
@@ -13,11 +16,11 @@ import math
 from .common import find_collection
 from .ops import OpError
 
-MESH_KINDS = ("cube", "plane", "sphere", "icosphere", "cylinder", "cone", "monkey")
+MESH_KINDS = ("cube", "plane", "sphere", "icosphere", "cylinder", "cone", "monkey", "torus")
 KINDS = MESH_KINDS + ("camera", "light", "empty")
 LIGHT_TYPES = ("POINT", "SUN", "SPOT", "AREA")
 DEFAULT_NAMES = {"cube": "Cube", "plane": "Plane", "sphere": "Sphere", "icosphere": "Icosphere", "cylinder": "Cylinder",
-                 "cone": "Cone", "monkey": "Suzanne", "camera": "Camera", "empty": "Empty"}
+                 "cone": "Cone", "monkey": "Suzanne", "torus": "Torus", "camera": "Camera", "empty": "Empty"}
 
 
 def _vec(v) -> list:
@@ -29,6 +32,48 @@ def _number(params: dict, key: str, default: float) -> float:
     return float(default if value is None else value)
 
 
+def _uvsphere(bm, segments: int, rings: int, radius: float) -> None:
+    """Pole vertex, `rings - 1` rings of `segments` vertices (each starts at +X, top down), pole vertex; triangle fans at
+    the poles, quads between. A fixed creation order, so the mesh (and a glb of it) is the same on every start."""
+    verts = [bm.verts.new((0.0, 0.0, radius))]
+    for i in range(1, rings):
+        phi = math.pi * i / rings
+        for j in range(segments):
+            theta = 2 * math.pi * j / segments
+            verts.append(bm.verts.new((radius * math.sin(phi) * math.cos(theta), radius * math.sin(phi) * math.sin(theta),
+                                       radius * math.cos(phi))))
+    last = len(verts)
+    verts.append(bm.verts.new((0.0, 0.0, -radius)))
+    for j in range(segments):
+        bm.faces.new((verts[0], verts[1 + j], verts[1 + (j + 1) % segments]))
+    for i in range(rings - 2):
+        base = 1 + i * segments
+        for j in range(segments):
+            k = (j + 1) % segments
+            bm.faces.new((verts[base + j], verts[base + segments + j], verts[base + segments + k], verts[base + k]))
+    base = 1 + (rings - 2) * segments
+    for j in range(segments):
+        bm.faces.new((verts[base + j], verts[last], verts[base + (j + 1) % segments]))
+
+
+def _torus(bm, segments: int, minor_segments: int, radius: float, minor_radius: float) -> None:
+    """`segments` x `minor_segments` quads: ring i around Z (starts at +X), vertex j around the tube (starts outside)."""
+    verts = []
+    for i in range(segments):
+        a = 2 * math.pi * i / segments
+        ca, sa = math.cos(a), math.sin(a)
+        for j in range(minor_segments):
+            b = 2 * math.pi * j / minor_segments
+            r = radius + minor_radius * math.cos(b)
+            verts.append(bm.verts.new((r * ca, r * sa, minor_radius * math.sin(b))))
+    for i in range(segments):
+        i2 = (i + 1) % segments
+        for j in range(minor_segments):
+            j2 = (j + 1) % minor_segments
+            bm.faces.new((verts[i * minor_segments + j], verts[i2 * minor_segments + j],
+                          verts[i2 * minor_segments + j2], verts[i * minor_segments + j2]))
+
+
 def _fill(bm, kind: str, params: dict) -> None:
     """Run the bmesh creator for `kind` with Blender's own defaults for whatever `params` leaves out."""
     import bmesh
@@ -36,12 +81,18 @@ def _fill(bm, kind: str, params: dict) -> None:
     ops = bmesh.ops
     radius = _number(params, "radius", 1.0)
     segments = int(_number(params, "segments", 32))
-    if kind == "cube":
+    if kind == "cube" and params.get("dimensions") is not None:  # the size goes into the vertices, the scale stays 1
+        ops.create_cube(bm, size=1.0)
+        ops.scale(bm, vec=tuple(float(x) for x in params["dimensions"]), verts=bm.verts)
+    elif kind == "cube":
         ops.create_cube(bm, size=_number(params, "size", 2.0))
     elif kind == "plane":  # create_grid's size is the half-extent
         ops.create_grid(bm, x_segments=1, y_segments=1, size=_number(params, "size", 2.0) / 2)
     elif kind == "sphere":
-        ops.create_uvsphere(bm, u_segments=segments, v_segments=max(segments // 2, 2), radius=radius)
+        _uvsphere(bm, segments, max(segments // 2, 2), radius)
+    elif kind == "torus":
+        _torus(bm, int(_number(params, "segments", 48)), int(_number(params, "minor_segments", 12)), radius,
+               _number(params, "minor_radius", 0.25))
     elif kind == "icosphere":
         ops.create_icosphere(bm, subdivisions=int(_number(params, "segments", 2)), radius=radius)
     elif kind in ("cylinder", "cone"):

@@ -6,6 +6,7 @@ when Blender is missing, and shows only state relevant to the current directory.
 
 from __future__ import annotations
 
+import os
 import shutil
 import socket
 import sys
@@ -106,10 +107,15 @@ def _tmp_line() -> str:
 
 def run(inv: Invocation) -> Result:
     g = inv.globals
-    with ThreadPoolExecutor(max_workers=1) as pool:  # probe overlaps with `blender --version`
-        probe = pool.submit(_live_reachable, g.host, g.port)
+    skip_probe = os.environ.get("BLENDER_AXI_NO_LIVE", "") not in ("", "0")
+    if skip_probe:  # the env opt-out: never touch the live port
         blender, found = _blender_line(g.blender)
-        live_up = probe.result()
+        live_up = False
+    else:
+        with ThreadPoolExecutor(max_workers=1) as pool:  # probe overlaps with `blender --version`
+            probe = pool.submit(_live_reachable, g.host, g.port)
+            blender, found = _blender_line(g.blender)
+            live_up = probe.result()
     cwd = Path.cwd()
     rows, total = _blends(cwd)
 
@@ -118,7 +124,8 @@ def run(inv: Invocation) -> Result:
         "version": __version__,
         "description": DESCRIPTION,
         "blender": blender,
-        "live": f"{'reachable' if live_up else 'unreachable'} {g.host}:{g.port}",
+        "live": "not probed (BLENDER_AXI_NO_LIVE)" if skip_probe
+        else f"{'reachable' if live_up else 'unreachable'} {g.host}:{g.port}",
         "tmp": _tmp_line(),
     }
     data["blends"] = rows if rows else f"0 .blend files in {collapse_home(cwd)}"

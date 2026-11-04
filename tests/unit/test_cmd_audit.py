@@ -7,6 +7,7 @@ import json
 import pytest
 
 from blender_axi import cli, flags, registry, toon
+from blender_axi.blender_side.audit_checks import CHECK_IDS
 from blender_axi.commands import audit as cmd
 from blender_axi.errors import AxiError
 from blender_axi.runner import RunOutcome
@@ -142,6 +143,98 @@ def test_strict_exit_code_through_cli(monkeypatch, capsys):
     assert code == 0 and "findings" in json.loads(capsys.readouterr().out)
 
 
+# -- levels, --fail-on, --ignore -------------------------------------------------------------------
+
+FILES = finding("files", "error", ["image Tex (missing: /x/tex.png)"])
+
+
+def test_status_with_an_error_finding_counts_errors_first():
+    res, _ = go([], result([FILES, *MIXED]))
+    assert res.data["status"] == "5 findings (1 error, 3 warn, 1 info)"
+    assert res.data["findings"][0] == {"check": "files", "level": "error", "count": 1,
+                                       "items": "image Tex (missing: /x/tex.png)"}
+    res, _ = go([], result(MIXED))
+    assert res.data["status"] == "4 findings (3 warn, 1 info)"  # no error: byte-identical to 0.9.0
+
+
+def test_fail_on_error_exits_1_only_with_an_error_finding():
+    res, _ = go(["--fail-on", "error"], result([FILES, *MIXED]))
+    assert res.exit_code == 1 and res.data["status"].endswith("(1 error, 3 warn, 1 info); --fail-on error: exit 1")
+    res, _ = go(["--fail-on", "error"], result(MIXED))
+    assert res.exit_code == 0 and "--fail-on" not in res.data["status"]
+    res, _ = go(["--fail-on", "error"], result())
+    assert res.exit_code == 0 and res.data["status"] == "clean"
+
+
+def test_fail_on_warn_counts_errors_and_warns_but_not_info():
+    res, _ = go(["--fail-on", "warn"], result(MIXED))
+    assert res.exit_code == 1 and res.data["status"].endswith("--fail-on warn: exit 1")
+    res, _ = go(["--fail-on", "warn"], result([FILES]))
+    assert res.exit_code == 1
+    res, _ = go(["--fail-on", "warn"], result([finding("ngons", "info", ["P (3 faces)"])]))
+    assert res.exit_code == 0
+
+
+def test_strict_is_fail_on_warn_and_also_fails_on_errors():
+    res, _ = go(["--strict"], result([FILES]))
+    assert res.exit_code == 1 and res.data["status"] == "1 finding (1 error, 0 warn, 0 info); --strict: exit 1"
+    res, _ = go(["--strict", "--fail-on", "warn"], result(MIXED))
+    assert res.exit_code == 1 and res.data["status"].endswith("--strict: exit 1")
+
+
+def test_strict_with_fail_on_error_is_a_contradiction():
+    with pytest.raises(AxiError) as e:
+        go(["--strict", "--fail-on", "error"])
+    assert e.value.exit_code == 2 and "--strict means --fail-on warn; pass one of them" in e.value.message
+
+
+def test_fail_on_rejects_other_levels():
+    with pytest.raises(AxiError) as e:
+        flags.parse(cmd.SPEC, ["--fail-on", "info"])
+    assert e.value.exit_code == 2 and "must be one of error, warn" in e.value.message
+
+
+def test_ignore_reaches_params_and_checked_text():
+    res, t = go(["--ignore", "scale,materials"], result(checks=9))
+    assert t.calls[0][1] == {"checks": None, "objects": None, "collection": None, "ignore": ["scale", "materials"]}
+    assert res.data["checked"] == "9 checks, 502 objects (ignored: scale, materials)"
+    _, t = go([])
+    assert "ignore" not in t.calls[0][1]
+
+
+def test_ignore_with_scene_skip_text_order():
+    res, _ = go(["--ignore", "scale", "--object", "A"], result(n_objects=1, checks=3, skipped=True))
+    assert res.data["checked"] == "3 checks, 1 object (ignored: scale) (scene-level checks skipped)"
+
+
+def test_ignore_checks_contradiction_and_ignoring_everything_exit_2():
+    with pytest.raises(AxiError) as e:
+        go(["--ignore", "scale", "--checks", "camera"])
+    assert e.value.exit_code == 2 and e.value.message == "--checks already selects the checks; drop --ignore"
+    with pytest.raises(AxiError) as e:
+        go(["--ignore", ",".join(CHECK_IDS)])
+    assert e.value.exit_code == 2 and "--ignore would skip every check" in e.value.message
+    with pytest.raises(AxiError) as e:
+        go(["--ignore", ","])
+    assert e.value.exit_code == 2 and "--ignore needs at least one check id" in e.value.message
+    with pytest.raises(AxiError) as e:
+        flags.parse(cmd.SPEC, ["--ignore", "bogus"])
+    assert e.value.exit_code == 2
+
+
+def test_replay_hint_keeps_ignore():
+    many = [finding("scale", "warn", ["x"] * 7)]
+    res, _ = go(["--ignore", "ngons"], result(many))
+    assert res.help[0] == "Run `blender-axi audit <file> --ignore ngons --full` to list every item"
+
+
+def test_fail_on_exit_code_through_cli(monkeypatch, capsys):
+    monkeypatch.setitem(registry.COMMANDS, "audit", "blender_axi.commands.audit:SPEC")
+    monkeypatch.setattr(cli, "_LazyHeadless", lambda g: FakeTransport(result([FILES])))
+    assert cli.main(["--json", "audit", "scene.blend", "--fail-on", "error"]) == 1
+    assert json.loads(capsys.readouterr().out)["status"].endswith("--fail-on error: exit 1")
+
+
 # -- hints -----------------------------------------------------------------------------------------
 
 def test_hint_priority_and_cap():
@@ -227,3 +320,4 @@ def test_help_lists_flags(capsys, monkeypatch):
     assert cli.main(["audit", "--help"]) == 0
     out = capsys.readouterr().out
     assert "--checks" in out and "--strict" in out and "--object" in out and "--collection" in out
+    assert "--ignore" in out and "--fail-on" in out and "Same as --fail-on warn" in out

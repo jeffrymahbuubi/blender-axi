@@ -148,6 +148,19 @@ def test_cli_end_to_end_json(monkeypatch, capsys, basic):
     assert "code: NOT_FOUND" in capsys.readouterr().out
 
 
+def test_objects_tris_sums_to_the_export_dry_run_triangles(capsys, basic):
+    """0.10.0 U5: `--fields tris` (shared `tris.py`) agrees with `export --dry-run` on the same file."""
+    from blender_axi import cli
+
+    assert cli.main(["--json", "objects", basic, "--fields", "tris"]) == 0
+    by = {o["name"]: o["tris"] for o in json.loads(capsys.readouterr().out)["objects"]}
+    assert by["Cube"] == 12 and by["Ball"] == 960 and by["Camera"] is None and by["Anchor"] is None
+    assert cli.main(["--json", "export", basic, "--out", str(Path(basic).with_name("dry.glb")), "--dry-run"]) == 0
+    assert json.loads(capsys.readouterr().out)["triangles"] == sum(v for v in by.values() if v)
+    assert cli.main(["--json", "object", "Ball", basic]) == 0
+    assert json.loads(capsys.readouterr().out)["tris"] == 960
+
+
 # -- used_by (0.8.0 U4) ----------------------------------------------------------------------------
 
 CITY = Path(__file__).resolve().parents[2] / ".tmp" / "bench" / "scenes" / "city.blend"

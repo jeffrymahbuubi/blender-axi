@@ -112,6 +112,15 @@ def test_identical_and_same_file_twice(pair):
     assert "changed" not in d and "added" not in d
 
 
+def test_exit_code_flag_gates_on_the_difference(pair):
+    v1, v2 = pair
+    code, d = axi("diff", v1, v2, "--exit-code")
+    assert code == 1 and d["status"] == "different" and d["changed"], d  # the report is still printed
+    code, d = axi("diff", v1, v1, "--exit-code")
+    assert code == 0 and d["status"] == "identical", d
+    assert axi("diff", v1, v2)[0] == 0  # without the flag a difference stays exit 0
+
+
 def test_object_filter(pair):
     v1, v2 = pair
     code, d = axi("diff", v1, v2, "--object", "A")

@@ -82,9 +82,11 @@ def one(check_id, objects=(), **kw):
 
 def test_registry_levels_scopes_and_order():
     assert list(ac.CHECKS) == list(ac.CHECK_IDS)
-    warn = {"camera", "lighting", "scale", "materials", "nonmanifold", "files"}
+    warn = {"camera", "lighting", "scale", "materials", "nonmanifold"}
+    assert ac.LEVELS == ("error", "warn", "info")
+    assert {k for k, c in ac.CHECKS.items() if c.level == "error"} == {"files"}
     assert {k for k, c in ac.CHECKS.items() if c.level == "warn"} == warn
-    assert {k for k, c in ac.CHECKS.items() if c.level == "info"} == set(ac.CHECK_IDS) - warn
+    assert {k for k, c in ac.CHECKS.items() if c.level == "info"} == set(ac.CHECK_IDS) - warn - {"files"}
     assert ac.SCENE_IDS == {"camera", "lighting", "unused", "files", "collections"}
 
 
@@ -111,6 +113,16 @@ def test_unused_type_words():
     items = one("unused", meshes=[NS(users=0, name="Cube.001"), used], materials=[zero], images=[NS(users=0, name="t.png")],
                 node_groups=[NS(users=0, name="Group")], collections=[NS(users=0, name="Old")], lights=[zero])
     assert items == ["mesh Cube.001", "material A", "image t.png", "light A", "node group Group", "collection Old"]
+
+
+def test_unused_fake_user_orphans():
+    spare = NS(users=1, use_fake_user=True, name="Spare")
+    shared = NS(users=2, use_fake_user=True, name="Shared")  # fake user plus a real user: in use
+    plain = NS(users=1, use_fake_user=False, name="Plain")
+    no_attr = NS(users=1, name="NoAttr")  # stubs without use_fake_user are treated as used
+    items = one("unused", materials=[spare, shared, plain, no_attr, NS(users=0, use_fake_user=True, name="Gone")],
+                images=[NS(users=1, use_fake_user=True, name="Img")])
+    assert items == ["material Spare (fake user)", "material Gone", "image Img (fake user)"]
 
 
 def test_files_missing_image_library_and_exceptions(tmp_path):
@@ -152,6 +164,47 @@ def test_materials_only_types_that_take_one():
     objs = [obj("Has"), obj("None", mats=()), obj("EmptySlot", mats=(None,)), obj("Curve", type_="CURVE", mats=()),
             obj("Cam", type_="CAMERA", mats=()), obj("Empty", type_="EMPTY", mats=())]
     assert one("materials", objs) == ["None", "EmptySlot", "Curve"]
+
+
+def boolean(target, **kw):
+    return NS(type="BOOLEAN", object=target, **kw)
+
+
+def test_materials_skips_render_off_and_boolean_cutters():
+    cutter = obj("Cutter", mats=())
+    body = obj("Body")
+    body.modifiers = [boolean(cutter), NS(type="BEVEL")]
+    objs = [body, cutter, obj("Off", mats=(), hide_render=True), obj("Bare", mats=())]
+    assert one("materials", objs) == ["Bare"]
+    assert ac._CUTTERS == set()  # cleared after the run
+
+
+def test_materials_skips_collection_operand_cutters():
+    c1, c2 = obj("C1", mats=()), obj("C2", mats=())
+    body = obj("Body")
+    body.modifiers = [boolean(None, operand_type="COLLECTION", collection=NS(all_objects=[c1, c2]))]
+    assert one("materials", [body, c1, c2, obj("Bare", mats=())]) == ["Bare"]
+
+
+def test_cutters_come_from_the_whole_scene_not_the_checked_objects():
+    cutter = obj("Cutter", mats=())
+    body = obj("Body")
+    body.modifiers = [boolean(cutter)]
+    bpy, scene = make([body, cutter])
+    assert ac.run_checks(bpy, scene, ["materials"], [cutter]) == {"materials": []}  # the --object filter keeps the rule
+    assert ac._CUTTERS == set()
+
+
+def test_cutters_cleared_even_when_an_object_check_raises():
+    cutter = obj("Cutter", mats=())
+    body = obj("Body")
+    body.modifiers = [boolean(cutter)]
+    broken = obj("Broken")
+    del broken.scale  # check_scale raises AttributeError after the cutters were collected
+    bpy, scene = make([body, cutter, broken])
+    with pytest.raises(AttributeError):
+        ac.run_checks(bpy, scene, ["materials", "scale"], [body, broken])
+    assert ac._CUTTERS == set()
 
 
 def test_ngons_counts_faces_over_four_loops():
@@ -225,6 +278,28 @@ def test_op_checks_subset_and_unknown(monkeypatch):
     with pytest.raises(OpError) as e:
         run_op(monkeypatch, bpy, checks=["bogus"])
     assert e.value.code == "OP_FAILED"
+
+
+def test_op_ignore_drops_checks_after_the_unknown_check(monkeypatch):
+    bpy, _ = make([obj("Cube", scale=(2, 2, 2), mats=())], camera=False)
+    r = run_op(monkeypatch, bpy, ignore=["scale", "materials"])
+    assert "scale" not in r["checks_run"] and "materials" not in r["checks_run"] and "camera" in r["checks_run"]
+    assert [f["check"] for f in r["findings"]] == ["camera"]
+    r = run_op(monkeypatch, bpy, checks=["scale", "camera"], ignore=["scale"])
+    assert r["checks_run"] == ["camera"]
+    with pytest.raises(OpError) as e:
+        run_op(monkeypatch, bpy, ignore=["bogus"])
+    assert e.value.code == "OP_FAILED" and "'bogus'" in e.value.message
+
+
+def test_op_fake_user_and_error_level_in_findings(monkeypatch):
+    img = NS(name="Tex", source="FILE", packed_file=None, filepath="//gone.png", users=1)
+    bpy, _ = make([obj("Cube")], images=[img], materials=[NS(name="Spare", users=1, use_fake_user=True)])
+    r = run_op(monkeypatch, bpy, checks=["files", "unused"])
+    assert [(f["check"], f["level"]) for f in r["findings"]] == [("unused", "info"), ("files", "error")]
+    by = {f["check"]: f for f in r["findings"]}
+    assert by["unused"]["items"] == ["material Spare (fake user)"]
+    assert by["files"]["items"] == ["image Tex (missing: /nowhere/gone.png)"]
 
 
 def test_op_object_filter_skips_scene_checks(monkeypatch):

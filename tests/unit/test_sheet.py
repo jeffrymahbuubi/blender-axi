@@ -79,8 +79,10 @@ def rows_of(img, width, height):
     return rows[::-1]
 
 
-@pytest.mark.parametrize("n, cols, rows", [(1, 1, 1), (2, 2, 1), (3, 2, 2), (4, 2, 2), (6, 3, 2), (12, 4, 3), (13, 4, 4)])
-def test_grid_is_ceil_sqrt_columns(n, cols, rows):
+@pytest.mark.parametrize("n, cols, rows", [(1, 1, 1), (2, 2, 1), (3, 2, 2), (4, 2, 2), (5, 3, 2), (6, 3, 2), (7, 4, 2),
+                                           (8, 4, 2), (9, 3, 3), (10, 4, 3), (12, 4, 3), (13, 5, 3), (16, 4, 4), (24, 6, 4)])
+def test_grid_has_the_fewest_empty_tiles_at_most_twice_as_wide_as_high(n, cols, rows):
+    # n=10: the frozen rule `cols <= 2*rows` rules out 5x2 (5 > 4), so it stays 4x3 with 2 empty tiles (plan §3.3 lists 5x2)
     assert sheet.grid(n) == (cols, rows)
 
 

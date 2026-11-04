@@ -41,11 +41,21 @@ _WHITE, _BLACK = (1.0, 1.0, 1.0, 1.0), (0.0, 0.0, 0.0, 1.0)
 
 
 def grid(n: int, cols: int | None = None) -> tuple[int, int]:
-    """`(cols, rows)` for `n` tiles; `cols` defaults to ceil(sqrt(n))."""
+    """`(cols, rows)` for `n` tiles. An explicit `cols` is clamped to 1..n. Otherwise the width starts at ceil(sqrt(n))
+    and grows (at most twice the rows) while that leaves fewer empty tiles; the smallest width wins a tie (8 -> 4x2)."""
     n = max(1, int(n))
-    cols = int(cols) if cols else math.ceil(math.sqrt(n))
-    cols = max(1, min(cols, n))
-    return cols, math.ceil(n / cols)
+    if cols:
+        cols = max(1, min(int(cols), n))
+        return cols, math.ceil(n / cols)
+    best = None
+    for c in range(math.ceil(math.sqrt(n)), n + 1):
+        r = math.ceil(n / c)
+        if c > 2 * r:
+            break
+        empty = c * r - n
+        if best is None or empty < best[0]:
+            best = (empty, c)
+    return best[1], math.ceil(n / best[1])
 
 
 def _remove(bpy, images: list) -> None:

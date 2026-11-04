@@ -181,5 +181,24 @@ def run(params: dict) -> dict:
         after = _norm(key, getattr(mod, key, None))
         if after != before[key]:
             changed.append({"field": key, "from": before[key], "to": after})
-    return {"object": obj.name, "modifier": mod.name, "type": mod.type, "created": created, "removed": False,
-            "changed": changed, "stack": [m.name for m in obj.modifiers]}
+    result = {"object": obj.name, "modifier": mod.name, "type": mod.type, "created": created, "removed": False,
+              "changed": changed, "stack": [m.name for m in obj.modifiers]}
+    notes = _scale_notes(obj, wanted)
+    if notes:
+        result["notes"] = notes
+    return result
+
+
+def _scale_notes(obj, wanted: dict) -> list[str]:
+    """`constant_offset_displace` is in object-local units: say so when the object's scale is not 1 (plan 0.10.0 F5)."""
+    offset = wanted.get("constant_offset_displace")
+    scale = [float(s) for s in obj.scale]
+    if offset is None or all(abs(s - 1.0) <= 1e-4 for s in scale):
+        return []
+
+    def fmt(values) -> str:
+        return ",".join(f"{round(float(v), 4) + 0.0:.4g}" for v in values)
+
+    scene = [float(o) * s for o, s in zip(offset, scale)]
+    return [f"constant offset is in local units: {obj.name} scale {fmt(scale)} makes {fmt(offset)} = {fmt(scene)} "
+            "scene units"]

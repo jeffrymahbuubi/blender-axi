@@ -1,6 +1,7 @@
 """`audit`: read-only asset checks over the active scene (0.6.0 plan §3.4, K3).
 
-params: checks (list[str] | None = all), objects (list[str] | None), collection (str | None).
+params: checks (list[str] | None = all), objects (list[str] | None), collection (str | None),
+ignore (list[str] | None = checks dropped from the requested ones).
 Result: {filepath, objects_checked, checks_run, scene_checks_skipped, findings[{check, level, count, items}]}
 (only checks with count > 0, in CHECK_IDS order) and, when something was unavailable, warnings[str].
 Scene-level checks are skipped when an object or collection filter is given.
@@ -28,9 +29,11 @@ def run(params: dict) -> dict:
 
     scene = bpy.context.scene
     requested = params.get("checks") or list(ac.CHECK_IDS)
-    unknown = [c for c in requested if c not in ac.CHECKS]
+    ignore = params.get("ignore") or []
+    unknown = [c for c in [*requested, *ignore] if c not in ac.CHECKS]
     if unknown:
         raise OpError("OP_FAILED", f"unknown check {unknown[0]!r} (valid: {', '.join(ac.CHECK_IDS)})")
+    requested = [c for c in requested if c not in ignore]
     names, collection = params.get("objects") or None, params.get("collection") or None
     filtered = bool(names or collection)
     objs = _objects(bpy, scene, names, collection)

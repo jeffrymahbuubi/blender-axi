@@ -6,6 +6,7 @@ splice). Live tests start a REAL headless MCP server on a free port (never 9876)
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -67,6 +68,7 @@ KINDS = [
     ("cylinder", ["--radius", "0.5", "--depth", "1"], "MESH", 64, 34, [1, 1, 1]),
     ("cone", [], "MESH", 33, 33, [2, 2, 2]),
     ("monkey", [], "MESH", 507, 500, None),
+    ("torus", [], "MESH", 576, 576, [2.5, 2.5, 0.5]),
 ]
 
 
@@ -79,6 +81,42 @@ def test_each_mesh_kind(capsys, empty, kind, extra, typ, verts, faces, dims):
         assert vec(data["dimensions"]) == pytest.approx(dims, abs=1e-3)
     code, obj = axi(capsys, "object", data["added"], empty)
     assert code == 0 and obj["type"] == "MESH" and obj["verts"] == verts and obj["dimensions"] == data["dimensions"]
+
+
+def test_sphere_counts_match_blenders_uv_sphere(capsys, empty):  # 0.10.0: pure-Python sphere, bmesh's counts
+    code, data = axi(capsys, "add", "sphere", empty, "--segments", "20", "--in-place")
+    assert code == 0 and (data["verts"], data["faces"]) == (182, 200) and data["dimensions"] == "2,2,2"
+
+
+def test_torus_options_and_cube_dimensions(capsys, empty):
+    code, ring = axi(capsys, "add", "torus", empty, "--radius", "2", "--minor-radius", "0.5", "--segments", "24",
+                     "--minor-segments", "8", "--in-place")
+    assert code == 0 and ring["dimensions"] == "5,5,1" and (ring["verts"], ring["faces"]) == (192, 192)
+    code, box = axi(capsys, "add", "cube", empty, "--name", "Slab", "--dimensions", "14,4.4,0.5", "--in-place")
+    assert code == 0 and box["dimensions"] == "14,4.4,0.5" and (box["verts"], box["faces"]) == (8, 6)
+    _, obj = axi(capsys, "object", "Slab", empty)
+    assert obj["dimensions"] == "14,4.4,0.5" and obj["scale"] == "1,1,1"
+    code, both = axi(capsys, "add", "cube", empty, "--dimensions", "1,1,1", "--size", "2", "--in-place")
+    assert code == 2 and both["error"] == "--dimensions replaces --size"
+
+
+def test_same_steps_in_two_blender_starts_give_identical_glb_bytes(capsys, work, fixtures_dir):  # 0.10.0 Y0-6 / Y3-11
+    steps = work / "steps.json"
+    steps.write_text(json.dumps([{"cmd": "add", "kind": "sphere", "name": "Ball", "segments": 20},
+                                 {"cmd": "add", "kind": "torus", "name": "Ring", "location": "3,0,0"},
+                                 {"cmd": "add", "kind": "cube", "name": "Slab", "dimensions": [4, 2, 0.5]}]),
+                     encoding="utf-8")
+    sums = []
+    for tag in ("a", "b"):
+        blend = work / f"{tag}.blend"
+        shutil.copy2(fixtures_dir / "empty.blend", blend)
+        assert axi(capsys, "apply", steps, blend, "--in-place")[0] == 0
+        glb = work / f"{tag}.glb"
+        assert axi(capsys, "export", blend, "--out", glb)[0] == 0
+        sums.append(hashlib.sha256(glb.read_bytes()).hexdigest())
+    assert sums[0] == sums[1], sums
+    code, same = axi(capsys, "diff", work / "a.blend", work / "b.blend")
+    assert code == 0 and same["status"] == "identical", same
 
 
 def test_default_names_are_blenders_and_clash_suffixes(capsys, empty):
@@ -161,7 +199,7 @@ def test_neither_flag_is_exit_2_and_writes_nothing(capsys, empty):
 
 
 def test_bad_arguments_exit_2_before_blender(capsys, empty):
-    for argv in (["torus", empty, "--in-place"], ["cube", empty, "--depth", "2", "--in-place"],
+    for argv in (["donut", empty, "--in-place"], ["cube", empty, "--depth", "2", "--in-place"],
                  ["cube", empty, "--location", "1,2", "--in-place"], ["cube", empty, "--in-place", "--out", "x.blend"]):
         code, data = axi(capsys, "add", *argv)
         assert code == 2 and data["code"] == "VALIDATION_ERROR", (argv, data)

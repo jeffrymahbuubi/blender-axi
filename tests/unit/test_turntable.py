@@ -64,6 +64,30 @@ def test_centre_is_the_bounding_box_centre():
     assert turntable.centre([0, 0, 0, 4, 2, 6, 2, 1, 1]) == (2.0, 1.0, 3.0)
 
 
+def test_sweep_of_one_step_is_the_input():
+    pts = [1.0, 2.0, 3.0, -4.0, 5.0, 6.0]
+    assert turntable.sweep(pts, (0.0, 0.0, 0.0), 1) == pts
+
+
+def test_sweep_turns_a_point_by_minus_the_step_angle_about_the_centre():
+    c = (2.0, 3.0, 1.0)
+    out = turntable.sweep([c[0] + 1, c[1], 7.0], c, 4)
+    assert len(out) == 4 * 3
+    offsets = [(round(out[k] - c[0], 9), round(out[k + 1] - c[1], 9), out[k + 2]) for k in range(0, 12, 3)]
+    assert offsets == [(1.0, 0.0, 7.0), (0.0, -1.0, 7.0), (-1.0, 0.0, 7.0), (0.0, 1.0, 7.0)]
+
+
+def test_sweep_is_the_inverse_of_the_orbit_rotation():
+    """Camera at step i viewing P == step-1 camera viewing sweep(P)[i]: rotating the swept point by +angle gives P back."""
+    c, p, n = (1.0, -2.0, 0.5), (4.0, 1.0, 2.0), 8
+    out = turntable.sweep(list(p), c, n)
+    for i in range(n):
+        a = 2 * math.pi * i / n
+        x, y = out[3 * i] - c[0], out[3 * i + 1] - c[1]
+        assert c[0] + math.cos(a) * x - math.sin(a) * y == pytest.approx(p[0])
+        assert c[1] + math.sin(a) * x + math.cos(a) * y == pytest.approx(p[1])
+
+
 # --- plan / apply / undo with stubs ---------------------------------------------------------------------
 
 def make_bpy(monkeypatch, coords, cam=None):

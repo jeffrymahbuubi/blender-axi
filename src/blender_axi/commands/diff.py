@@ -100,7 +100,7 @@ def run(inv: Invocation) -> Result:
         help_.append(f"Run `{again}{carry_suffix(inv)} --full` to see all rows")
     if identical:
         help_.append(f"Run `blender-axi objects {quote_name(label_a)}` to list the objects")
-    return Result(data=data, help=help_)
+    return Result(data=data, help=help_, exit_code=1 if inv.flags.get("exit_code") and not identical else 0)
 
 
 SPEC = CommandSpec(
@@ -114,6 +114,7 @@ SPEC = CommandSpec(
     flags=(
         Flag("--object", "list", split=False, help="Only these objects, repeatable"),
         Flag("--collection", "str", help="Only objects in this collection (by either file)"),
+        Flag("--exit-code", "bool", help="Exit 1 when the files differ, 0 when identical (the report is still printed)"),
     ),
     examples=("blender-axi diff v1.blend v2.blend", "blender-axi diff v1.blend --live"),
     run=run,

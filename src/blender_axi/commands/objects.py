@@ -13,7 +13,7 @@ OBJECT_TYPES = (
     "MESH", "CURVE", "SURFACE", "META", "FONT", "CURVES", "POINTCLOUD", "VOLUME", "GREASEPENCIL", "GPENCIL",
     "ARMATURE", "LATTICE", "EMPTY", "LIGHT", "LIGHT_PROBE", "CAMERA", "SPEAKER",
 )
-FIELDS = ("location", "dimensions", "parent", "verts", "faces", "materials", "modifiers", "data", "used_by")
+FIELDS = ("location", "dimensions", "parent", "verts", "faces", "materials", "modifiers", "data", "used_by", "tris")
 
 
 def _coll_label(names: list[str]) -> str:
@@ -157,6 +157,8 @@ def run_object(inv: Invocation) -> Result:
     if r.get("verts") is not None:
         data["verts"] = r["verts"]
         data["faces"] = r["faces"]
+    if r.get("tris") is not None:
+        data["tris"] = r["tris"]
     data["materials"] = r["materials"] if r["materials"] else "none"
     data["modifiers"] = r["modifiers"] if r["modifiers"] else "none"
     data["custom_props"] = _props_text(r["custom_props"], inv.globals.full)

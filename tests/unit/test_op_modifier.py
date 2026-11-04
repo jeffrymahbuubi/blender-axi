@@ -74,7 +74,7 @@ class Modifiers(list):
 
 
 def make_object(name="Cube", kind="MESH", with_modifiers=True):
-    obj = types.SimpleNamespace(name=name, type=kind)
+    obj = types.SimpleNamespace(name=name, type=kind, scale=(1.0, 1.0, 1.0))
     if with_modifiers:
         obj.modifiers = Modifiers(obj)
     return obj
@@ -149,6 +149,20 @@ def test_op_array_vectors_and_flags(world):
     assert fields["constant_offset_displace"] == {"field": "constant_offset_displace", "from": [1.0, 0.0, 0.0],
                                                   "to": [0.0, 3.0, 0.0]}
     assert fields["use_constant_offset"]["to"] is True and fields["use_relative_offset"]["to"] is False
+
+
+def test_op_constant_offset_note_names_the_scene_units_when_scaled(world):
+    world.cube.scale = (0.3, 2.4, 1.4)
+    r = modifier_op(kind="ARRAY", settings={"constant_offset_displace": [0.65, 0.0, 0.0], "use_constant_offset": True})
+    assert r["notes"] == ["constant offset is in local units: Cube scale 0.3,2.4,1.4 makes 0.65,0,0 = 0.195,0,0 scene units"]
+
+
+def test_op_no_notes_without_a_constant_offset_or_with_unit_scale(world):
+    world.cube.scale = (0.3, 2.4, 1.4)
+    assert "notes" not in modifier_op(kind="ARRAY", settings={"count": 3})
+    world.cube.scale = (1.0, 1.00001, 1.0)
+    r = modifier_op(kind="ARRAY", name="Other", settings={"constant_offset_displace": [0.65, 0.0, 0.0]})
+    assert "notes" not in r
 
 
 def test_op_mirror_use_axis_bools(world):

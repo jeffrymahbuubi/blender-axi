@@ -8,12 +8,13 @@ order against the listed names, so a step that targets an object nothing created
 from __future__ import annotations
 
 import dataclasses
+import fnmatch
 import re
 from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ..blender_side import op_add
+from ..blender_side import op_add, op_material
 from ..blender_side.common import SCENE_COLLECTION
 from ..errors import AxiError
 from ..spec import CommandSpec, Invocation, Result
@@ -136,6 +137,21 @@ class _Simulation:
                                     "(nor created by an earlier step)",
                        help=[self.list_hint, f"Fix step {i} in {self.steps_label} (nothing ran)"])
 
+    def need_match(self, i: int, cmd: str, name) -> None:
+        """A plain object name as `need`; a glob (`Region*`) needs at least one match among the known names."""
+        if not op_material.is_pattern(name):
+            return self.need(i, cmd, "object", name)
+        if any(fnmatch.fnmatchcase(o, str(name)) for o in self.objects):
+            return
+        if self.import_step is not None:
+            note = (f"step {i} ({cmd}): no object matches '{name}' in {self.label}; "
+                    f"it may come from the import in step {self.import_step}")
+            if note not in self.warnings:
+                self.warnings.append(note)
+            return
+        raise AxiError("NOT_FOUND", f"step {i} ({cmd}): no object matches '{name}' in {self.label}",
+                       help=[self.list_hint, f"Fix step {i} in {self.steps_label} (nothing ran)"])
+
     def step(self, i: int, cmd: str, p: dict) -> None:
         if cmd == "add":
             self.need(i, cmd, "collection", p.get("collection"))
@@ -155,7 +171,7 @@ class _Simulation:
                 self.need(i, cmd, "object", name)
             self.objects -= set(p.get("names") or [])
         elif cmd == "material":
-            self.need(i, cmd, "object", p.get("object"))
+            self.need_match(i, cmd, p.get("object"))
         elif cmd == "modifier":
             self.need(i, cmd, "object", p.get("object"))
             settings = p.get("settings") or {}

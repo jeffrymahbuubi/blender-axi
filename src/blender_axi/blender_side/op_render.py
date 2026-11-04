@@ -9,7 +9,8 @@ and, when the file has no world, a grey world fill; see `auto_light`). `fit` fra
 turntable (int | None: render that many stills of the current frame with the camera orbited around the visible
 geometry, see `turntable`), video ({out, fps | None, frames_dir} | None: with `turntable` or `frames`, write the stills
 into `frames_dir` and encode them into the mp4 `out` at `fps`, default the scene fps, see `video`), sheet ({out, cols,
-frames_dir} | None: the same stills composed into one grid image `out`, see `sheet`). subject (list[str] | None: the objects to orbit and
+frames_dir} | None: the same stills composed into one grid image `out`, see `sheet`). transparent (bool: film transparent +
+RGBA, restored afterwards). subject (list[str] | None: the objects to orbit and
 fit; default with a turntable = all visible geometry minus a ground plane, see `subject`). A turntable on an existing
 camera first turns it toward the subject's centre (`aim`); the result carries `subject` and `aim` when they ran.
 
@@ -85,7 +86,8 @@ def _engine_name(ident: str) -> str:
     return ident
 
 
-_RENDER_ATTRS = ("engine", "resolution_x", "resolution_y", "resolution_percentage", "filepath", "use_file_extension")
+_RENDER_ATTRS = ("engine", "resolution_x", "resolution_y", "resolution_percentage", "filepath", "use_file_extension",
+                 "film_transparent")
 # file_format first: changing it coerces the others, so it is restored before them
 _IMAGE_ATTRS = ("file_format", "color_mode", "color_depth", "compression", "quality", "exr_codec")
 _SAMPLE_ATTRS = (("cycles", "samples"), ("eevee", "taa_render_samples"))
@@ -205,7 +207,10 @@ def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState", light_st
     subject, coords, aim = _choose_subject(bpy, scene, params, bool(n_turn), orbit_state)
     fit = None
     if params.get("fit"):
-        extra = {"coords": coords} if coords is not None else {}  # no subject: today's call, byte for byte
+        fit_coords = coords
+        if n_turn and coords:  # a turntable fit frames every step: the corners swept through the orbit (0.10.0 K6)
+            fit_coords = turntable.sweep(coords, turntable.centre(coords), int(n_turn))
+        extra = {"coords": fit_coords} if fit_coords is not None else {}  # no subject: today's call, byte for byte
         fit = camera_fit.fit_scene(bpy, scene, float(params.get("fit_margin") or 1.1),
                                    bool(params.get("temp_camera_ok")), fit_state, **extra)
     elif scene.camera is None:
@@ -220,6 +225,10 @@ def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState", light_st
     pack = vid or grid  # the stills go to a run dir and are packed into one mp4 / one sheet image
     fmt = "PNG" if pack else (params.get("format") or EXT_FORMATS.get(os.path.splitext(params["out"])[1].lower(), "PNG"))
     render.image_settings.file_format = fmt
+    transparent = bool(params.get("transparent"))
+    if transparent:  # restored by `_restore` (film_transparent is in _RENDER_ATTRS, color_mode in _IMAGE_ATTRS)
+        render.film_transparent = True
+        render.image_settings.color_mode = "RGBA"
     render.use_file_extension = False  # write exactly the path we computed
 
     if n_turn:
@@ -262,6 +271,8 @@ def _render(bpy, scene, params: dict, fit_state: "camera_fit.FitState", light_st
         "format": fmt,
         "lighting": lit,
     }
+    if transparent:
+        result["transparent"] = True
     if fit is not None:
         result["fit"] = fit
     if light is not None:

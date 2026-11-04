@@ -184,6 +184,16 @@ class Obj:
         self.selected = False
         self.viewport_hidden = False  # hide_set state
         self.hide_viewport = hidden
+        self.data = types.SimpleNamespace(polygons=[types.SimpleNamespace(vertices=(0, 1, 2, 3))])  # one quad: 2 tris
+
+    def evaluated_get(self, depsgraph):
+        return self
+
+    def to_mesh(self):
+        return self.data
+
+    def to_mesh_clear(self):
+        pass
 
     def visible_get(self):
         return not (self.hide_viewport or self.viewport_hidden) and self.in_view_layer
@@ -215,6 +225,7 @@ def scene(fake_bpy):
     ab, cam = Obj("A,B"), Obj("Camera", "CAMERA")
     objs = [ring, hole, floor, ab, cam]
     ctx = fake_bpy.context
+    ctx.evaluated_depsgraph_get = lambda: "depsgraph"
     ctx.scene = types.SimpleNamespace(objects=objs)
     ctx.view_layer = types.SimpleNamespace(objects=types.SimpleNamespace(active=None))
     fake_bpy.data.objects = types.SimpleNamespace(get={o.name: o for o in objs}.get)
@@ -375,6 +386,7 @@ def test_dry_run_calls_no_exporter_and_writes_nothing(scene):
     assert scene.calls == [] and not Path(path).exists()
     assert res == {"format": "glb", "dry_run": True, "objects": 2,
                    "export_set": [{"name": "Ring", "type": "MESH"}, {"name": "A,B", "type": "MESH"}],
+                   "also": [], "triangles": 4,
                    "skipped_hidden": ["Hole"], "excluded": ["Floor"], "non_geometry": ["Camera"],
                    "modifiers": "applied", "modifiers_note": None}
     assert not any(o.selected for o in scene.objs.values())

@@ -30,7 +30,8 @@ Full pages with side-by-side images, replay GIFs, transcripts and every repeat: 
 Everything behind the table is in [results/results.md](results/results.md): the prompt of each project, a side-by-side
 final image, a replay GIF per arm (one frame per tool call, with the scene after that step), a trimmed transcript per arm
 and a table with every repeat. Costs are list-price estimates from `claude -p`, not invoices. Workflow videos (mp4) are
-release assets, not part of the repository.
+release assets, not part of the repository: [release showcase-0.9.0](https://github.com/jeffrymahbuubi/blender-axi/releases/tag/showcase-0.9.0)
+(blender-axi on top, official MCP below; one video per model and task).
 
 ## Method and fairness
 

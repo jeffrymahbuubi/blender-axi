@@ -16,7 +16,7 @@ from ..blender_side.op_modifier import KINDS
 from ..errors import AxiError
 from ..spec import BatchSpec, CommandSpec, Flag, Invocation, Positional, Result
 from . import _mutate
-from ._common import Hints, fmt_num, invalid, names_summary, quote_name, translate_not_found
+from ._common import Hints, fmt_num, invalid, names_summary, quote_name, translate_not_found, with_warnings
 from .set_cmd import NO_CHANGE
 
 IDENT = re.compile(r"^[A-Z][A-Z0-9_]*$")
@@ -235,7 +235,9 @@ def run(inv: Invocation) -> Result:
     data["stack"] = names_summary(r["stack"])
     check = f"object {quote_name(r['object'])} <file>"
     hints = [f"Run `{_mutate.hint_cmd(inv, target, outcome, check)}` to check the result"]
-    return _mutate.finish(inv, SPEC, target, outcome, data, hints)
+    result = _mutate.finish(inv, SPEC, target, outcome, data, hints)
+    with_warnings(result.data, [*outcome.warnings, *r.get("notes", [])])
+    return result
 
 
 SPEC = CommandSpec(
@@ -258,7 +260,7 @@ SPEC = CommandSpec(
         Flag("--simple", "bool", help="Simple instead of Catmull-Clark subdivision (back to Catmull-Clark: --prop subdivision_type=CATMULL_CLARK)"),
         Flag("--count", "int", help="Array copies, 1-1000"),
         Flag("--offset", "str", help="Array: relative offset x,y,z (in object sizes); solidify: offset, -1 to 1"),
-        Flag("--constant", "str", help="Array: constant offset x,y,z in scene units (turns the relative offset off unless --offset is given)"),
+        Flag("--constant", "str", help="Array: constant offset x,y,z in the object's local units (Blender multiplies it by the object's scale); turns the relative offset off unless --offset is given"),
         Flag("--axis", "str", choices=AXES, help="Mirror axes (x, y, z, xy, xz, yz or xyz)"),
         Flag("--clip", "bool", help="Mirror: keep vertices on the mirror plane (clipping)"),
         Flag("--object", "str", help="Mirror: mirror object; boolean: alias of --cutter"),

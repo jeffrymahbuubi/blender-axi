@@ -4,15 +4,25 @@ params: object, name, color[4]|None, metallic|None, roughness|None, emission[3]|
 slot ("replace" = slot 0, "add" = append). The material named `name` is reused when it exists, else created; only
 the values that are given are written. Colour, metallic and roughness are also written to the material's viewport
 fields (`diffuse_color`, `metallic`, `roughness`), which is what WORKBENCH previews and the solid viewport show.
-Result: {object, material, created, color[4], metallic, roughness, slots[names]}.
+`object` may be a glob (`*`, `?`, `[`; `fnmatch.fnmatchcase` over sorted object names): the material then goes to every
+match. `alpha` (float | None) is written to the Principled `Alpha` input (glTF `alphaMode: BLEND` below 1).
+Result: {object (first), objects[names], material, created, color[4], metallic, roughness, slots[names of the first
+object]}, plus `alpha` when given and `pattern` when `object` was a glob.
 """
 
 import difflib
+import fnmatch
 
 from .common import count
 from .ops import OpError
 
 PRINCIPLED = "BSDF_PRINCIPLED"
+PATTERN_CHARS = "*?["
+
+
+def is_pattern(name) -> bool:
+    """True when an object positional is a glob (`Region*`) rather than one object name."""
+    return any(c in str(name) for c in PATTERN_CHARS)
 
 
 def _vec(values) -> list:
@@ -38,6 +48,16 @@ def _object(bpy, name):
         hint = f" (did you mean: {', '.join(close)}?)" if close else f" (the file has {count(len(names), 'object')})"
         raise OpError("NOT_FOUND", f"object '{name}' not found{hint}")
     return obj
+
+
+def _targets(bpy, name) -> list:
+    """The one named object, or every object a glob matches (sorted by name); NOT_FOUND when nothing matches."""
+    if not is_pattern(name):
+        return [_object(bpy, name)]
+    found = sorted((o for o in bpy.data.objects if fnmatch.fnmatchcase(o.name, str(name))), key=lambda o: o.name)
+    if not found:
+        raise OpError("NOT_FOUND", f"no object matches '{name}'")
+    return found
 
 
 def _principled(mat):
@@ -76,9 +96,11 @@ def _assign(obj, mat, slot: str) -> None:
 def run(params: dict) -> dict:
     import bpy
 
-    obj = _object(bpy, params.get("object"))
-    if getattr(obj.data, "materials", None) is None:
-        raise OpError("OP_FAILED", f"'{obj.name}' ({obj.type}) cannot take a material")
+    targets = _targets(bpy, params.get("object"))
+    for obj in targets:
+        if getattr(obj.data, "materials", None) is None:
+            raise OpError("OP_FAILED", f"'{obj.name}' ({obj.type}) cannot take a material")
+    alpha = params.get("alpha")
     name = params.get("name")
     slot = params.get("slot") or "replace"
     mat = _find(bpy.data.materials, name)
@@ -87,7 +109,8 @@ def run(params: dict) -> dict:
         mat = bpy.data.materials.new(name)
     try:
         bsdf = _principled(mat)
-        for socket in ("Base Color", "Metallic", "Roughness", "Emission Color", "Emission Strength"):
+        for socket in ("Base Color", "Metallic", "Roughness", "Emission Color", "Emission Strength",
+                       *(("Alpha",) if alpha is not None else ())):
             _socket(bsdf, mat, socket)
     except OpError:
         if created:
@@ -107,11 +130,20 @@ def run(params: dict) -> dict:
         bsdf.inputs["Emission Color"].default_value = (*(float(x) for x in params["emission"]), 1.0)
     if params.get("emission_strength") is not None:
         bsdf.inputs["Emission Strength"].default_value = float(params["emission_strength"])
-    _assign(obj, mat, slot)
-    return {
-        "object": obj.name, "material": mat.name, "created": created,
+    if alpha is not None:
+        bsdf.inputs["Alpha"].default_value = float(alpha)
+    for obj in targets:
+        _assign(obj, mat, slot)
+    first = targets[0]
+    result = {
+        "object": first.name, "objects": [o.name for o in targets], "material": mat.name, "created": created,
         "color": _vec(bsdf.inputs["Base Color"].default_value),
         "metallic": _num(bsdf.inputs["Metallic"].default_value),
         "roughness": _num(bsdf.inputs["Roughness"].default_value),
-        "slots": _slot_names(obj),
+        "slots": _slot_names(first),
     }
+    if alpha is not None:
+        result["alpha"] = _num(bsdf.inputs["Alpha"].default_value)
+    if is_pattern(params.get("object")):
+        result["pattern"] = str(params["object"])
+    return result
