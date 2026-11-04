@@ -52,6 +52,43 @@ blender-axi's defaults, so compare per task, not field for field. To reproduce:
 Unit: tokens (claude-opus-5-5), measured 2026-11-03. Details: [results.md](benchmarks/results/results.md).
 <!-- bench:end -->
 
+<!-- showcase:start -->
+## Showcase: three real tasks, official MCP vs blender-axi
+
+Real agents (`claude -p`), same prompt, model, effort and start file for both arms; success judged by a plain bpy script; 5 repeats per cell; measured 2026-11-04. Opus 5.5 below, all three models in the table after it.
+
+| Project | Arm | Passed | Input tokens | Output tokens | Cost (est.) | Turns | Tool calls | Wall |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| build_export | blender-axi | 5/5 | 207,424<br><sub>166,488–310,680</sub> | 5,944<br><sub>4,503–8,646</sub> | $0.24<br><sub>$0.17–$0.33</sub> | 15<br><sub>14–19</sub> | 14<br><sub>13–18</sub> | 80s<br><sub>67s–125s</sub> |
+| build_export | official MCP | 5/5 | 176,271<br><sub>139,164–188,491</sub> | 5,989<br><sub>5,567–6,710</sub> | $0.21<br><sub>$0.19–$0.22</sub> | 12<br><sub>9–12</sub> | 10<br><sub>8–11</sub> | 68s<br><sub>55s–77s</sub> |
+| qa_cleanup | blender-axi | 5/5 | 126,418<br><sub>68,963–401,160</sub> | 4,824<br><sub>3,567–8,412</sub> | $0.17<br><sub>$0.12–$0.38</sub> | 9<br><sub>6–15</sub> | 8<br><sub>5–14</sub> | 78s<br><sub>55s–113s</sub> |
+| qa_cleanup | official MCP | 5/5 | 152,734<br><sub>146,019–184,482</sub> | 6,592<br><sub>5,586–6,923</sub> | $0.22<br><sub>$0.20–$0.23</sub> | 9<br><sub>9–11</sub> | 8<br><sub>8–10</sub> | 66s<br><sub>60s–76s</sub> |
+| turntable | blender-axi | 5/5 | 92,623<br><sub>63,365–141,337</sub> | 2,427<br><sub>1,793–3,112</sub> | $0.14<br><sub>$0.10–$0.16</sub> | 10<br><sub>6–12</sub> | 8<br><sub>5–10</sub> | 53s<br><sub>34s–56s</sub> |
+| turntable | official MCP | 5/5 | 202,510<br><sub>169,856–224,775</sub> | 6,279<br><sub>6,178–7,028</sub> | $0.25<br><sub>$0.24–$0.28</sub> | 14<br><sub>10–15</sub> | 13<br><sub>9–14</sub> | 77s<br><sub>72s–85s</sub> |
+
+![turntable: blender-axi (left) vs official MCP (right)](benchmarks/showcase/results/opus/turntable/side_by_side.png)
+![qa_cleanup: blender-axi (left) vs official MCP (right)](benchmarks/showcase/results/opus/qa_cleanup/side_by_side.png)
+![build_export: blender-axi (left) vs official MCP (right)](benchmarks/showcase/results/opus/build_export/side_by_side.png)
+
+Across models (medians of 5 repeats):
+
+| Model | Project | Passed (axi / MCP) | Median cost (axi / MCP) | Median input tokens (axi / MCP) | Median wall (axi / MCP) |
+|---|---|---:|---:|---:|---:|
+| Opus 5.5 | turntable | 5/5 / 5/5 | $0.14 / $0.25 | 92,623 / 202,510 | 53s / 77s |
+| Opus 5.5 | qa_cleanup | 5/5 / 5/5 | $0.17 / $0.22 | 126,418 / 152,734 | 78s / 66s |
+| Opus 5.5 | build_export | 5/5 / 5/5 | $0.24 / $0.21 | 207,424 / 176,271 | 80s / 68s |
+| Sonnet 5.5 | turntable | 4/5 / 5/5 | $0.04 / $0.16 | 76,388 / 200,874 | 27s / 73s |
+| Sonnet 5.5 | qa_cleanup | 2/5 / 5/5 | $0.11 / $0.09 | 155,744 / 124,025 | 63s / 28s |
+| Sonnet 5.5 | build_export | 5/5 / 5/5 | $0.10 / $0.09 | 198,735 / 126,636 | 62s / 39s |
+| Haiku 5.5 | turntable | 5/5 / 4/5 | $0.01 / $0.03 | 159,999 / 626,037 | 59s / 171s |
+| Haiku 5.5 | qa_cleanup | 5/5 / 5/5 | $0.01 / $0.01 | 226,559 / 236,083 | 79s / 53s |
+| Haiku 5.5 | build_export | 5/5 / 4/5 | $0.01 / $0.02 | 347,721 / 396,099 | 77s / 96s |
+
+**Where blender-axi wins:** the turntable task (one typed `render --turntable --sheet` command vs a hand-written orbit, compositing and encoding script): about half the tokens and cost on Opus, under 40% on Sonnet, on Haiku about a quarter of the input tokens. **Where it ties or loses:** building a lamp from scratch (one generated script is as cheap as many typed steps), and wall time in general (blender-axi starts Blender per command). **What it got wrong:** on Sonnet the blender-axi agent trusted `audit`, which does not report materials kept alive only by a fake user, and failed `qa_cleanup` 3 of 5 times; that is a blender-axi gap, now on the backlog. **Looks are not scored:** the judge checks files, sizes and scene facts, not beauty; with the same prompt the MCP agents more often chose EEVEE with colour and shadows, the blender-axi agents the cheaper grey WORKBENCH (see the side-by-side images).
+
+Replay GIFs (one frame per tool call), transcripts and every repeat: [Opus](benchmarks/showcase/results/opus/results.md) · [Sonnet](benchmarks/showcase/results/sonnet/results.md) · [Haiku](benchmarks/showcase/results/haiku/results.md). Method and fairness: [benchmarks/showcase/README.md](benchmarks/showcase/README.md).
+<!-- showcase:end -->
+
 ## Install
 
 Needs Python 3.13+ and [uv](https://docs.astral.sh/uv/). Blender is installed separately.

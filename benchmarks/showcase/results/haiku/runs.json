@@ -1,0 +1,1411 @@
+{
+  "schema": 1,
+  "date": "2026-11-04",
+  "model": "claude-haiku-5-5",
+  "effort": "medium",
+  "versions": {
+    "claude": "2.1.317",
+    "blender_axi": "0.9.0",
+    "blender": "5.2.0",
+    "mcp_server": {
+      "version": "1.0.2",
+      "commit": "dbbf836"
+    }
+  },
+  "runs": [
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 1,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:16:58",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.008642885,
+        "input_total": 224054,
+        "input_tokens": 20,
+        "cache_creation_input_tokens": 20383,
+        "cache_read_input_tokens": 203651,
+        "output_tokens": 8113,
+        "thinking_tokens": 3805,
+        "num_turns": 14,
+        "tool_calls": 13,
+        "errors": 2,
+        "duration_s": 51.2,
+        "blender_starts": 9,
+        "first_turn_cache_creation": 1230
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 2,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:21:37",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.013964764999999999,
+        "input_total": 466144,
+        "input_tokens": 42,
+        "cache_creation_input_tokens": 25283,
+        "cache_read_input_tokens": 440819,
+        "output_tokens": 12784,
+        "thinking_tokens": 5805,
+        "num_turns": 28,
+        "tool_calls": 27,
+        "errors": 8,
+        "duration_s": 83.1,
+        "blender_starts": 15,
+        "first_turn_cache_creation": 1247
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 3,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:23:01",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.018220724999999997,
+        "input_total": 568388,
+        "input_tokens": 34,
+        "cache_creation_input_tokens": 41559,
+        "cache_read_input_tokens": 526795,
+        "output_tokens": 15509,
+        "thinking_tokens": 10685,
+        "num_turns": 22,
+        "tool_calls": 21,
+        "errors": 4,
+        "duration_s": 97.3,
+        "blender_starts": 12,
+        "first_turn_cache_creation": 387
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 4,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:26:46",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.011129334999999999,
+        "input_total": 299075,
+        "input_tokens": 28,
+        "cache_creation_input_tokens": 24931,
+        "cache_read_input_tokens": 274116,
+        "output_tokens": 10538,
+        "thinking_tokens": 6643,
+        "num_turns": 23,
+        "tool_calls": 22,
+        "errors": 3,
+        "duration_s": 77.0,
+        "blender_starts": 10,
+        "first_turn_cache_creation": 387
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 5,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:28:04",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.01091446,
+        "input_total": 347721,
+        "input_tokens": 32,
+        "cache_creation_input_tokens": 23338,
+        "cache_read_input_tokens": 324351,
+        "output_tokens": 9501,
+        "thinking_tokens": 5650,
+        "num_turns": 19,
+        "tool_calls": 18,
+        "errors": 5,
+        "duration_s": 65.5,
+        "blender_starts": 11,
+        "first_turn_cache_creation": 387
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 1,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:17:51",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.019773384999999997,
+        "input_total": 538873,
+        "input_tokens": 36,
+        "cache_creation_input_tokens": 31221,
+        "cache_read_input_tokens": 507616,
+        "output_tokens": 21582,
+        "thinking_tokens": 10491,
+        "num_turns": 20,
+        "tool_calls": 19,
+        "errors": 2,
+        "duration_s": 103.8,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 2463
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 2,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:19:36",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.020762475000000002,
+        "input_total": 396099,
+        "input_tokens": 26,
+        "cache_creation_input_tokens": 31723,
+        "cache_read_input_tokens": 364350,
+        "output_tokens": 26302,
+        "thinking_tokens": 14707,
+        "num_turns": 14,
+        "tool_calls": 13,
+        "errors": 1,
+        "duration_s": 120.4,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1828
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 3,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:24:39",
+      "passed": false,
+      "failed_checks": [
+        "glb_clean",
+        "glb_magic",
+        "glb_meshes"
+      ],
+      "metrics": {
+        "total_cost_usd": 0.011232679999999998,
+        "input_total": 262171,
+        "input_tokens": 24,
+        "cache_creation_input_tokens": 19094,
+        "cache_read_input_tokens": 243053,
+        "output_tokens": 12826,
+        "thinking_tokens": 5475,
+        "num_turns": 13,
+        "tool_calls": 12,
+        "errors": 1,
+        "duration_s": 61.5,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 2480
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 4,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:25:41",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.01132192,
+        "input_total": 241828,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 18184,
+        "cache_read_input_tokens": 223622,
+        "output_tokens": 13621,
+        "thinking_tokens": 6012,
+        "num_turns": 13,
+        "tool_calls": 12,
+        "errors": 1,
+        "duration_s": 64.1,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1828
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 5,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:29:11",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.01983239,
+        "input_total": 546816,
+        "input_tokens": 32,
+        "cache_creation_input_tokens": 35590,
+        "cache_read_input_tokens": 511194,
+        "output_tokens": 20537,
+        "thinking_tokens": 9974,
+        "num_turns": 18,
+        "tool_calls": 17,
+        "errors": 2,
+        "duration_s": 95.9,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1828
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 1,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:05:00",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.01760797,
+        "input_total": 360269,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 40220,
+        "cache_read_input_tokens": 320027,
+        "output_tokens": 18756,
+        "thinking_tokens": 9782,
+        "num_turns": 14,
+        "tool_calls": 13,
+        "errors": 1,
+        "duration_s": 111.8,
+        "blender_starts": 13,
+        "first_turn_cache_creation": 1202
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 2,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:08:52",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.012936829999999998,
+        "input_total": 309401,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 31516,
+        "cache_read_input_tokens": 277863,
+        "output_tokens": 12433,
+        "thinking_tokens": 5696,
+        "num_turns": 11,
+        "tool_calls": 10,
+        "errors": 1,
+        "duration_s": 79.0,
+        "blender_starts": 11,
+        "first_turn_cache_creation": 391
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 3,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:10:12",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.010694950000000002,
+        "input_total": 226559,
+        "input_tokens": 20,
+        "cache_creation_input_tokens": 22844,
+        "cache_read_input_tokens": 203695,
+        "output_tokens": 11601,
+        "thinking_tokens": 4442,
+        "num_turns": 11,
+        "tool_calls": 10,
+        "errors": 1,
+        "duration_s": 73.2,
+        "blender_starts": 11,
+        "first_turn_cache_creation": 391
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 4,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:13:12",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.011290075,
+        "input_total": 217912,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 27665,
+        "cache_read_input_tokens": 190225,
+        "output_tokens": 11855,
+        "thinking_tokens": 5383,
+        "num_turns": 11,
+        "tool_calls": 10,
+        "errors": 1,
+        "duration_s": 73.4,
+        "blender_starts": 9,
+        "first_turn_cache_creation": 391
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 5,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:14:27",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.011603244999999998,
+        "input_total": 197658,
+        "input_tokens": 20,
+        "cache_creation_input_tokens": 21351,
+        "cache_read_input_tokens": 176287,
+        "output_tokens": 14339,
+        "thinking_tokens": 6391,
+        "num_turns": 11,
+        "tool_calls": 10,
+        "errors": 1,
+        "duration_s": 79.1,
+        "blender_starts": 9,
+        "first_turn_cache_creation": 391
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 1,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:06:53",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.011998625,
+        "input_total": 282521,
+        "input_tokens": 24,
+        "cache_creation_input_tokens": 21937,
+        "cache_read_input_tokens": 260560,
+        "output_tokens": 13297,
+        "thinking_tokens": 4813,
+        "num_turns": 13,
+        "tool_calls": 12,
+        "errors": 1,
+        "duration_s": 64.2,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 2435
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 2,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:07:58",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.009138215,
+        "input_total": 195872,
+        "input_tokens": 20,
+        "cache_creation_input_tokens": 15793,
+        "cache_read_input_tokens": 180059,
+        "output_tokens": 10723,
+        "thinking_tokens": 3639,
+        "num_turns": 11,
+        "tool_calls": 10,
+        "errors": 1,
+        "duration_s": 52.5,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1832
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 3,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:11:26",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.009727845,
+        "input_total": 215533,
+        "input_tokens": 20,
+        "cache_creation_input_tokens": 18141,
+        "cache_read_input_tokens": 197372,
+        "output_tokens": 10969,
+        "thinking_tokens": 3675,
+        "num_turns": 11,
+        "tool_calls": 10,
+        "errors": 1,
+        "duration_s": 51.0,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1832
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 4,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:12:18",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.010151140000000001,
+        "input_total": 236083,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 18442,
+        "cache_read_input_tokens": 217619,
+        "output_tokens": 11335,
+        "thinking_tokens": 3521,
+        "num_turns": 12,
+        "tool_calls": 11,
+        "errors": 1,
+        "duration_s": 53.4,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1832
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 5,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:15:47",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.013886384999999998,
+        "input_total": 343309,
+        "input_tokens": 28,
+        "cache_creation_input_tokens": 23485,
+        "cache_read_input_tokens": 319796,
+        "output_tokens": 15500,
+        "thinking_tokens": 4849,
+        "num_turns": 15,
+        "tool_calls": 14,
+        "errors": 1,
+        "duration_s": 70.4,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1832
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 1,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T01:46:35",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.006111049999999999,
+        "input_total": 139858,
+        "input_tokens": 16,
+        "cache_creation_input_tokens": 20922,
+        "cache_read_input_tokens": 118920,
+        "output_tokens": 4610,
+        "thinking_tokens": 2591,
+        "num_turns": 9,
+        "tool_calls": 8,
+        "errors": 1,
+        "duration_s": 39.2,
+        "blender_starts": 7,
+        "first_turn_cache_creation": 6068
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 2,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T01:52:44",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.009784665000000001,
+        "input_total": 156789,
+        "input_tokens": 16,
+        "cache_creation_input_tokens": 29229,
+        "cache_read_input_tokens": 127544,
+        "output_tokens": 9708,
+        "thinking_tokens": 6196,
+        "num_turns": 14,
+        "tool_calls": 12,
+        "errors": 2,
+        "duration_s": 64.7,
+        "blender_starts": 8,
+        "first_turn_cache_creation": 9194
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 3,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T01:53:50",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.006756975,
+        "input_total": 187426,
+        "input_tokens": 20,
+        "cache_creation_input_tokens": 16521,
+        "cache_read_input_tokens": 170885,
+        "output_tokens": 5962,
+        "thinking_tokens": 3476,
+        "num_turns": 16,
+        "tool_calls": 13,
+        "errors": 2,
+        "duration_s": 53.8,
+        "blender_starts": 9,
+        "first_turn_cache_creation": 387
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 4,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T01:59:45",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.008209465,
+        "input_total": 229425,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 18789,
+        "cache_read_input_tokens": 210614,
+        "output_tokens": 7505,
+        "thinking_tokens": 4663,
+        "num_turns": 16,
+        "tool_calls": 14,
+        "errors": 4,
+        "duration_s": 58.6,
+        "blender_starts": 12,
+        "first_turn_cache_creation": 1265
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 5,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:00:44",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.00721303,
+        "input_total": 159999,
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 17708,
+        "cache_read_input_tokens": 142273,
+        "output_tokens": 7150,
+        "thinking_tokens": 4578,
+        "num_turns": 17,
+        "tool_calls": 15,
+        "errors": 4,
+        "duration_s": 62.8,
+        "blender_starts": 9,
+        "first_turn_cache_creation": 387
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 1,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T01:47:15",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.021336220000000003,
+        "input_total": 581515,
+        "input_tokens": 40,
+        "cache_creation_input_tokens": 35378,
+        "cache_read_input_tokens": 546097,
+        "output_tokens": 22898,
+        "thinking_tokens": 11856,
+        "num_turns": 23,
+        "tool_calls": 22,
+        "errors": 1,
+        "duration_s": 122.1,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 4713
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 2,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T01:49:19",
+      "passed": false,
+      "failed_checks": [
+        "mp4_frames"
+      ],
+      "metrics": {
+        "total_cost_usd": 0.038145370000000005,
+        "input_total": 1033754,
+        "input_tokens": 50,
+        "cache_creation_input_tokens": 55442,
+        "cache_read_input_tokens": 978262,
+        "output_tokens": 42855,
+        "thinking_tokens": 25772,
+        "num_turns": 29,
+        "tool_calls": 28,
+        "errors": 1,
+        "duration_s": 204.4,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1828
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 3,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T01:54:44",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.029648869999999994,
+        "input_total": 626037,
+        "input_tokens": 34,
+        "cache_creation_input_tokens": 45656,
+        "cache_read_input_tokens": 580347,
+        "output_tokens": 36270,
+        "thinking_tokens": 23058,
+        "num_turns": 22,
+        "tool_calls": 21,
+        "errors": 1,
+        "duration_s": 171.0,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1828
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 4,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T01:57:36",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.021828945,
+        "input_total": 460473,
+        "input_tokens": 30,
+        "cache_creation_input_tokens": 36161,
+        "cache_read_input_tokens": 424282,
+        "output_tokens": 26126,
+        "thinking_tokens": 17289,
+        "num_turns": 18,
+        "tool_calls": 16,
+        "errors": 1,
+        "duration_s": 127.8,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1828
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 5,
+      "model": "claude-haiku-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:01:48",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.03297960999999999,
+        "input_total": 693686,
+        "input_tokens": 36,
+        "cache_creation_input_tokens": 51774,
+        "cache_read_input_tokens": 641876,
+        "output_tokens": 40171,
+        "thinking_tokens": 23949,
+        "num_turns": 22,
+        "tool_calls": 21,
+        "errors": 2,
+        "duration_s": 190.3,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1828
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    }
+  ],
+  "cells": {
+    "build_export": {
+      "axi": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.0111,
+          "input_total": 347721,
+          "input_tokens": 32,
+          "cache_creation_input_tokens": 24931,
+          "cache_read_input_tokens": 324351,
+          "output_tokens": 10538,
+          "thinking_tokens": 5805,
+          "num_turns": 22,
+          "tool_calls": 21,
+          "errors": 4,
+          "duration_s": 77,
+          "blender_starts": 11,
+          "first_turn_cache_creation": 387
+        },
+        "min": {
+          "total_cost_usd": 0.0086,
+          "input_total": 224054,
+          "input_tokens": 20,
+          "cache_creation_input_tokens": 20383,
+          "cache_read_input_tokens": 203651,
+          "output_tokens": 8113,
+          "thinking_tokens": 3805,
+          "num_turns": 14,
+          "tool_calls": 13,
+          "errors": 2,
+          "duration_s": 51.2,
+          "blender_starts": 9,
+          "first_turn_cache_creation": 387
+        },
+        "max": {
+          "total_cost_usd": 0.0182,
+          "input_total": 568388,
+          "input_tokens": 42,
+          "cache_creation_input_tokens": 41559,
+          "cache_read_input_tokens": 526795,
+          "output_tokens": 15509,
+          "thinking_tokens": 10685,
+          "num_turns": 28,
+          "tool_calls": 27,
+          "errors": 8,
+          "duration_s": 97.3,
+          "blender_starts": 15,
+          "first_turn_cache_creation": 1247
+        }
+      },
+      "mcp": {
+        "n": 5,
+        "passed": 4,
+        "success": "4/5",
+        "median": {
+          "total_cost_usd": 0.0198,
+          "input_total": 396099,
+          "input_tokens": 26,
+          "cache_creation_input_tokens": 31221,
+          "cache_read_input_tokens": 364350,
+          "output_tokens": 20537,
+          "thinking_tokens": 9974,
+          "num_turns": 14,
+          "tool_calls": 13,
+          "errors": 1,
+          "duration_s": 95.9,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1828
+        },
+        "min": {
+          "total_cost_usd": 0.0112,
+          "input_total": 241828,
+          "input_tokens": 22,
+          "cache_creation_input_tokens": 18184,
+          "cache_read_input_tokens": 223622,
+          "output_tokens": 12826,
+          "thinking_tokens": 5475,
+          "num_turns": 13,
+          "tool_calls": 12,
+          "errors": 1,
+          "duration_s": 61.5,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1828
+        },
+        "max": {
+          "total_cost_usd": 0.0208,
+          "input_total": 546816,
+          "input_tokens": 36,
+          "cache_creation_input_tokens": 35590,
+          "cache_read_input_tokens": 511194,
+          "output_tokens": 26302,
+          "thinking_tokens": 14707,
+          "num_turns": 20,
+          "tool_calls": 19,
+          "errors": 2,
+          "duration_s": 120.4,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 2480
+        }
+      }
+    },
+    "qa_cleanup": {
+      "axi": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.0116,
+          "input_total": 226559,
+          "input_tokens": 22,
+          "cache_creation_input_tokens": 27665,
+          "cache_read_input_tokens": 203695,
+          "output_tokens": 12433,
+          "thinking_tokens": 5696,
+          "num_turns": 11,
+          "tool_calls": 10,
+          "errors": 1,
+          "duration_s": 79,
+          "blender_starts": 11,
+          "first_turn_cache_creation": 391
+        },
+        "min": {
+          "total_cost_usd": 0.0107,
+          "input_total": 197658,
+          "input_tokens": 20,
+          "cache_creation_input_tokens": 21351,
+          "cache_read_input_tokens": 176287,
+          "output_tokens": 11601,
+          "thinking_tokens": 4442,
+          "num_turns": 11,
+          "tool_calls": 10,
+          "errors": 1,
+          "duration_s": 73.2,
+          "blender_starts": 9,
+          "first_turn_cache_creation": 391
+        },
+        "max": {
+          "total_cost_usd": 0.0176,
+          "input_total": 360269,
+          "input_tokens": 22,
+          "cache_creation_input_tokens": 40220,
+          "cache_read_input_tokens": 320027,
+          "output_tokens": 18756,
+          "thinking_tokens": 9782,
+          "num_turns": 14,
+          "tool_calls": 13,
+          "errors": 1,
+          "duration_s": 111.8,
+          "blender_starts": 13,
+          "first_turn_cache_creation": 1202
+        }
+      },
+      "mcp": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.0102,
+          "input_total": 236083,
+          "input_tokens": 22,
+          "cache_creation_input_tokens": 18442,
+          "cache_read_input_tokens": 217619,
+          "output_tokens": 11335,
+          "thinking_tokens": 3675,
+          "num_turns": 12,
+          "tool_calls": 11,
+          "errors": 1,
+          "duration_s": 53.4,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1832
+        },
+        "min": {
+          "total_cost_usd": 0.0091,
+          "input_total": 195872,
+          "input_tokens": 20,
+          "cache_creation_input_tokens": 15793,
+          "cache_read_input_tokens": 180059,
+          "output_tokens": 10723,
+          "thinking_tokens": 3521,
+          "num_turns": 11,
+          "tool_calls": 10,
+          "errors": 1,
+          "duration_s": 51,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1832
+        },
+        "max": {
+          "total_cost_usd": 0.0139,
+          "input_total": 343309,
+          "input_tokens": 28,
+          "cache_creation_input_tokens": 23485,
+          "cache_read_input_tokens": 319796,
+          "output_tokens": 15500,
+          "thinking_tokens": 4849,
+          "num_turns": 15,
+          "tool_calls": 14,
+          "errors": 1,
+          "duration_s": 70.4,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 2435
+        }
+      }
+    },
+    "turntable": {
+      "axi": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.0072,
+          "input_total": 159999,
+          "input_tokens": 18,
+          "cache_creation_input_tokens": 18789,
+          "cache_read_input_tokens": 142273,
+          "output_tokens": 7150,
+          "thinking_tokens": 4578,
+          "num_turns": 16,
+          "tool_calls": 13,
+          "errors": 2,
+          "duration_s": 58.6,
+          "blender_starts": 9,
+          "first_turn_cache_creation": 1265
+        },
+        "min": {
+          "total_cost_usd": 0.0061,
+          "input_total": 139858,
+          "input_tokens": 16,
+          "cache_creation_input_tokens": 16521,
+          "cache_read_input_tokens": 118920,
+          "output_tokens": 4610,
+          "thinking_tokens": 2591,
+          "num_turns": 9,
+          "tool_calls": 8,
+          "errors": 1,
+          "duration_s": 39.2,
+          "blender_starts": 7,
+          "first_turn_cache_creation": 387
+        },
+        "max": {
+          "total_cost_usd": 0.0098,
+          "input_total": 229425,
+          "input_tokens": 22,
+          "cache_creation_input_tokens": 29229,
+          "cache_read_input_tokens": 210614,
+          "output_tokens": 9708,
+          "thinking_tokens": 6196,
+          "num_turns": 17,
+          "tool_calls": 15,
+          "errors": 4,
+          "duration_s": 64.7,
+          "blender_starts": 12,
+          "first_turn_cache_creation": 9194
+        }
+      },
+      "mcp": {
+        "n": 5,
+        "passed": 4,
+        "success": "4/5",
+        "median": {
+          "total_cost_usd": 0.0296,
+          "input_total": 626037,
+          "input_tokens": 36,
+          "cache_creation_input_tokens": 45656,
+          "cache_read_input_tokens": 580347,
+          "output_tokens": 36270,
+          "thinking_tokens": 23058,
+          "num_turns": 22,
+          "tool_calls": 21,
+          "errors": 1,
+          "duration_s": 171,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1828
+        },
+        "min": {
+          "total_cost_usd": 0.0213,
+          "input_total": 460473,
+          "input_tokens": 30,
+          "cache_creation_input_tokens": 35378,
+          "cache_read_input_tokens": 424282,
+          "output_tokens": 22898,
+          "thinking_tokens": 11856,
+          "num_turns": 18,
+          "tool_calls": 16,
+          "errors": 1,
+          "duration_s": 122.1,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1828
+        },
+        "max": {
+          "total_cost_usd": 0.0381,
+          "input_total": 1033754,
+          "input_tokens": 50,
+          "cache_creation_input_tokens": 55442,
+          "cache_read_input_tokens": 978262,
+          "output_tokens": 42855,
+          "thinking_tokens": 25772,
+          "num_turns": 29,
+          "tool_calls": 28,
+          "errors": 2,
+          "duration_s": 204.4,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 4713
+        }
+      }
+    }
+  }
+}

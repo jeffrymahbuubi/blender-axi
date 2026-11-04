@@ -1,0 +1,21 @@
+{
+  "name": "build_export",
+  "title": "Build a desk lamp from a brief, render it and export a glb",
+  "start": "empty",
+  "expect": [
+    "out/lamp.png",
+    "out/lamp.glb",
+    "out/lamp.blend"
+  ],
+  "commands_hint": [
+    "apply",
+    "add",
+    "material",
+    "modifier",
+    "configure",
+    "render",
+    "export --object",
+    "diff"
+  ],
+  "showcase": "out/lamp.png"
+}

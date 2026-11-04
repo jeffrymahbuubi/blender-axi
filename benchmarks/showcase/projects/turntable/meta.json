@@ -1,0 +1,16 @@
+{
+  "name": "turntable",
+  "title": "Product turntable shots of one object",
+  "start": "desk",
+  "expect": [
+    "out/sheet.png",
+    "out/turntable.mp4",
+    "out/hero.png"
+  ],
+  "commands_hint": [
+    "render --turntable --fit --subject --sheet",
+    "render --turntable --out x.mp4",
+    "render --fit --subject"
+  ],
+  "showcase": "out/sheet.png"
+}

@@ -1,0 +1,1405 @@
+{
+  "schema": 1,
+  "date": "2026-11-04",
+  "model": "claude-opus-5-5",
+  "effort": "medium",
+  "versions": {
+    "claude": "2.1.317",
+    "blender_axi": "0.9.0",
+    "blender": "5.2.0",
+    "mcp_server": {
+      "version": "1.0.2",
+      "commit": "dbbf836"
+    }
+  },
+  "runs": [
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 1,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:07:46",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.33317440000000004,
+        "input_total": 310680,
+        "input_tokens": 32,
+        "cache_creation_input_tokens": 20416,
+        "cache_read_input_tokens": 290232,
+        "output_tokens": 8646,
+        "thinking_tokens": 2575,
+        "num_turns": 19,
+        "tool_calls": 18,
+        "errors": 3,
+        "duration_s": 125.3,
+        "blender_starts": 15,
+        "first_turn_cache_creation": 1243
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 2,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:11:56",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.17442139999999998,
+        "input_total": 170431,
+        "input_tokens": 24,
+        "cache_creation_input_tokens": 10455,
+        "cache_read_input_tokens": 159952,
+        "output_tokens": 4503,
+        "thinking_tokens": 1197,
+        "num_turns": 15,
+        "tool_calls": 14,
+        "errors": 3,
+        "duration_s": 73.6,
+        "blender_starts": 14,
+        "first_turn_cache_creation": 361
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 3,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:13:11",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.2381632,
+        "input_total": 207424,
+        "input_tokens": 24,
+        "cache_creation_input_tokens": 16189,
+        "cache_read_input_tokens": 191211,
+        "output_tokens": 5944,
+        "thinking_tokens": 1359,
+        "num_turns": 16,
+        "tool_calls": 15,
+        "errors": 4,
+        "duration_s": 80.4,
+        "blender_starts": 10,
+        "first_turn_cache_creation": 361
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 4,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:16:48",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.261926,
+        "input_total": 215030,
+        "input_tokens": 24,
+        "cache_creation_input_tokens": 16806,
+        "cache_read_input_tokens": 198200,
+        "output_tokens": 6908,
+        "thinking_tokens": 1573,
+        "num_turns": 15,
+        "tool_calls": 14,
+        "errors": 3,
+        "duration_s": 92.4,
+        "blender_starts": 11,
+        "first_turn_cache_creation": 361
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 5,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:18:22",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.19437880000000002,
+        "input_total": 166488,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 12562,
+        "cache_read_input_tokens": 153904,
+        "output_tokens": 5035,
+        "thinking_tokens": 823,
+        "num_turns": 14,
+        "tool_calls": 13,
+        "errors": 3,
+        "duration_s": 66.9,
+        "blender_starts": 9,
+        "first_turn_cache_creation": 361
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 1,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:09:52",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.18995500000000004,
+        "input_total": 141045,
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 10487,
+        "cache_read_input_tokens": 130540,
+        "output_tokens": 5567,
+        "thinking_tokens": 338,
+        "num_turns": 10,
+        "tool_calls": 9,
+        "errors": 0,
+        "duration_s": 54.8,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 2477
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 2,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:10:47",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.2112282,
+        "input_total": 176271,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 10698,
+        "cache_read_input_tokens": 165551,
+        "output_tokens": 6227,
+        "thinking_tokens": 409,
+        "num_turns": 12,
+        "tool_calls": 11,
+        "errors": 1,
+        "duration_s": 68.3,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1802
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 3,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:14:32",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.190902,
+        "input_total": 139164,
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 9671,
+        "cache_read_input_tokens": 129475,
+        "output_tokens": 5829,
+        "thinking_tokens": 417,
+        "num_turns": 9,
+        "tool_calls": 8,
+        "errors": 0,
+        "duration_s": 57.2,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1802
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 4,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:15:30",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.2236806,
+        "input_total": 188491,
+        "input_tokens": 24,
+        "cache_creation_input_tokens": 10769,
+        "cache_read_input_tokens": 177698,
+        "output_tokens": 6710,
+        "thinking_tokens": 322,
+        "num_turns": 12,
+        "tool_calls": 10,
+        "errors": 0,
+        "duration_s": 77.2,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1802
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 5,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:19:29",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.20686179999999998,
+        "input_total": 187033,
+        "input_tokens": 24,
+        "cache_creation_input_tokens": 10330,
+        "cache_read_input_tokens": 176679,
+        "output_tokens": 5989,
+        "thinking_tokens": 349,
+        "num_turns": 12,
+        "tool_calls": 11,
+        "errors": 0,
+        "duration_s": 72.9,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1802
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 1,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:55:21",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.12273339999999999,
+        "input_total": 68963,
+        "input_tokens": 12,
+        "cache_creation_input_tokens": 7824,
+        "cache_read_input_tokens": 61127,
+        "output_tokens": 3567,
+        "thinking_tokens": 260,
+        "num_turns": 6,
+        "tool_calls": 5,
+        "errors": 0,
+        "duration_s": 54.8,
+        "blender_starts": 8,
+        "first_turn_cache_creation": 1215
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 2,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:58:40",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.3758148,
+        "input_total": 401160,
+        "input_tokens": 30,
+        "cache_creation_input_tokens": 26506,
+        "cache_read_input_tokens": 374624,
+        "output_tokens": 8412,
+        "thinking_tokens": 1145,
+        "num_turns": 15,
+        "tool_calls": 14,
+        "errors": 3,
+        "duration_s": 113.4,
+        "blender_starts": 17,
+        "first_turn_cache_creation": 365
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 3,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:00:35",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.1713072,
+        "input_total": 126418,
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 10599,
+        "cache_read_input_tokens": 115801,
+        "output_tokens": 4754,
+        "thinking_tokens": 530,
+        "num_turns": 9,
+        "tool_calls": 8,
+        "errors": 1,
+        "duration_s": 78.5,
+        "blender_starts": 11,
+        "first_turn_cache_creation": 365
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 4,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:04:02",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.3196158,
+        "input_total": 265521,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 23260,
+        "cache_read_input_tokens": 242239,
+        "output_tokens": 7739,
+        "thinking_tokens": 669,
+        "num_turns": 14,
+        "tool_calls": 13,
+        "errors": 5,
+        "duration_s": 91.4,
+        "blender_starts": 10,
+        "first_turn_cache_creation": 365
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 5,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:05:34",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.16642959999999998,
+        "input_total": 116198,
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 9717,
+        "cache_read_input_tokens": 106463,
+        "output_tokens": 4824,
+        "thinking_tokens": 642,
+        "num_turns": 9,
+        "tool_calls": 8,
+        "errors": 1,
+        "duration_s": 66.5,
+        "blender_starts": 10,
+        "first_turn_cache_creation": 365
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 1,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:56:16",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.22818159999999998,
+        "input_total": 184482,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 11767,
+        "cache_read_input_tokens": 172693,
+        "output_tokens": 6736,
+        "thinking_tokens": 804,
+        "num_turns": 11,
+        "tool_calls": 10,
+        "errors": 1,
+        "duration_s": 76.5,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 2449
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 2,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:57:34",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.215398,
+        "input_total": 149632,
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 11159,
+        "cache_read_input_tokens": 138455,
+        "output_tokens": 6592,
+        "thinking_tokens": 666,
+        "num_turns": 9,
+        "tool_calls": 8,
+        "errors": 1,
+        "duration_s": 65.6,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1806
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 3,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:01:54",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.19607060000000004,
+        "input_total": 146019,
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 10283,
+        "cache_read_input_tokens": 135718,
+        "output_tokens": 5872,
+        "thinking_tokens": 605,
+        "num_turns": 9,
+        "tool_calls": 8,
+        "errors": 1,
+        "duration_s": 59.8,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1806
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 4,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:02:55",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.22685560000000002,
+        "input_total": 167134,
+        "input_tokens": 20,
+        "cache_creation_input_tokens": 11436,
+        "cache_read_input_tokens": 155678,
+        "output_tokens": 6923,
+        "thinking_tokens": 579,
+        "num_turns": 10,
+        "tool_calls": 9,
+        "errors": 1,
+        "duration_s": 66.0,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1806
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 5,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:06:42",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.1976504,
+        "input_total": 152734,
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 11524,
+        "cache_read_input_tokens": 141192,
+        "output_tokens": 5586,
+        "thinking_tokens": 525,
+        "num_turns": 9,
+        "tool_calls": 8,
+        "errors": 1,
+        "duration_s": 63.1,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1806
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 1,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:44:50",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.16058820000000001,
+        "input_total": 92623,
+        "input_tokens": 14,
+        "cache_creation_input_tokens": 19473,
+        "cache_read_input_tokens": 73136,
+        "output_tokens": 2427,
+        "thinking_tokens": 347,
+        "num_turns": 10,
+        "tool_calls": 8,
+        "errors": 1,
+        "duration_s": 53.2,
+        "blender_starts": 10,
+        "first_turn_cache_creation": 8566
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 2,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:48:13",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.09745900000000002,
+        "input_total": 63365,
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 10185,
+        "cache_read_input_tokens": 53170,
+        "output_tokens": 1793,
+        "thinking_tokens": 418,
+        "num_turns": 6,
+        "tool_calls": 5,
+        "errors": 0,
+        "duration_s": 33.9,
+        "blender_starts": 7,
+        "first_turn_cache_creation": 1278
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 3,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:48:48",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.1411096,
+        "input_total": 123162,
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 11731,
+        "cache_read_input_tokens": 111413,
+        "output_tokens": 3005,
+        "thinking_tokens": 574,
+        "num_turns": 11,
+        "tool_calls": 10,
+        "errors": 3,
+        "duration_s": 55.7,
+        "blender_starts": 9,
+        "first_turn_cache_creation": 361
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 4,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:52:28",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.15465859999999998,
+        "input_total": 141337,
+        "input_tokens": 20,
+        "cache_creation_input_tokens": 13349,
+        "cache_read_input_tokens": 127968,
+        "output_tokens": 3112,
+        "thinking_tokens": 610,
+        "num_turns": 12,
+        "tool_calls": 10,
+        "errors": 2,
+        "duration_s": 55.0,
+        "blender_starts": 11,
+        "first_turn_cache_creation": 361
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 5,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:53:24",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.10377720000000001,
+        "input_total": 78598,
+        "input_tokens": 12,
+        "cache_creation_input_tokens": 10040,
+        "cache_read_input_tokens": 68546,
+        "output_tokens": 1991,
+        "thinking_tokens": 455,
+        "num_turns": 7,
+        "tool_calls": 6,
+        "errors": 0,
+        "duration_s": 38.2,
+        "blender_starts": 7,
+        "first_turn_cache_creation": 361
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 1,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:45:44",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.28447880000000003,
+        "input_total": 202510,
+        "input_tokens": 24,
+        "cache_creation_input_tokens": 24647,
+        "cache_read_input_tokens": 177839,
+        "output_tokens": 6279,
+        "thinking_tokens": 1045,
+        "num_turns": 14,
+        "tool_calls": 13,
+        "errors": 1,
+        "duration_s": 71.8,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 12133
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 2,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:46:56",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.2535882,
+        "input_total": 182081,
+        "input_tokens": 20,
+        "cache_creation_input_tokens": 18370,
+        "cache_read_input_tokens": 163691,
+        "output_tokens": 6446,
+        "thinking_tokens": 1773,
+        "num_turns": 13,
+        "tool_calls": 10,
+        "errors": 1,
+        "duration_s": 76.5,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 2512
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 3,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:49:45",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.23871300000000004,
+        "input_total": 224775,
+        "input_tokens": 26,
+        "cache_creation_input_tokens": 14329,
+        "cache_read_input_tokens": 210420,
+        "output_tokens": 6244,
+        "thinking_tokens": 1449,
+        "num_turns": 14,
+        "tool_calls": 13,
+        "errors": 1,
+        "duration_s": 84.6,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1802
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 4,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:51:11",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.2554364,
+        "input_total": 169856,
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 16841,
+        "cache_read_input_tokens": 152997,
+        "output_tokens": 7028,
+        "thinking_tokens": 1403,
+        "num_turns": 10,
+        "tool_calls": 9,
+        "errors": 1,
+        "duration_s": 76.8,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1802
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 5,
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T02:54:03",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.2358308,
+        "input_total": 224068,
+        "input_tokens": 26,
+        "cache_creation_input_tokens": 14033,
+        "cache_read_input_tokens": 210009,
+        "output_tokens": 6178,
+        "thinking_tokens": 1513,
+        "num_turns": 15,
+        "tool_calls": 14,
+        "errors": 1,
+        "duration_s": 76.6,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1802
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    }
+  ],
+  "cells": {
+    "build_export": {
+      "axi": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.2382,
+          "input_total": 207424,
+          "input_tokens": 24,
+          "cache_creation_input_tokens": 16189,
+          "cache_read_input_tokens": 191211,
+          "output_tokens": 5944,
+          "thinking_tokens": 1359,
+          "num_turns": 15,
+          "tool_calls": 14,
+          "errors": 3,
+          "duration_s": 80.4,
+          "blender_starts": 11,
+          "first_turn_cache_creation": 361
+        },
+        "min": {
+          "total_cost_usd": 0.1744,
+          "input_total": 166488,
+          "input_tokens": 22,
+          "cache_creation_input_tokens": 10455,
+          "cache_read_input_tokens": 153904,
+          "output_tokens": 4503,
+          "thinking_tokens": 823,
+          "num_turns": 14,
+          "tool_calls": 13,
+          "errors": 3,
+          "duration_s": 66.9,
+          "blender_starts": 9,
+          "first_turn_cache_creation": 361
+        },
+        "max": {
+          "total_cost_usd": 0.3332,
+          "input_total": 310680,
+          "input_tokens": 32,
+          "cache_creation_input_tokens": 20416,
+          "cache_read_input_tokens": 290232,
+          "output_tokens": 8646,
+          "thinking_tokens": 2575,
+          "num_turns": 19,
+          "tool_calls": 18,
+          "errors": 4,
+          "duration_s": 125.3,
+          "blender_starts": 15,
+          "first_turn_cache_creation": 1243
+        }
+      },
+      "mcp": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.2069,
+          "input_total": 176271,
+          "input_tokens": 22,
+          "cache_creation_input_tokens": 10487,
+          "cache_read_input_tokens": 165551,
+          "output_tokens": 5989,
+          "thinking_tokens": 349,
+          "num_turns": 12,
+          "tool_calls": 10,
+          "errors": 0,
+          "duration_s": 68.3,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1802
+        },
+        "min": {
+          "total_cost_usd": 0.19,
+          "input_total": 139164,
+          "input_tokens": 18,
+          "cache_creation_input_tokens": 9671,
+          "cache_read_input_tokens": 129475,
+          "output_tokens": 5567,
+          "thinking_tokens": 322,
+          "num_turns": 9,
+          "tool_calls": 8,
+          "errors": 0,
+          "duration_s": 54.8,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1802
+        },
+        "max": {
+          "total_cost_usd": 0.2237,
+          "input_total": 188491,
+          "input_tokens": 24,
+          "cache_creation_input_tokens": 10769,
+          "cache_read_input_tokens": 177698,
+          "output_tokens": 6710,
+          "thinking_tokens": 417,
+          "num_turns": 12,
+          "tool_calls": 11,
+          "errors": 1,
+          "duration_s": 77.2,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 2477
+        }
+      }
+    },
+    "qa_cleanup": {
+      "axi": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.1713,
+          "input_total": 126418,
+          "input_tokens": 18,
+          "cache_creation_input_tokens": 10599,
+          "cache_read_input_tokens": 115801,
+          "output_tokens": 4824,
+          "thinking_tokens": 642,
+          "num_turns": 9,
+          "tool_calls": 8,
+          "errors": 1,
+          "duration_s": 78.5,
+          "blender_starts": 10,
+          "first_turn_cache_creation": 365
+        },
+        "min": {
+          "total_cost_usd": 0.1227,
+          "input_total": 68963,
+          "input_tokens": 12,
+          "cache_creation_input_tokens": 7824,
+          "cache_read_input_tokens": 61127,
+          "output_tokens": 3567,
+          "thinking_tokens": 260,
+          "num_turns": 6,
+          "tool_calls": 5,
+          "errors": 0,
+          "duration_s": 54.8,
+          "blender_starts": 8,
+          "first_turn_cache_creation": 365
+        },
+        "max": {
+          "total_cost_usd": 0.3758,
+          "input_total": 401160,
+          "input_tokens": 30,
+          "cache_creation_input_tokens": 26506,
+          "cache_read_input_tokens": 374624,
+          "output_tokens": 8412,
+          "thinking_tokens": 1145,
+          "num_turns": 15,
+          "tool_calls": 14,
+          "errors": 5,
+          "duration_s": 113.4,
+          "blender_starts": 17,
+          "first_turn_cache_creation": 1215
+        }
+      },
+      "mcp": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.2154,
+          "input_total": 152734,
+          "input_tokens": 18,
+          "cache_creation_input_tokens": 11436,
+          "cache_read_input_tokens": 141192,
+          "output_tokens": 6592,
+          "thinking_tokens": 605,
+          "num_turns": 9,
+          "tool_calls": 8,
+          "errors": 1,
+          "duration_s": 65.6,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1806
+        },
+        "min": {
+          "total_cost_usd": 0.1961,
+          "input_total": 146019,
+          "input_tokens": 18,
+          "cache_creation_input_tokens": 10283,
+          "cache_read_input_tokens": 135718,
+          "output_tokens": 5586,
+          "thinking_tokens": 525,
+          "num_turns": 9,
+          "tool_calls": 8,
+          "errors": 1,
+          "duration_s": 59.8,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1806
+        },
+        "max": {
+          "total_cost_usd": 0.2282,
+          "input_total": 184482,
+          "input_tokens": 22,
+          "cache_creation_input_tokens": 11767,
+          "cache_read_input_tokens": 172693,
+          "output_tokens": 6923,
+          "thinking_tokens": 804,
+          "num_turns": 11,
+          "tool_calls": 10,
+          "errors": 1,
+          "duration_s": 76.5,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 2449
+        }
+      }
+    },
+    "turntable": {
+      "axi": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.1411,
+          "input_total": 92623,
+          "input_tokens": 14,
+          "cache_creation_input_tokens": 11731,
+          "cache_read_input_tokens": 73136,
+          "output_tokens": 2427,
+          "thinking_tokens": 455,
+          "num_turns": 10,
+          "tool_calls": 8,
+          "errors": 1,
+          "duration_s": 53.2,
+          "blender_starts": 9,
+          "first_turn_cache_creation": 361
+        },
+        "min": {
+          "total_cost_usd": 0.0975,
+          "input_total": 63365,
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 10040,
+          "cache_read_input_tokens": 53170,
+          "output_tokens": 1793,
+          "thinking_tokens": 347,
+          "num_turns": 6,
+          "tool_calls": 5,
+          "errors": 0,
+          "duration_s": 33.9,
+          "blender_starts": 7,
+          "first_turn_cache_creation": 361
+        },
+        "max": {
+          "total_cost_usd": 0.1606,
+          "input_total": 141337,
+          "input_tokens": 20,
+          "cache_creation_input_tokens": 19473,
+          "cache_read_input_tokens": 127968,
+          "output_tokens": 3112,
+          "thinking_tokens": 610,
+          "num_turns": 12,
+          "tool_calls": 10,
+          "errors": 3,
+          "duration_s": 55.7,
+          "blender_starts": 11,
+          "first_turn_cache_creation": 8566
+        }
+      },
+      "mcp": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.2536,
+          "input_total": 202510,
+          "input_tokens": 24,
+          "cache_creation_input_tokens": 16841,
+          "cache_read_input_tokens": 177839,
+          "output_tokens": 6279,
+          "thinking_tokens": 1449,
+          "num_turns": 14,
+          "tool_calls": 13,
+          "errors": 1,
+          "duration_s": 76.6,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1802
+        },
+        "min": {
+          "total_cost_usd": 0.2358,
+          "input_total": 169856,
+          "input_tokens": 18,
+          "cache_creation_input_tokens": 14033,
+          "cache_read_input_tokens": 152997,
+          "output_tokens": 6178,
+          "thinking_tokens": 1045,
+          "num_turns": 10,
+          "tool_calls": 9,
+          "errors": 1,
+          "duration_s": 71.8,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1802
+        },
+        "max": {
+          "total_cost_usd": 0.2845,
+          "input_total": 224775,
+          "input_tokens": 26,
+          "cache_creation_input_tokens": 24647,
+          "cache_read_input_tokens": 210420,
+          "output_tokens": 7028,
+          "thinking_tokens": 1773,
+          "num_turns": 15,
+          "tool_calls": 14,
+          "errors": 1,
+          "duration_s": 84.6,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 12133
+        }
+      }
+    }
+  }
+}

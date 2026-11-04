@@ -1,0 +1,7 @@
+{
+  "name": "qa_cleanup",
+  "title": "Asset QA and cleanup of a 500-object scene",
+  "start": "city_messy",
+  "expect": ["out/clean.blend", "out/report.md"],
+  "commands_hint": ["audit", "objects --collection", "set --show", "delete", "exec", "diff"]
+}

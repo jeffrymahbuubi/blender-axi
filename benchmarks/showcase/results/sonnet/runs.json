@@ -1,0 +1,1413 @@
+{
+  "schema": 1,
+  "date": "2026-11-04",
+  "model": "claude-sonnet-5-5",
+  "effort": "medium",
+  "versions": {
+    "claude": "2.1.317",
+    "blender_axi": "0.9.0",
+    "blender": "5.2.0",
+    "mcp_server": {
+      "version": "1.0.2",
+      "commit": "dbbf836"
+    }
+  },
+  "runs": [
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 1,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:45:53",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.1062596,
+        "input_total": 247784,
+        "input_tokens": 28,
+        "cache_creation_input_tokens": 16070,
+        "cache_read_input_tokens": 231686,
+        "output_tokens": 4286,
+        "thinking_tokens": 814,
+        "num_turns": 21,
+        "tool_calls": 20,
+        "errors": 5,
+        "duration_s": 69.7,
+        "blender_starts": 27,
+        "first_turn_cache_creation": 1251
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 2,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:48:29",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.10733469999999999,
+        "input_total": 219611,
+        "input_tokens": 28,
+        "cache_creation_input_tokens": 13846,
+        "cache_read_input_tokens": 205737,
+        "output_tokens": 5209,
+        "thinking_tokens": 1387,
+        "num_turns": 18,
+        "tool_calls": 17,
+        "errors": 3,
+        "duration_s": 57.6,
+        "blender_starts": 4,
+        "first_turn_cache_creation": 367
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 3,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:49:27",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.08936260000000001,
+        "input_total": 193982,
+        "input_tokens": 24,
+        "cache_creation_input_tokens": 11712,
+        "cache_read_input_tokens": 182246,
+        "output_tokens": 4181,
+        "thinking_tokens": 1005,
+        "num_turns": 16,
+        "tool_calls": 15,
+        "errors": 5,
+        "duration_s": 68.6,
+        "blender_starts": 20,
+        "first_turn_cache_creation": 367
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 4,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:51:53",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.09991830000000002,
+        "input_total": 198735,
+        "input_tokens": 24,
+        "cache_creation_input_tokens": 13683,
+        "cache_read_input_tokens": 185028,
+        "output_tokens": 4716,
+        "thinking_tokens": 1604,
+        "num_turns": 17,
+        "tool_calls": 16,
+        "errors": 3,
+        "duration_s": 62.5,
+        "blender_starts": 15,
+        "first_turn_cache_creation": 367
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "axi",
+      "repeat": 5,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:52:56",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.0930933,
+        "input_total": 177927,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 13612,
+        "cache_read_input_tokens": 164293,
+        "output_tokens": 4259,
+        "thinking_tokens": 790,
+        "num_turns": 15,
+        "tool_calls": 14,
+        "errors": 3,
+        "duration_s": 51.7,
+        "blender_starts": 7,
+        "first_turn_cache_creation": 367
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 1,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:47:04",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.08901930000000001,
+        "input_total": 111751,
+        "input_tokens": 14,
+        "cache_creation_input_tokens": 10499,
+        "cache_read_input_tokens": 101238,
+        "output_tokens": 5262,
+        "thinking_tokens": 354,
+        "num_turns": 9,
+        "tool_calls": 8,
+        "errors": 0,
+        "duration_s": 41.5,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 2483
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 2,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:47:46",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.09038850000000001,
+        "input_total": 131945,
+        "input_tokens": 16,
+        "cache_creation_input_tokens": 9939,
+        "cache_read_input_tokens": 121990,
+        "output_tokens": 5331,
+        "thinking_tokens": 375,
+        "num_turns": 11,
+        "tool_calls": 10,
+        "errors": 0,
+        "duration_s": 42.0,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1808
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 3,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:50:37",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.0851939,
+        "input_total": 130075,
+        "input_tokens": 16,
+        "cache_creation_input_tokens": 9615,
+        "cache_read_input_tokens": 120444,
+        "output_tokens": 4908,
+        "thinking_tokens": 247,
+        "num_turns": 10,
+        "tool_calls": 9,
+        "errors": 0,
+        "duration_s": 35.4,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1808
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 4,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:51:13",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.08903720000000001,
+        "input_total": 126636,
+        "input_tokens": 16,
+        "cache_creation_input_tokens": 9818,
+        "cache_read_input_tokens": 116802,
+        "output_tokens": 5278,
+        "thinking_tokens": 260,
+        "num_turns": 10,
+        "tool_calls": 9,
+        "errors": 0,
+        "duration_s": 38.9,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1808
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "build_export",
+      "arm": "mcp",
+      "repeat": 5,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:53:49",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.080093,
+        "input_total": 108640,
+        "input_tokens": 14,
+        "cache_creation_input_tokens": 8801,
+        "cache_read_input_tokens": 99825,
+        "output_tokens": 4808,
+        "thinking_tokens": 481,
+        "num_turns": 8,
+        "tool_calls": 7,
+        "errors": 0,
+        "duration_s": 36.3,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1808
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 1,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:38:32",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.16661890000000001,
+        "input_total": 335591,
+        "input_tokens": 26,
+        "cache_creation_input_tokens": 25196,
+        "cache_read_input_tokens": 310369,
+        "output_tokens": 7254,
+        "thinking_tokens": 1276,
+        "num_turns": 13,
+        "tool_calls": 12,
+        "errors": 3,
+        "duration_s": 71.7,
+        "blender_starts": 14,
+        "first_turn_cache_creation": 1223
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 2,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:40:40",
+      "passed": false,
+      "failed_checks": [
+        "no_unused_materials"
+      ],
+      "metrics": {
+        "total_cost_usd": 0.1026994,
+        "input_total": 155744,
+        "input_tokens": 14,
+        "cache_creation_input_tokens": 18941,
+        "cache_read_input_tokens": 136789,
+        "output_tokens": 4164,
+        "thinking_tokens": 660,
+        "num_turns": 7,
+        "tool_calls": 6,
+        "errors": 0,
+        "duration_s": 48.3,
+        "blender_starts": 7,
+        "first_turn_cache_creation": 371
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 3,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:41:30",
+      "passed": false,
+      "failed_checks": [
+        "no_unused_materials"
+      ],
+      "metrics": {
+        "total_cost_usd": 0.113977,
+        "input_total": 138014,
+        "input_tokens": 20,
+        "cache_creation_input_tokens": 10674,
+        "cache_read_input_tokens": 127320,
+        "output_tokens": 7452,
+        "thinking_tokens": 966,
+        "num_turns": 10,
+        "tool_calls": 9,
+        "errors": 3,
+        "duration_s": 62.6,
+        "blender_starts": 8,
+        "first_turn_cache_creation": 371
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 4,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:43:31",
+      "passed": false,
+      "failed_checks": [
+        "no_unused_materials"
+      ],
+      "metrics": {
+        "total_cost_usd": 0.0666102,
+        "input_total": 104758,
+        "input_tokens": 16,
+        "cache_creation_input_tokens": 8010,
+        "cache_read_input_tokens": 96732,
+        "output_tokens": 3688,
+        "thinking_tokens": 650,
+        "num_turns": 8,
+        "tool_calls": 7,
+        "errors": 0,
+        "duration_s": 42.9,
+        "blender_starts": 8,
+        "first_turn_cache_creation": 371
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "axi",
+      "repeat": 5,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:44:15",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.15771890000000002,
+        "input_total": 407117,
+        "input_tokens": 32,
+        "cache_creation_input_tokens": 22936,
+        "cache_read_input_tokens": 384149,
+        "output_tokens": 6190,
+        "thinking_tokens": 854,
+        "num_turns": 21,
+        "tool_calls": 20,
+        "errors": 4,
+        "duration_s": 64.8,
+        "blender_starts": 13,
+        "first_turn_cache_creation": 371
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 1,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:39:44",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.0937704,
+        "input_total": 116034,
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 22270,
+        "cache_read_input_tokens": 93754,
+        "output_tokens": 2870,
+        "thinking_tokens": 332,
+        "num_turns": 5,
+        "tool_calls": 4,
+        "errors": 0,
+        "duration_s": 25.1,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 2455
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 2,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:40:11",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.11641820000000003,
+        "input_total": 150690,
+        "input_tokens": 12,
+        "cache_creation_input_tokens": 28536,
+        "cache_read_input_tokens": 122142,
+        "output_tokens": 3284,
+        "thinking_tokens": 395,
+        "num_turns": 6,
+        "tool_calls": 5,
+        "errors": 1,
+        "duration_s": 28.4,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1812
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 3,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:42:33",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.11090839999999998,
+        "input_total": 131250,
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 26581,
+        "cache_read_input_tokens": 104659,
+        "output_tokens": 3397,
+        "thinking_tokens": 287,
+        "num_turns": 5,
+        "tool_calls": 4,
+        "errors": 1,
+        "duration_s": 27.2,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1812
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 4,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:43:01",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.08284230000000001,
+        "input_total": 110311,
+        "input_tokens": 12,
+        "cache_creation_input_tokens": 15291,
+        "cache_read_input_tokens": 95008,
+        "output_tokens": 3509,
+        "thinking_tokens": 387,
+        "num_turns": 6,
+        "tool_calls": 5,
+        "errors": 1,
+        "duration_s": 28.9,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1812
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "qa_cleanup",
+      "arm": "mcp",
+      "repeat": 5,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:45:21",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.0795935,
+        "input_total": 124025,
+        "input_tokens": 14,
+        "cache_creation_input_tokens": 12856,
+        "cache_read_input_tokens": 111155,
+        "output_tokens": 3631,
+        "thinking_tokens": 477,
+        "num_turns": 7,
+        "tool_calls": 6,
+        "errors": 1,
+        "duration_s": 31.6,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1812
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 1,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:29:32",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.0428064,
+        "input_total": 51786,
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 11637,
+        "cache_read_input_tokens": 40139,
+        "output_tokens": 968,
+        "thinking_tokens": 104,
+        "num_turns": 5,
+        "tool_calls": 4,
+        "errors": 1,
+        "duration_s": 21.3,
+        "blender_starts": 3,
+        "first_turn_cache_creation": 8413
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 2,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:32:38",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.09159160000000001,
+        "input_total": 241824,
+        "input_tokens": 32,
+        "cache_creation_input_tokens": 13066,
+        "cache_read_input_tokens": 228726,
+        "output_tokens": 3599,
+        "thinking_tokens": 815,
+        "num_turns": 19,
+        "tool_calls": 18,
+        "errors": 7,
+        "duration_s": 58.3,
+        "blender_starts": 10,
+        "first_turn_cache_creation": 367
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 3,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:33:37",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.0241315,
+        "input_total": 52065,
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 3665,
+        "cache_read_input_tokens": 48390,
+        "output_tokens": 1011,
+        "thinking_tokens": 197,
+        "num_turns": 5,
+        "tool_calls": 4,
+        "errors": 1,
+        "duration_s": 22.7,
+        "blender_starts": 3,
+        "first_turn_cache_creation": 367
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 4,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:36:17",
+      "passed": false,
+      "failed_checks": [
+        "hero"
+      ],
+      "metrics": {
+        "total_cost_usd": 0.0365282,
+        "input_total": 76388,
+        "input_tokens": 14,
+        "cache_creation_input_tokens": 4372,
+        "cache_read_input_tokens": 72002,
+        "output_tokens": 1837,
+        "thinking_tokens": 518,
+        "num_turns": 8,
+        "tool_calls": 7,
+        "errors": 4,
+        "duration_s": 27.0,
+        "blender_starts": 3,
+        "first_turn_cache_creation": 367
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "axi",
+      "repeat": 5,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:36:45",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.051042500000000005,
+        "input_total": 104487,
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 7404,
+        "cache_read_input_tokens": 97065,
+        "output_tokens": 2279,
+        "thinking_tokens": 329,
+        "num_turns": 9,
+        "tool_calls": 7,
+        "errors": 2,
+        "duration_s": 32.2,
+        "blender_starts": 5,
+        "first_turn_cache_creation": 367
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 1,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:29:54",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.1668456,
+        "input_total": 141984,
+        "input_tokens": 16,
+        "cache_creation_input_tokens": 27282,
+        "cache_read_input_tokens": 114686,
+        "output_tokens": 8714,
+        "thinking_tokens": 2383,
+        "num_turns": 11,
+        "tool_calls": 10,
+        "errors": 1,
+        "duration_s": 71.3,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 11951
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 2,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:31:07",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.16324260000000002,
+        "input_total": 235940,
+        "input_tokens": 26,
+        "cache_creation_input_tokens": 18433,
+        "cache_read_input_tokens": 217481,
+        "output_tokens": 9536,
+        "thinking_tokens": 3284,
+        "num_turns": 18,
+        "tool_calls": 15,
+        "errors": 1,
+        "duration_s": 90.1,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1808
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 3,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:34:00",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.16136640000000002,
+        "input_total": 200874,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 18628,
+        "cache_read_input_tokens": 182224,
+        "output_tokens": 9653,
+        "thinking_tokens": 2092,
+        "num_turns": 16,
+        "tool_calls": 14,
+        "errors": 1,
+        "duration_s": 78.9,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1808
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 4,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:35:20",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.1086605,
+        "input_total": 132193,
+        "input_tokens": 16,
+        "cache_creation_input_tokens": 13292,
+        "cache_read_input_tokens": 118885,
+        "output_tokens": 6351,
+        "thinking_tokens": 1100,
+        "num_turns": 11,
+        "tool_calls": 10,
+        "errors": 1,
+        "duration_s": 56.2,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1808
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    },
+    {
+      "project": "turntable",
+      "arm": "mcp",
+      "repeat": 5,
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "stop": "end_turn",
+      "started": "2026-11-04T03:37:18",
+      "passed": true,
+      "failed_checks": [],
+      "metrics": {
+        "total_cost_usd": 0.1529222,
+        "input_total": 208104,
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 16750,
+        "cache_read_input_tokens": 191332,
+        "output_tokens": 9187,
+        "thinking_tokens": 1509,
+        "num_turns": 13,
+        "tool_calls": 12,
+        "errors": 1,
+        "duration_s": 72.9,
+        "blender_starts": 1,
+        "first_turn_cache_creation": 1808
+      },
+      "versions": {
+        "claude": "2.1.317",
+        "blender_axi": "0.9.0",
+        "blender": "5.2.0",
+        "mcp_server": {
+          "version": "1.0.2",
+          "commit": "dbbf836"
+        }
+      },
+      "transcript": "transcript.md"
+    }
+  ],
+  "cells": {
+    "build_export": {
+      "axi": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.0999,
+          "input_total": 198735,
+          "input_tokens": 24,
+          "cache_creation_input_tokens": 13683,
+          "cache_read_input_tokens": 185028,
+          "output_tokens": 4286,
+          "thinking_tokens": 1005,
+          "num_turns": 17,
+          "tool_calls": 16,
+          "errors": 3,
+          "duration_s": 62.5,
+          "blender_starts": 15,
+          "first_turn_cache_creation": 367
+        },
+        "min": {
+          "total_cost_usd": 0.0894,
+          "input_total": 177927,
+          "input_tokens": 22,
+          "cache_creation_input_tokens": 11712,
+          "cache_read_input_tokens": 164293,
+          "output_tokens": 4181,
+          "thinking_tokens": 790,
+          "num_turns": 15,
+          "tool_calls": 14,
+          "errors": 3,
+          "duration_s": 51.7,
+          "blender_starts": 4,
+          "first_turn_cache_creation": 367
+        },
+        "max": {
+          "total_cost_usd": 0.1073,
+          "input_total": 247784,
+          "input_tokens": 28,
+          "cache_creation_input_tokens": 16070,
+          "cache_read_input_tokens": 231686,
+          "output_tokens": 5209,
+          "thinking_tokens": 1604,
+          "num_turns": 21,
+          "tool_calls": 20,
+          "errors": 5,
+          "duration_s": 69.7,
+          "blender_starts": 27,
+          "first_turn_cache_creation": 1251
+        }
+      },
+      "mcp": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.089,
+          "input_total": 126636,
+          "input_tokens": 16,
+          "cache_creation_input_tokens": 9818,
+          "cache_read_input_tokens": 116802,
+          "output_tokens": 5262,
+          "thinking_tokens": 354,
+          "num_turns": 10,
+          "tool_calls": 9,
+          "errors": 0,
+          "duration_s": 38.9,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1808
+        },
+        "min": {
+          "total_cost_usd": 0.0801,
+          "input_total": 108640,
+          "input_tokens": 14,
+          "cache_creation_input_tokens": 8801,
+          "cache_read_input_tokens": 99825,
+          "output_tokens": 4808,
+          "thinking_tokens": 247,
+          "num_turns": 8,
+          "tool_calls": 7,
+          "errors": 0,
+          "duration_s": 35.4,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1808
+        },
+        "max": {
+          "total_cost_usd": 0.0904,
+          "input_total": 131945,
+          "input_tokens": 16,
+          "cache_creation_input_tokens": 10499,
+          "cache_read_input_tokens": 121990,
+          "output_tokens": 5331,
+          "thinking_tokens": 481,
+          "num_turns": 11,
+          "tool_calls": 10,
+          "errors": 0,
+          "duration_s": 42,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 2483
+        }
+      }
+    },
+    "qa_cleanup": {
+      "axi": {
+        "n": 5,
+        "passed": 2,
+        "success": "2/5",
+        "median": {
+          "total_cost_usd": 0.114,
+          "input_total": 155744,
+          "input_tokens": 20,
+          "cache_creation_input_tokens": 18941,
+          "cache_read_input_tokens": 136789,
+          "output_tokens": 6190,
+          "thinking_tokens": 854,
+          "num_turns": 10,
+          "tool_calls": 9,
+          "errors": 3,
+          "duration_s": 62.6,
+          "blender_starts": 8,
+          "first_turn_cache_creation": 371
+        },
+        "min": {
+          "total_cost_usd": 0.0666,
+          "input_total": 104758,
+          "input_tokens": 14,
+          "cache_creation_input_tokens": 8010,
+          "cache_read_input_tokens": 96732,
+          "output_tokens": 3688,
+          "thinking_tokens": 650,
+          "num_turns": 7,
+          "tool_calls": 6,
+          "errors": 0,
+          "duration_s": 42.9,
+          "blender_starts": 7,
+          "first_turn_cache_creation": 371
+        },
+        "max": {
+          "total_cost_usd": 0.1666,
+          "input_total": 407117,
+          "input_tokens": 32,
+          "cache_creation_input_tokens": 25196,
+          "cache_read_input_tokens": 384149,
+          "output_tokens": 7452,
+          "thinking_tokens": 1276,
+          "num_turns": 21,
+          "tool_calls": 20,
+          "errors": 4,
+          "duration_s": 71.7,
+          "blender_starts": 14,
+          "first_turn_cache_creation": 1223
+        }
+      },
+      "mcp": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.0938,
+          "input_total": 124025,
+          "input_tokens": 12,
+          "cache_creation_input_tokens": 22270,
+          "cache_read_input_tokens": 104659,
+          "output_tokens": 3397,
+          "thinking_tokens": 387,
+          "num_turns": 6,
+          "tool_calls": 5,
+          "errors": 1,
+          "duration_s": 28.4,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1812
+        },
+        "min": {
+          "total_cost_usd": 0.0796,
+          "input_total": 110311,
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 12856,
+          "cache_read_input_tokens": 93754,
+          "output_tokens": 2870,
+          "thinking_tokens": 287,
+          "num_turns": 5,
+          "tool_calls": 4,
+          "errors": 0,
+          "duration_s": 25.1,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1812
+        },
+        "max": {
+          "total_cost_usd": 0.1164,
+          "input_total": 150690,
+          "input_tokens": 14,
+          "cache_creation_input_tokens": 28536,
+          "cache_read_input_tokens": 122142,
+          "output_tokens": 3631,
+          "thinking_tokens": 477,
+          "num_turns": 7,
+          "tool_calls": 6,
+          "errors": 1,
+          "duration_s": 31.6,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 2455
+        }
+      }
+    },
+    "turntable": {
+      "axi": {
+        "n": 5,
+        "passed": 4,
+        "success": "4/5",
+        "median": {
+          "total_cost_usd": 0.0428,
+          "input_total": 76388,
+          "input_tokens": 14,
+          "cache_creation_input_tokens": 7404,
+          "cache_read_input_tokens": 72002,
+          "output_tokens": 1837,
+          "thinking_tokens": 329,
+          "num_turns": 8,
+          "tool_calls": 7,
+          "errors": 2,
+          "duration_s": 27,
+          "blender_starts": 3,
+          "first_turn_cache_creation": 367
+        },
+        "min": {
+          "total_cost_usd": 0.0241,
+          "input_total": 51786,
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 3665,
+          "cache_read_input_tokens": 40139,
+          "output_tokens": 968,
+          "thinking_tokens": 104,
+          "num_turns": 5,
+          "tool_calls": 4,
+          "errors": 1,
+          "duration_s": 21.3,
+          "blender_starts": 3,
+          "first_turn_cache_creation": 367
+        },
+        "max": {
+          "total_cost_usd": 0.0916,
+          "input_total": 241824,
+          "input_tokens": 32,
+          "cache_creation_input_tokens": 13066,
+          "cache_read_input_tokens": 228726,
+          "output_tokens": 3599,
+          "thinking_tokens": 815,
+          "num_turns": 19,
+          "tool_calls": 18,
+          "errors": 7,
+          "duration_s": 58.3,
+          "blender_starts": 10,
+          "first_turn_cache_creation": 8413
+        }
+      },
+      "mcp": {
+        "n": 5,
+        "passed": 5,
+        "success": "5/5",
+        "median": {
+          "total_cost_usd": 0.1614,
+          "input_total": 200874,
+          "input_tokens": 22,
+          "cache_creation_input_tokens": 18433,
+          "cache_read_input_tokens": 182224,
+          "output_tokens": 9187,
+          "thinking_tokens": 2092,
+          "num_turns": 13,
+          "tool_calls": 12,
+          "errors": 1,
+          "duration_s": 72.9,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1808
+        },
+        "min": {
+          "total_cost_usd": 0.1087,
+          "input_total": 132193,
+          "input_tokens": 16,
+          "cache_creation_input_tokens": 13292,
+          "cache_read_input_tokens": 114686,
+          "output_tokens": 6351,
+          "thinking_tokens": 1100,
+          "num_turns": 11,
+          "tool_calls": 10,
+          "errors": 1,
+          "duration_s": 56.2,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 1808
+        },
+        "max": {
+          "total_cost_usd": 0.1668,
+          "input_total": 235940,
+          "input_tokens": 26,
+          "cache_creation_input_tokens": 27282,
+          "cache_read_input_tokens": 217481,
+          "output_tokens": 9653,
+          "thinking_tokens": 3284,
+          "num_turns": 18,
+          "tool_calls": 15,
+          "errors": 1,
+          "duration_s": 90.1,
+          "blender_starts": 1,
+          "first_turn_cache_creation": 11951
+        }
+      }
+    }
+  }
+}
